@@ -87,7 +87,7 @@ from katiecad.model.core import (
     teile_bogen_durch_winkel,
 )
 from katiecad.ui.dialogs import (
-    farbe_waehlen,
+    farbe_waehlen, VON_LAYER,
     MIT_LICENSE_TEXT, zeige_lizenz_fenster,
     _LayoutNameDialog, BlattEigenschaftenDialog, PropertiesDialog, ViewportDialog,
     LayerDialog, LayerEditDialog, TextDialog, ArrayDialog, SchraffurDialog, DruckDialog,
@@ -282,7 +282,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self.einheit = tk.StringVar(value="mm")
         self.massstab = tk.StringVar(value="1:1")
         self.linientyp = tk.StringVar(value="Volllinie (schmal)")
-        self.linienstaerke = tk.DoubleVar(value=0.35)
+        self.linienstaerke = tk.StringVar(value="0.35")      # number or "By layer"
         self.zeichenfarbe = FARBEN["cyan"]
         self.eigene_farbe = tk.BooleanVar(value=True)
 
@@ -1104,6 +1104,9 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                          bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
                          activebackground=FARBEN["cyan"],
                          activeforeground=FARBEN["bg_dunkel"])
+        m_ausr.add_command(label=tr("menu.ausrichten.zwei_punkte"),
+                           command=lambda: self._befehl("ausrichten2p"))
+        m_ausr.add_separator()
         for k in ("links", "rechts", "oben", "unten", "mitte_h", "mitte_v"):
             m_ausr.add_command(label=tr("menu.ausrichten." + k),
                                command=lambda k=k: self.ausrichten(k))
@@ -1464,7 +1467,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         cb_lt.bind("<<ComboboxSelected>>", self._stil_auf_auswahl)
         ttk.Label(tb2, text="  " + tr("tb.staerke"), style="Title.TLabel").pack(side=tk.LEFT)
         cb_ls = ttk.Combobox(tb2, textvariable=self.linienstaerke,
-                             values=LINIENSTAERKEN, width=6, state="readonly")
+                             values=[tr("tb.von_layer")] + [str(s) for s in LINIENSTAERKEN],
+                             width=9, state="readonly")
         cb_ls.pack(side=tk.LEFT, padx=4)
         cb_ls.bind("<<ComboboxSelected>>", self._stil_auf_auswahl)
         ttk.Label(tb2, text="mm").pack(side=tk.LEFT)
@@ -1472,8 +1476,10 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self.farbe_btn = self._farb_swatch(tb2, self.zeichenfarbe,
                                            self.farbe_waehlen)
         self.farbe_btn.pack(side=tk.LEFT, padx=4)
-        ttk.Checkbutton(tb2, text=tr("tb.eig_farbe"),
-                        variable=self.eigene_farbe).pack(side=tk.LEFT, padx=(0, 6))
+        self.farbe_von_layer = tk.BooleanVar(value=not self.eigene_farbe.get())
+        ttk.Checkbutton(tb2, text=tr("tb.von_layer"), variable=self.farbe_von_layer,
+                        command=self._farbe_modus_geaendert).pack(side=tk.LEFT, padx=(0, 6))
+        self._farb_swatch_aktualisieren()
 
         # --- Toolbar 3 ---
         tb3 = self.tb3
@@ -2313,6 +2319,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self._layer_info_aktualisieren()
 
     def _layer_info_aktualisieren(self):
+        self._farb_swatch_aktualisieren()
         l = self.layers.get(self.aktiver_layer.get())
         if l:
             de = SPRACHE["aktuell"] == "de"
@@ -2581,11 +2588,38 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self.canvas.delete("vorschau")
 
     def farbe_waehlen(self):
-        hexc = farbe_waehlen(self.root, self.zeichenfarbe)
-        if hexc:
+        hexc = farbe_waehlen(self.root, self.zeichenfarbe, von_layer=True)
+        if hexc == VON_LAYER:
+            self.eigene_farbe.set(False)
+            self.farbe_von_layer.set(True)
+        elif hexc:
             self.zeichenfarbe = hexc
-            self.farbe_btn.config(bg=hexc)
             self.eigene_farbe.set(True)
+            self.farbe_von_layer.set(False)
+        self._farb_swatch_aktualisieren()
+
+    def _farbe_modus_geaendert(self):
+        self.eigene_farbe.set(not self.farbe_von_layer.get())
+        self._farb_swatch_aktualisieren()
+
+    def _farb_swatch_aktualisieren(self):
+        """Colour field of the toolbar: shows the layer colour while 'By layer' is on."""
+        try:
+            if self.eigene_farbe.get():
+                farbe = self.zeichenfarbe
+            else:
+                l = self.layers.get(self.aktiver_layer.get())
+                farbe = l.farbe if l else self.zeichenfarbe
+            self.farbe_btn.config(bg=farbe)
+        except (AttributeError, tk.TclError):
+            pass
+
+    def _staerke_neu(self):
+        """Weight of new objects: number in mm, or None = by layer."""
+        try:
+            return float(str(self.linienstaerke.get()).replace(",", "."))
+        except ValueError:
+            return None
 
     def mm_to_px(self, x_mm, y_mm):
         v = self.view
@@ -3377,7 +3411,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                             farbe=self.zeichenfarbe,
                             linientyp=self.linientyp.get(),
                             eig_farbe=self.eigene_farbe.get(),
-                            staerke=self._zahl(self.linienstaerke, 0.35))
+                            staerke=self._staerke_neu())
         stil = {"farbe": FARBEN["gruen"], "w": 2, "dash": (5, 3)}
         tf, sk = self._ctx_zu_px, self._ctx_skala()
         for kind in ref.aufgeloest():
@@ -3706,7 +3740,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                 and self._op["stufe"] == "fenster"):
             self.auswahl_rechteck_start(event)
             return
-        if self._op is not None and self._op["stufe"] in ("basis", "ziel"):
+        if self._op is not None and self._op["stufe"] in ("basis", "ziel", "s2", "d2"):
             pt = self._eingabepunkt(event, self.letzter_punkt)
             self._op_klick(pt)
             self.entry_eingabe.focus_set()
@@ -5923,8 +5957,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         farbe = self.zeichenfarbe if self.eigene_farbe.get() else (
             l.farbe if l else FARBEN["cyan"])
         lt = self.linientyp.get()
-        st = self._zahl(self.linienstaerke, 0.35)
-        if "breit" in lt:
+        st = self._staerke_neu()
+        if st is not None and "breit" in lt:
             st = max(st, 0.7)
         return {"layer": self.aktiver_layer.get(), "farbe": farbe,
                 "linientyp": lt, "eig_farbe": bool(self.eigene_farbe.get()),
@@ -7013,15 +7047,16 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         if not ziele:
             return
         self._snapshot()
-        st = self._zahl(self.linienstaerke, 0.35)
+        st = self._staerke_neu()
         for el in ziele:
             el.staerke = st
             el.linientyp = self.linientyp.get()
         self.redraw()
         de = SPRACHE["aktuell"] == "de"
-        self.status.set((f"Stärke {st} mm / {self.linientyp.get()} auf "
+        st_txt = tr("tb.von_layer") if st is None else f"{st} mm"
+        self.status.set((f"Stärke {st_txt} / {self.linientyp.get()} auf "
                          f"{len(ziele)} Element(e) angewendet." if de else
-                         f"Weight {st} mm / {self.linientyp.get()} applied to "
+                         f"Weight {st_txt} / {self.linientyp.get()} applied to "
                          f"{len(ziele)} element(s)."))
 
     def _op_start(self, typ):
@@ -7082,6 +7117,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                 "rotate": "DREHEN" if de else "ROTATE",
                 "scale": "SKALIEREN" if de else "SCALE",
                 "mirror": "SPIEGELN" if de else "MIRROR",
+                "align": "AUSRICHTEN" if de else "ALIGN",
                 "stretch": "STRECKEN" if de else "STRETCH"}.get(self._op["typ"], "")
 
     def _op_hinweis(self):
@@ -7096,6 +7132,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         elif op["stufe"] == "wahl":
             t = ("Objekte wählen, dann Enter oder Rechtsklick" if de
                  else "Select objects, then Enter or right-click")
+        elif op["typ"] == "align":
+            t = tr("msg.align." + {"basis": "s1", "ziel": "d1", "s2": "s2", "d2": "d2"}[op["stufe"]])
         elif op["stufe"] == "basis":
             if op["typ"] == "mirror":
                 t = ("Ersten Punkt der Spiegelachse angeben" if de
@@ -7176,6 +7214,10 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             return
         pt = self._op_achse(pt)
         de = SPRACHE["aktuell"] == "de"
+        if op["typ"] == "align":
+            if op["stufe"] != "wahl":
+                self._align_klick(pt)
+            return
         if op["typ"] == "stretch":
             if op["stufe"] == "basis":
                 op["basis"] = pt
@@ -7430,13 +7472,16 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                 self._op_beenden("Abgebrochen." if de else "Cancelled.")
         elif op["stufe"] == "ziel" and op["typ"] == "copy":
             self._op_beenden("Kopieren beendet." if de else "Copy finished.")
+        elif op["typ"] == "align" and op["stufe"] == "s2":
+            self._align_fertig()                      # Enter at the 2nd source point = move only
         else:
             self._op_beenden("Abgebrochen." if de else "Cancelled.")
         return True
 
     def _op_vorschau(self, pt):
         op = self._op
-        if op is None or op["stufe"] != "ziel":
+        if op is None or (op["stufe"] != "ziel" and not (
+                op["typ"] == "align" and op["stufe"] in ("s2", "d2"))):
             return
         pt = self._op_achse(pt)
         if op.get("achse"):
@@ -7450,6 +7495,10 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         tf, sk = self._ctx_zu_px, self._ctx_skala()
         stil = {"farbe": FARBEN["gruen"], "w": 1, "dash": (4, 3)}
         einh = self._einh_faktor()
+
+        if op["typ"] == "align":
+            self._align_vorschau(pt, tf, sk, stil)
+            return
 
         if op["typ"] == "stretch":
             dx, dy = pt[0] - op["basis"][0], pt[1] - op["basis"][1]
@@ -7561,6 +7610,11 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         op = self._op
         if op is None:
             return
+        if op["typ"] == "align" and op["stufe"] != "wahl":
+            lp = self.letzter_punkt
+            self._op_klick(self._parse_xy(text, einh) if lp is None else
+                           self._parse_punkt_eingabe(text, lp[0], lp[1], einh))
+            return
         if op["typ"] == "stretch":
             if op["stufe"] == "basis":
                 self._op_klick(self._parse_xy(text, einh))
@@ -7620,7 +7674,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self._zeichnen_werkzeug_anwenden(*pt)
         self.redraw()
 
-    NUR_2D_BEFEHLE = ("laenge", "abrunden", "fase", "versatz")
+    NUR_2D_BEFEHLE = ("laenge", "abrunden", "fase", "versatz", "ausrichten2p")
 
     def _befehl(self, cmd, arg=""):
         arg = arg.strip()
@@ -7646,6 +7700,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         elif cmd in ("move", "copy", "copybase", "array", "rotate", "stretch",
                      "scale", "mirror"):
             self._op_start(cmd)
+        elif cmd == "ausrichten2p":
+            self._op_start("align")
         elif cmd == "paste":
             self.einfuegen()
         elif cmd == "druck":
@@ -10075,7 +10131,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                             farbe=self.zeichenfarbe,
                             linientyp=self.linientyp.get(),
                             eig_farbe=self.eigene_farbe.get(),
-                            staerke=self._zahl(self.linienstaerke, 0.35))
+                            staerke=self._staerke_neu())
         self._attribute_abfragen(ref)
         liste.append(ref)
         self.auswahl = [ref]
@@ -10235,7 +10291,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                             farbe=self.zeichenfarbe,
                             linientyp=self.linientyp.get(),
                             eig_farbe=self.eigene_farbe.get(),
-                            staerke=self._zahl(self.linienstaerke, 0.35))
+                            staerke=self._staerke_neu())
         self._attribute_abfragen(ref)
         self._ziel_liste().append(ref)
         self._einrasten([ref])

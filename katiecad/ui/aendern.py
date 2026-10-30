@@ -5,8 +5,9 @@ katiecad/ui/aendern.py - Change length, align, manipulator (mixin of CadApp).
 * LAENGE / LENGTHEN: click a line near one end, then click the new end
   position (projected onto the line) or type the change in mm
   (+5 lengthens, -5 shortens, =50 sets the length to 50).
-* AUSRICHTEN / ALIGN: aligns the selected objects to the left/right/top/
-  bottom edge or to the centre of the selection.
+* AUSRICHTEN / ALIGN: like AutoCAD - source/destination point pairs (move, rotate,
+  optionally scale). AUSLINKS / AUSRECHTS / ... align the selected objects to the
+  left/right/top/bottom edge or to the centre of the selection.
 * MANIP / MANIPULATOR: shows an axis cross on the selection. A drag on the
   X or Y arm moves the objects ONLY along that axis, whatever point the
   object snap picks (only its component along the axis counts). The centre
@@ -15,9 +16,10 @@ katiecad/ui/aendern.py - Change length, align, manipulator (mixin of CadApp).
 
 import math
 import tkinter as tk
+from tkinter import messagebox
 
 from katiecad.common.i18n import tr, SPRACHE
-from katiecad.model.core import FARBEN, Linie, UI_SCHRIFT
+from katiecad.model.core import FARBEN, Linie, UI_SCHRIFT, Viewport
 
 ARM_PX = 46            # length of a manipulator arm (pixels)
 TREFFER_PX = 7         # hit tolerance
@@ -175,6 +177,126 @@ class AendernMixin:
                 dy = (ymin + ymax) / 2 - (b[1] + b[3]) / 2
             out.append((dx, dy))
         return out
+
+    # ------------------------------------------------------------
+    # ALIGN (like in AutoCAD): objects, 1st source point -> 1st destination point,
+    # optional 2nd source point -> 2nd destination point, then "scale?" (default No)
+    # ------------------------------------------------------------
+    @staticmethod
+    def ausrichten_2p_parameter(s1, d1, s2=None, d2=None, skalieren=False):
+        """-> (dx, dy, winkel_ccw_grad, faktor). Move s1 -> d1; with a second point pair
+        additionally rotate about d1 so that the line s1-s2 points along d1-d2 and,
+        if `skalieren`, scale about d1 so that the distances match."""
+        dx, dy = d1[0] - s1[0], d1[1] - s1[1]
+        winkel, f = 0.0, 1.0
+        if s2 is not None and d2 is not None:
+            ls = math.hypot(s2[0] - s1[0], s2[1] - s1[1])
+            ld = math.hypot(d2[0] - d1[0], d2[1] - d1[1])
+            if ls > 1e-9 and ld > 1e-9:
+                winkel = math.degrees(math.atan2(d2[1] - d1[1], d2[0] - d1[0])
+                                      - math.atan2(s2[1] - s1[1], s2[0] - s1[0]))
+                winkel = (winkel + 180.0) % 360.0 - 180.0
+                if skalieren:
+                    f = ld / ls
+        return dx, dy, winkel, f
+
+    @staticmethod
+    def ausrichten_2p_anwenden(objekte, d1, dx, dy, winkel_ccw, faktor):
+        """Applies the result of ausrichten_2p_parameter to the elements."""
+        for el in objekte:
+            el.verschieben(dx, dy)
+            if abs(winkel_ccw) > 1e-9:
+                el.drehen(d1[0], d1[1], -winkel_ccw)      # model convention: see punkte_drehen
+            if abs(faktor - 1.0) > 1e-12 and hasattr(el, "skalieren"):
+                el.skalieren(d1[0], d1[1], faktor)
+
+    def _align_klick(self, pt):
+        op = self._op
+        st = op["stufe"]
+        if st == "basis":
+            op["s1"] = pt
+            self.letzter_punkt = pt
+            op["stufe"] = "ziel"
+        elif st == "ziel":
+            op["d1"] = pt
+            self.letzter_punkt = pt
+            op["stufe"] = "s2"
+        elif st == "s2":
+            op["s2"] = pt
+            self.letzter_punkt = pt
+            op["stufe"] = "d2"
+        elif st == "d2":
+            op["d2"] = pt
+            self._align_fertig()
+            return
+        self._op_hinweis()
+
+    def _align_fertig(self):
+        """After the last point (or Enter at the 2nd source point = move only)."""
+        op = self._op
+        s1, d1 = op["s1"], op["d1"]
+        s2, d2 = op.get("s2"), op.get("d2")
+        skalieren = False
+        if s2 is not None and d2 is not None:
+            if (math.hypot(s2[0] - s1[0], s2[1] - s1[1]) < 1e-9
+                    or math.hypot(d2[0] - d1[0], d2[1] - d1[1]) < 1e-9):
+                s2 = d2 = None
+            else:
+                skalieren = messagebox.askyesno(
+                    tr("msg.align.skala_titel"), tr("msg.align.skala_frage"),
+                    default=messagebox.NO, parent=self.root)
+        dx, dy, w, f = self.ausrichten_2p_parameter(s1, d1, s2, d2, skalieren)
+        if abs(dx) < 1e-12 and abs(dy) < 1e-12 and abs(w) < 1e-9 and abs(f - 1.0) < 1e-12:
+            self._op_beenden(tr("msg.align.nichts"))
+            return
+        self._snapshot()
+        self.ausrichten_2p_anwenden(op["objekte"], d1, dx, dy, w, f)
+        n = len(op["objekte"])
+        self._op_beenden(tr("msg.align.fertig", n=n, w=w, f=f) if s2 is not None
+                         else tr("msg.align.verschoben", n=n))
+
+    def _align_vorschau(self, pt, tf, sk, stil):
+        op = self._op
+        st = op["stufe"]
+        c = self.canvas
+        s1 = op["s1"]
+        d1 = op.get("d1")
+        s2, d2 = op.get("s2"), None
+        if st == "ziel":
+            d1 = pt
+        elif st == "d2":
+            d2 = pt
+        s2p = s2 if st == "d2" else None
+        dx, dy, w, f = self.ausrichten_2p_parameter(s1, d1, s2p, d2, False) if d1 else (0, 0, 0, 1)
+        for el in op["objekte"]:
+            k = self._dict_zu_element(el.to_dict())
+            if k is None or isinstance(k, Viewport):
+                continue
+            self.ausrichten_2p_anwenden([k], d1 or s1, dx, dy, w, f)
+            self._zeichne_element(k, tags=("vorschau",), tf=tf, skala=sk, stil=stil)
+
+        def linie(a, b, farbe, dash=(2, 3)):
+            ax, ay = tf(*a)
+            bx, by = tf(*b)
+            c.create_line(ax, ay, bx, by, fill=farbe, dash=dash, tags="vorschau")
+
+        def kreuz(p, farbe):
+            x, y = tf(*p)
+            c.create_line(x - 5, y, x + 5, y, fill=farbe, tags="vorschau")
+            c.create_line(x, y - 5, x, y + 5, fill=farbe, tags="vorschau")
+
+        kreuz(s1, FARBEN["gelb"])
+        if st == "ziel":
+            linie(s1, pt, FARBEN["gelb"])
+        else:
+            linie(s1, d1, FARBEN["gelb"], None)
+            kreuz(d1, FARBEN["gelb"])
+        if st == "s2":
+            linie(s1, pt, FARBEN["cyan"])
+        if st == "d2":
+            kreuz(s2, FARBEN["cyan"])
+            linie(s1, s2, FARBEN["cyan"], (1, 4))
+            linie(d1, pt, FARBEN["cyan"])
 
     def ausrichten(self, modus):
         ziele = [e for e in self.auswahl if hasattr(e, "bbox") and hasattr(e, "verschieben")]

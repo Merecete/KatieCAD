@@ -328,9 +328,11 @@ class PropertiesDialog(tk.Toplevel):
         row += 1
         ttk.Label(f, text=tr("dlg.prop.staerke")).grid(row=row, column=0,
                                                        sticky=tk.W, pady=4)
-        staerke_wert = getattr(element, "staerke", None) or 0.35
-        self.staerke_var = tk.DoubleVar(value=staerke_wert)
-        ttk.Combobox(f, textvariable=self.staerke_var, values=LINIENSTAERKEN,
+        staerke_wert = getattr(element, "staerke", None)
+        self.staerke_var = tk.StringVar(value=(tr("dlg.eig.vonlayer") if staerke_wert is None
+                                               else "%g" % staerke_wert))
+        ttk.Combobox(f, textvariable=self.staerke_var,
+                     values=[tr("dlg.eig.vonlayer")] + [str(s) for s in LINIENSTAERKEN],
                      width=10).grid(row=row, column=1, sticky=tk.W, pady=4)
         row += 1
         geo_sep = ttk.Separator(f, orient=tk.HORIZONTAL)
@@ -557,10 +559,17 @@ class PropertiesDialog(tk.Toplevel):
             self._sperre = False
 
     def _farbe_waehlen(self):
-        hexc = farbe_waehlen(self, self.farbe_var.get())
-        if hexc:
+        hexc = farbe_waehlen(self, self.farbe_var.get(), von_layer=True)
+        if hexc == VON_LAYER:
+            self.eig_farbe_var.set(False)
+            l = self.app.layers.get(self.layer_var.get())
+            if l:
+                self.farbe_var.set(l.farbe)
+                self.farbe_btn.config(bg=l.farbe)
+        elif hexc:
             self.farbe_var.set(hexc)
             self.farbe_btn.config(bg=hexc)
+            self.eig_farbe_var.set(True)
 
     def _ok(self):
         el = self.el
@@ -570,9 +579,9 @@ class PropertiesDialog(tk.Toplevel):
             el.linientyp = self.linientyp_var.get()
             el.eig_farbe = bool(self.eig_farbe_var.get())
             try:
-                el.staerke = float(self.staerke_var.get())
+                el.staerke = float(str(self.staerke_var.get()).replace(",", "."))
             except Exception:
-                pass
+                el.staerke = None                    # "by layer"
             if isinstance(el, Linie):
                 for k in ("x1", "y1", "x2", "y2"):
                     setattr(el, k, self.geo_vars[k].get())
@@ -1928,10 +1937,17 @@ class EigenschaftenPalette(tk.Toplevel):
         for feld, br in (("staerke", 10), ("hoehe", 10), ("winkel", 10)):
             v = tk.StringVar()
             self._vars[feld] = v
-            e = ttk.Entry(f, textvariable=v, width=br)
+            if feld == "staerke":                         # entry + "by layer"
+                fr_s = ttk.Frame(f)
+                e = ttk.Entry(fr_s, textvariable=v, width=br)
+                e.pack(side=tk.LEFT)
+                ttk.Button(fr_s, text=tr("dlg.eig.vonlayer"), width=10,
+                           command=lambda: self._anwenden("staerke", None)).pack(side=tk.LEFT, padx=4)
+            else:
+                e = ttk.Entry(f, textvariable=v, width=br)
             e.bind("<Return>", lambda ev, k=feld: self._anwenden(k))
             e.bind("<FocusOut>", lambda ev, k=feld: self._anwenden(k, nur_wenn_geaendert=True))
-            zeile(r, feld, lambda w=e: w)
+            zeile(r, feld, (lambda w=fr_s: w) if feld == "staerke" else (lambda w=e: w))
             r += 1
         v = tk.StringVar()
         self._vars["schriftart"] = v
@@ -1976,7 +1992,7 @@ class EigenschaftenPalette(tk.Toplevel):
             if val == VERSCHIEDEN:
                 txt = tr("dlg.eig.verschieden")
             elif val is None:
-                txt = tr("dlg.eig.vonlayer") if feld == "farbe" else ""
+                txt = tr("dlg.eig.vonlayer") if feld in ("farbe", "staerke") else ""
             elif isinstance(val, float):
                 txt = ("%g" % val)
             else:
@@ -1986,8 +2002,10 @@ class EigenschaftenPalette(tk.Toplevel):
 
     def _farbe_waehlen(self):
         akt = self._vars["farbe"].get()
-        hexc = farbe_waehlen(self, akt if akt.startswith("#") else "#c29bff")
-        if hexc:
+        hexc = farbe_waehlen(self, akt if akt.startswith("#") else "#c29bff", von_layer=True)
+        if hexc == VON_LAYER:
+            self._anwenden("farbe", None)
+        elif hexc:
             self._anwenden("farbe", hexc)
 
     def _anwenden(self, feld, wert="__lesen__", nur_wenn_geaendert=False):
@@ -1998,7 +2016,7 @@ class EigenschaftenPalette(tk.Toplevel):
             if wert == tr("dlg.eig.verschieden"):
                 return
             if feld in ("hoehe", "winkel", "staerke"):
-                if wert == "" and feld == "staerke":
+                if feld == "staerke" and wert in ("", tr("dlg.eig.vonlayer")):
                     wert = None
                 else:
                     try:
@@ -3477,13 +3495,16 @@ class BauteilkatalogDialog(tk.Toplevel):
 # ============================================================
 # Colour dialog in the KatieCAD design with RAL Classic
 # ============================================================
+VON_LAYER = "bylayer"       # result of the colour dialog: "by layer"
+
+
 class FarbDialog(tk.Toplevel):
     """Colour picker: RAL Classic palette (by colour family), RAL number entry, hex entry and
     RGB fields. result = '#rrggbb' or None."""
 
     ZELLE = 24
 
-    def __init__(self, parent, farbe="#c29bff", titel=None):
+    def __init__(self, parent, farbe="#c29bff", titel=None, von_layer=False):
         super().__init__(parent)
         from katiecad.model import ral as RAL
         self.RAL = RAL
@@ -3586,6 +3607,9 @@ class FarbDialog(tk.Toplevel):
         bt.grid(row=1, column=0, columnspan=2, pady=(12, 0))
         ttk.Button(bt, text=tr("dlg.ok"), command=self._ok).pack(side=tk.LEFT, padx=6)
         ttk.Button(bt, text=tr("dlg.abbrechen"), command=self.destroy).pack(side=tk.LEFT, padx=6)
+        if von_layer:
+            ttk.Button(bt, text=tr("dlg.farbe.von_layer"), command=self._von_layer).pack(
+                side=tk.LEFT, padx=(18, 6))
         self.bind("<Return>", lambda ev: self._ok())
         self.bind("<Escape>", lambda ev: self.destroy())
 
@@ -3825,6 +3849,10 @@ class FarbDialog(tk.Toplevel):
         else:
             self._info.configure(text=tr("dlg.farbe.ral_unbekannt"))
 
+    def _von_layer(self):
+        self.result = VON_LAYER
+        self.destroy()
+
     def _system(self):
         _, hexc = colorchooser.askcolor(color=self._farbe, parent=self)
         if hexc:
@@ -3884,8 +3912,9 @@ class FarbDialog(tk.Toplevel):
         self.destroy()
 
 
-def farbe_waehlen(parent, farbe="#c29bff", titel=None):
-    """Opens the KatieCAD colour dialog -> '#rrggbb' or None."""
-    dlg = FarbDialog(parent, farbe, titel)
+def farbe_waehlen(parent, farbe="#c29bff", titel=None, von_layer=False):
+    """Opens the KatieCAD colour dialog -> '#rrggbb', VON_LAYER (only with von_layer=True,
+    button "By layer") or None."""
+    dlg = FarbDialog(parent, farbe, titel, von_layer)
     parent.wait_window(dlg)
     return dlg.result
