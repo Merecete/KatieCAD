@@ -1,0 +1,1562 @@
+{
+  "format": "katiecad-block",
+  "version": 1,
+  "block": {
+    "name": "Universalmessgerät",
+    "basispunkt": [
+      0.0,
+      0.0
+    ],
+    "elemente": [
+      {
+        "typ": "rechteck",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": -5.0,
+        "y1": -2.0,
+        "x2": 65.0,
+        "y2": -28.0
+      },
+      {
+        "typ": "vpunkt",
+        "layer": "E_PIN",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.25,
+        "x": 0.0,
+        "y": 0.0,
+        "inhalt": "1",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "mitte_links",
+        "tag": "VP1",
+        "prompt": "Pin 1",
+        "wert": "1",
+        "sichtbar": true,
+        "text_dx": 0.0,
+        "text_dy": 0.0,
+        "richtungen": [
+          90
+        ],
+        "radius": 0.5
+      },
+      {
+        "typ": "vpunkt",
+        "layer": "E_PIN",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.25,
+        "x": 5.0,
+        "y": 0.0,
+        "inhalt": "2",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "mitte_links",
+        "tag": "VP2",
+        "prompt": "Pin 2",
+        "wert": "2",
+        "sichtbar": true,
+        "text_dx": 0.0,
+        "text_dy": 0.0,
+        "richtungen": [
+          90
+        ],
+        "radius": 0.5
+      },
+      {
+        "typ": "vpunkt",
+        "layer": "E_PIN",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.25,
+        "x": 60.0,
+        "y": 0.0,
+        "inhalt": "6",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "mitte_links",
+        "tag": "VP3",
+        "prompt": "Pin 3",
+        "wert": "6",
+        "sichtbar": true,
+        "text_dx": 0.0,
+        "text_dy": 0.0,
+        "richtungen": [
+          90
+        ],
+        "radius": 0.5
+      },
+      {
+        "typ": "vpunkt",
+        "layer": "E_PIN",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.25,
+        "x": 55.0,
+        "y": 0.0,
+        "inhalt": "5",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "mitte_links",
+        "tag": "VP4",
+        "prompt": "Pin 4",
+        "wert": "5",
+        "sichtbar": true,
+        "text_dx": 0.0,
+        "text_dy": 0.0,
+        "richtungen": [
+          90
+        ],
+        "radius": 0.5
+      },
+      {
+        "typ": "vpunkt",
+        "layer": "E_PIN",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.25,
+        "x": 50.0,
+        "y": 0.0,
+        "inhalt": "4",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "mitte_links",
+        "tag": "VP5",
+        "prompt": "Pin 5",
+        "wert": "4",
+        "sichtbar": true,
+        "text_dx": 0.0,
+        "text_dy": 0.0,
+        "richtungen": [
+          90
+        ],
+        "radius": 0.5
+      },
+      {
+        "typ": "vpunkt",
+        "layer": "E_PIN",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.25,
+        "x": 45.0,
+        "y": 0.0,
+        "inhalt": "3",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "mitte_links",
+        "tag": "VP6",
+        "prompt": "Pin 6",
+        "wert": "3",
+        "sichtbar": true,
+        "text_dx": 0.0,
+        "text_dy": 0.0,
+        "richtungen": [
+          90
+        ],
+        "radius": 0.5
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 0.0,
+        "y1": 0.0,
+        "x2": 0.0,
+        "y2": -2.0
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 5.0,
+        "y1": 0.0,
+        "x2": 5.0,
+        "y2": -2.0
+      },
+      {
+        "typ": "text",
+        "layer": "Schrift",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": null,
+        "x": 0.0,
+        "y": -3.0,
+        "inhalt": "N/-",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "oben_zentriert"
+      },
+      {
+        "typ": "text",
+        "layer": "Schrift",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": null,
+        "x": 5.0,
+        "y": -3.0,
+        "inhalt": "L/+",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "oben_zentriert"
+      },
+      {
+        "typ": "text",
+        "layer": "Schrift",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": null,
+        "x": 45.0,
+        "y": -3.0,
+        "inhalt": "V1",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "oben_zentriert"
+      },
+      {
+        "typ": "text",
+        "layer": "Schrift",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": null,
+        "x": 50.0,
+        "y": -3.0,
+        "inhalt": "V2",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "oben_zentriert"
+      },
+      {
+        "typ": "text",
+        "layer": "Schrift",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": null,
+        "x": 55.0,
+        "y": -3.0,
+        "inhalt": "V3",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "oben_zentriert"
+      },
+      {
+        "typ": "text",
+        "layer": "Schrift",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": null,
+        "x": 60.0,
+        "y": -3.0,
+        "inhalt": "VN",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "oben_zentriert"
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 45.0,
+        "y1": 0.0,
+        "x2": 45.0,
+        "y2": -2.0
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 50.0,
+        "y1": 0.0,
+        "x2": 50.0,
+        "y2": -2.0
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 55.0,
+        "y1": 0.0,
+        "x2": 55.0,
+        "y2": -2.0
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 60.0,
+        "y1": 0.0,
+        "x2": 60.0,
+        "y2": -2.0
+      },
+      {
+        "typ": "vpunkt",
+        "layer": "E_PIN",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.25,
+        "x": 0.0,
+        "y": -30.0,
+        "inhalt": "17",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "mitte_links",
+        "tag": "VP7",
+        "prompt": "Pin 7",
+        "wert": "17",
+        "sichtbar": true,
+        "text_dx": -0.5,
+        "text_dy": 0.0,
+        "richtungen": [
+          270
+        ],
+        "radius": 0.5
+      },
+      {
+        "typ": "vpunkt",
+        "layer": "E_PIN",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.25,
+        "x": 5.0,
+        "y": -30.0,
+        "inhalt": "16",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "mitte_links",
+        "tag": "VP8",
+        "prompt": "Pin 8",
+        "wert": "16",
+        "sichtbar": true,
+        "text_dx": -0.5,
+        "text_dy": 0.0,
+        "richtungen": [
+          270
+        ],
+        "radius": 0.5
+      },
+      {
+        "typ": "vpunkt",
+        "layer": "E_PIN",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.25,
+        "x": 15.0,
+        "y": -30.0,
+        "inhalt": "15",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "mitte_links",
+        "tag": "VP9",
+        "prompt": "Pin 9",
+        "wert": "15",
+        "sichtbar": true,
+        "text_dx": -0.5,
+        "text_dy": 0.0,
+        "richtungen": [
+          270
+        ],
+        "radius": 0.5
+      },
+      {
+        "typ": "vpunkt",
+        "layer": "E_PIN",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.25,
+        "x": 20.0,
+        "y": -30.0,
+        "inhalt": "14",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "mitte_links",
+        "tag": "VP10",
+        "prompt": "Pin 10",
+        "wert": "14",
+        "sichtbar": true,
+        "text_dx": -0.5,
+        "text_dy": 0.0,
+        "richtungen": [
+          270
+        ],
+        "radius": 0.5
+      },
+      {
+        "typ": "vpunkt",
+        "layer": "E_PIN",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.25,
+        "x": 25.0,
+        "y": -30.0,
+        "inhalt": "13",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "mitte_links",
+        "tag": "VP11",
+        "prompt": "Pin 11",
+        "wert": "13",
+        "sichtbar": true,
+        "text_dx": -0.5,
+        "text_dy": 0.0,
+        "richtungen": [
+          270
+        ],
+        "radius": 0.5
+      },
+      {
+        "typ": "text",
+        "layer": "Schrift",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": null,
+        "x": 0.0,
+        "y": -28.0,
+        "inhalt": "A",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "unten_zentriert"
+      },
+      {
+        "typ": "text",
+        "layer": "Schrift",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": null,
+        "x": 5.0,
+        "y": -28.0,
+        "inhalt": "B",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "unten_zentriert"
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 0.0,
+        "y1": -30.0,
+        "x2": 0.0,
+        "y2": -28.0
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 5.0,
+        "y1": -30.0,
+        "x2": 5.0,
+        "y2": -28.0
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 15.0,
+        "y1": -30.0,
+        "x2": 15.0,
+        "y2": -28.0
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 20.0,
+        "y1": -30.0,
+        "x2": 20.0,
+        "y2": -28.0
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 25.0,
+        "y1": -30.0,
+        "x2": 25.0,
+        "y2": -28.0
+      },
+      {
+        "typ": "text",
+        "layer": "Schrift",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": null,
+        "x": 2.5,
+        "y": -25.0,
+        "inhalt": "RS485",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "unten_zentriert"
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": -1.0,
+        "y1": -25.0,
+        "x2": 6.0,
+        "y2": -25.0
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 15.0,
+        "y1": -28.0,
+        "x2": 15.0,
+        "y2": -26.5
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 13.0,
+        "y1": -26.5,
+        "x2": 17.0,
+        "y2": -26.5
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 17.0,
+        "y1": -26.5,
+        "x2": 17.0,
+        "y2": -24.5
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 17.0,
+        "y1": -24.5,
+        "x2": 13.0,
+        "y2": -24.5
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 13.0,
+        "y1": -24.5,
+        "x2": 13.0,
+        "y2": -26.5
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 20.0,
+        "y1": -28.0,
+        "x2": 20.0,
+        "y2": -26.5
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 18.0,
+        "y1": -26.5,
+        "x2": 22.0,
+        "y2": -26.5
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 22.0,
+        "y1": -26.5,
+        "x2": 22.0,
+        "y2": -24.5
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 22.0,
+        "y1": -24.5,
+        "x2": 18.0,
+        "y2": -24.5
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 18.0,
+        "y1": -24.5,
+        "x2": 18.0,
+        "y2": -26.5
+      },
+      {
+        "typ": "kreis",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "cx": 25.0,
+        "cy": -25.0,
+        "r": 2.0
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 24.0,
+        "y1": -24.435660193247827,
+        "x2": 26.0,
+        "y2": -24.435660193247827
+      },
+      {
+        "typ": "spline",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "punkte": [
+          [
+            24.0,
+            -25.435660193247827
+          ],
+          [
+            24.037168246249507,
+            -25.412556824934427
+          ],
+          [
+            24.07438179875706,
+            -25.386893415114628
+          ],
+          [
+            24.111630202232305,
+            -25.3592607425976
+          ],
+          [
+            24.14890300138495,
+            -25.330249586192622
+          ],
+          [
+            24.186189740924732,
+            -25.30045072470881
+          ],
+          [
+            24.223479965561268,
+            -25.27045493695516
+          ],
+          [
+            24.260763220004264,
+            -25.240853001741016
+          ],
+          [
+            24.29802904896337,
+            -25.212235697875485
+          ],
+          [
+            24.335266997148324,
+            -25.18519380416768
+          ],
+          [
+            24.3724666092688,
+            -25.160318099426718
+          ],
+          [
+            24.409617430034416,
+            -25.138199362461876
+          ],
+          [
+            24.44670900415494,
+            -25.119428372082268
+          ],
+          [
+            24.48373087633999,
+            -25.104595907097007
+          ],
+          [
+            24.520672591299245,
+            -25.094292746315205
+          ],
+          [
+            24.55752369374244,
+            -25.089109668546143
+          ],
+          [
+            24.59427372837925,
+            -25.089637452598822
+          ],
+          [
+            24.630465782277554,
+            -25.097323085374853
+          ],
+          [
+            24.665776867622554,
+            -25.112545012866917
+          ],
+          [
+            24.700397416800087,
+            -25.134291202521013
+          ],
+          [
+            24.734517862195815,
+            -25.161549621783195
+          ],
+          [
+            24.768328636195577,
+            -25.19330823809952
+          ],
+          [
+            24.802020171185035,
+            -25.228555018915984
+          ],
+          [
+            24.835782899549997,
+            -25.266277931678587
+          ],
+          [
+            24.86980725367613,
+            -25.3054649438335
+          ],
+          [
+            24.904283665949208,
+            -25.345104022826547
+          ],
+          [
+            24.939402568755042,
+            -25.384183136103957
+          ],
+          [
+            24.975354394479268,
+            -25.42169025111167
+          ],
+          [
+            25.01232957550772,
+            -25.456613335295685
+          ],
+          [
+            25.050518544226094,
+            -25.487940356102058
+          ],
+          [
+            25.090111733020137,
+            -25.5146592809769
+          ],
+          [
+            25.13129957427563,
+            -25.535758077366154
+          ],
+          [
+            25.174272500378322,
+            -25.55022471271576
+          ],
+          [
+            25.21913132802615,
+            -25.558861445679497
+          ],
+          [
+            25.265729934263135,
+            -25.5634260591101
+          ],
+          [
+            25.313888341993845,
+            -25.56433980675223
+          ],
+          [
+            25.36342657412277,
+            -25.562023942350834
+          ],
+          [
+            25.414164653554565,
+            -25.556899719650687
+          ],
+          [
+            25.465922603193746,
+            -25.549388392396565
+          ],
+          [
+            25.518520445945,
+            -25.539911214333358
+          ],
+          [
+            25.571778204712757,
+            -25.52888943920584
+          ],
+          [
+            25.625515902401673,
+            -25.51674432075879
+          ],
+          [
+            25.679553561916293,
+            -25.503897112737093
+          ],
+          [
+            25.73371120616116,
+            -25.490769068885527
+          ],
+          [
+            25.78780885804096,
+            -25.47778144294881
+          ],
+          [
+            25.841666540460125,
+            -25.46535548867189
+          ],
+          [
+            25.895104276323337,
+            -25.45391245979954
+          ],
+          [
+            25.947942088535115,
+            -25.443873610076594
+          ],
+          [
+            26.0,
+            -25.435660193247827
+          ]
+        ],
+        "geschlossen": false,
+        "stuetz": [
+          [
+            24.0,
+            -25.435660193247827
+          ],
+          [
+            24.59427372837925,
+            -25.089637452598822
+          ],
+          [
+            25.174272500378322,
+            -25.55022471271576
+          ],
+          [
+            26.0,
+            -25.435660193247827
+          ]
+        ]
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 20.0,
+        "y1": -24.5,
+        "x2": 20.0,
+        "y2": -22.5
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 25.0,
+        "y1": -22.0,
+        "x2": 25.0,
+        "y2": -23.0
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 15.0,
+        "y1": -24.5,
+        "x2": 15.0,
+        "y2": -22.0
+      },
+      {
+        "typ": "schraffur",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": null,
+        "punkte": [
+          [
+            20.482962913144547,
+            -22.12940952255127
+          ],
+          [
+            20.5,
+            -22.0
+          ],
+          [
+            20.482962913144547,
+            -21.87059047744873
+          ],
+          [
+            20.43301270189221,
+            -21.75
+          ],
+          [
+            20.353553390593277,
+            -21.646446609406723
+          ],
+          [
+            20.25,
+            -21.56698729810779
+          ],
+          [
+            20.12940952255127,
+            -21.517037086855453
+          ],
+          [
+            20.065263096110016,
+            -21.504277569313103
+          ],
+          [
+            19.934736903889984,
+            -21.504277569313103
+          ],
+          [
+            19.87059047744873,
+            -21.517037086855453
+          ],
+          [
+            19.75,
+            -21.56698729810779
+          ],
+          [
+            19.646446609406723,
+            -21.646446609406723
+          ],
+          [
+            19.56698729810779,
+            -21.75
+          ],
+          [
+            19.517037086855453,
+            -21.87059047744873
+          ],
+          [
+            19.504277569313103,
+            -21.934736903889984
+          ],
+          [
+            19.504277569313103,
+            -22.065263096110016
+          ],
+          [
+            19.517037086855453,
+            -22.12940952255127
+          ],
+          [
+            19.56698729810779,
+            -22.25
+          ],
+          [
+            19.646446609406723,
+            -22.353553390593277
+          ],
+          [
+            19.75,
+            -22.43301270189221
+          ],
+          [
+            19.87059047744873,
+            -22.482962913144547
+          ],
+          [
+            20.0,
+            -22.5
+          ],
+          [
+            20.12940952255127,
+            -22.482962913144547
+          ],
+          [
+            20.25,
+            -22.43301270189221
+          ],
+          [
+            20.353553390593277,
+            -22.353553390593277
+          ],
+          [
+            20.43301270189221,
+            -22.25
+          ]
+        ],
+        "muster": "solid",
+        "winkel": 45.0,
+        "abstand": 5.0
+      },
+      {
+        "typ": "kreis",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "cx": 20.0,
+        "cy": -22.0,
+        "r": 0.5
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 20.5,
+        "y1": -22.0,
+        "x2": 25.0,
+        "y2": -22.0
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 19.5,
+        "y1": -22.0,
+        "x2": 15.0,
+        "y2": -22.0
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 25.0,
+        "y1": -28.0,
+        "x2": 25.0,
+        "y2": -27.0
+      },
+      {
+        "typ": "vpunkt",
+        "layer": "E_PIN",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.25,
+        "x": 35.0,
+        "y": -30.0,
+        "inhalt": "12",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "mitte_links",
+        "tag": "VP12",
+        "prompt": "Pin 12",
+        "wert": "12",
+        "sichtbar": true,
+        "text_dx": -0.5,
+        "text_dy": 0.0,
+        "richtungen": [
+          270
+        ],
+        "radius": 0.5
+      },
+      {
+        "typ": "vpunkt",
+        "layer": "E_PIN",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.25,
+        "x": 40.0,
+        "y": -30.0,
+        "inhalt": "11",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "mitte_links",
+        "tag": "VP13",
+        "prompt": "Pin 13",
+        "wert": "11",
+        "sichtbar": true,
+        "text_dx": -0.5,
+        "text_dy": 0.0,
+        "richtungen": [
+          270
+        ],
+        "radius": 0.5
+      },
+      {
+        "typ": "vpunkt",
+        "layer": "E_PIN",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.25,
+        "x": 45.0,
+        "y": -30.0,
+        "inhalt": "10",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "mitte_links",
+        "tag": "VP14",
+        "prompt": "Pin 14",
+        "wert": "10",
+        "sichtbar": true,
+        "text_dx": -0.5,
+        "text_dy": 0.0,
+        "richtungen": [
+          270
+        ],
+        "radius": 0.5
+      },
+      {
+        "typ": "vpunkt",
+        "layer": "E_PIN",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.25,
+        "x": 50.0,
+        "y": -30.0,
+        "inhalt": "9",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "mitte_links",
+        "tag": "VP15",
+        "prompt": "Pin 15",
+        "wert": "9",
+        "sichtbar": true,
+        "text_dx": -0.5,
+        "text_dy": 0.0,
+        "richtungen": [
+          270
+        ],
+        "radius": 0.5
+      },
+      {
+        "typ": "vpunkt",
+        "layer": "E_PIN",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.25,
+        "x": 55.0,
+        "y": -30.0,
+        "inhalt": "8",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "mitte_links",
+        "tag": "VP16",
+        "prompt": "Pin 16",
+        "wert": "8",
+        "sichtbar": true,
+        "text_dx": -0.5,
+        "text_dy": 0.0,
+        "richtungen": [
+          270
+        ],
+        "radius": 0.5
+      },
+      {
+        "typ": "vpunkt",
+        "layer": "E_PIN",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.25,
+        "x": 60.0,
+        "y": -30.0,
+        "inhalt": "7",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "mitte_links",
+        "tag": "VP17",
+        "prompt": "Pin 17",
+        "wert": "7",
+        "sichtbar": true,
+        "text_dx": -0.5,
+        "text_dy": 0.0,
+        "richtungen": [
+          270
+        ],
+        "radius": 0.5
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 35.0,
+        "y1": -30.0,
+        "x2": 35.0,
+        "y2": -28.0
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 40.0,
+        "y1": -30.0,
+        "x2": 40.0,
+        "y2": -28.0
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 45.0,
+        "y1": -30.0,
+        "x2": 45.0,
+        "y2": -28.0
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 50.0,
+        "y1": -30.0,
+        "x2": 50.0,
+        "y2": -28.0
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 55.0,
+        "y1": -30.0,
+        "x2": 55.0,
+        "y2": -28.0
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 60.0,
+        "y1": -30.0,
+        "x2": 60.0,
+        "y2": -28.0
+      },
+      {
+        "typ": "text",
+        "layer": "Schrift",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": null,
+        "x": 35.0,
+        "y": -28.0,
+        "inhalt": "S2",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "unten_zentriert"
+      },
+      {
+        "typ": "text",
+        "layer": "Schrift",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": null,
+        "x": 40.0,
+        "y": -28.0,
+        "inhalt": "S1",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "unten_zentriert"
+      },
+      {
+        "typ": "text",
+        "layer": "Schrift",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": null,
+        "x": 45.0,
+        "y": -28.0,
+        "inhalt": "S2",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "unten_zentriert"
+      },
+      {
+        "typ": "text",
+        "layer": "Schrift",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": null,
+        "x": 50.0,
+        "y": -28.0,
+        "inhalt": "S1",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "unten_zentriert"
+      },
+      {
+        "typ": "text",
+        "layer": "Schrift",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": null,
+        "x": 55.0,
+        "y": -28.0,
+        "inhalt": "S2",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "unten_zentriert"
+      },
+      {
+        "typ": "text",
+        "layer": "Schrift",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": null,
+        "x": 60.0,
+        "y": -28.0,
+        "inhalt": "S1",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "unten_zentriert"
+      },
+      {
+        "typ": "text",
+        "layer": "Schrift",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": null,
+        "x": 37.5,
+        "y": -25.0,
+        "inhalt": "|3",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "unten_zentriert"
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 34.0,
+        "y1": -25.0,
+        "x2": 41.0,
+        "y2": -25.0
+      },
+      {
+        "typ": "text",
+        "layer": "Schrift",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": null,
+        "x": 47.5,
+        "y": -25.0,
+        "inhalt": "|2",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "unten_zentriert"
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 44.0,
+        "y1": -25.0,
+        "x2": 51.0,
+        "y2": -25.0
+      },
+      {
+        "typ": "text",
+        "layer": "Schrift",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": null,
+        "x": 57.5,
+        "y": -25.0,
+        "inhalt": "|1",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "unten_zentriert"
+      },
+      {
+        "typ": "linie",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.35,
+        "x1": 54.0,
+        "y1": -25.0,
+        "x2": 61.0,
+        "y2": -25.0
+      },
+      {
+        "typ": "maske",
+        "layer": "E_DEVICES",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": null,
+        "x": -6.0,
+        "y": -12.0,
+        "versatz": {},
+        "werte": {
+          "IND": "-P",
+          "TYP": "TYP",
+          "PER": "PER"
+        },
+        "ausgeblendet": [],
+        "platzhalter": true,
+        "rolle": "haupt",
+        "spiegel": "liste",
+        "sp_dx": 0.0,
+        "sp_dy": 0.0
+      }
+    ]
+  }
+}

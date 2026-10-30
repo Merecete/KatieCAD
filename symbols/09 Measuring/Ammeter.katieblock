@@ -2,7 +2,7 @@
   "format": "katiecad-block",
   "version": 1,
   "block": {
-    "name": "Ammeter",
+    "name": "Amperemeter",
     "basispunkt": [
       0.0,
       0.0
@@ -15,10 +15,10 @@
         "linientyp": "Volllinie (schmal)",
         "eig_farbe": true,
         "staerke": 0.35,
-        "x1": 0,
-        "y1": 7.5,
-        "x2": 0,
-        "y2": 3.5
+        "x1": 0.0,
+        "y1": 0.0,
+        "x2": 0.0,
+        "y2": -4.0
       },
       {
         "typ": "linie",
@@ -27,10 +27,10 @@
         "linientyp": "Volllinie (schmal)",
         "eig_farbe": true,
         "staerke": 0.35,
-        "x1": 0,
-        "y1": -3.5,
-        "x2": 0,
-        "y2": -7.5
+        "x1": 0.0,
+        "y1": -11.0,
+        "x2": 0.0,
+        "y2": -15.0
       },
       {
         "typ": "kreis",
@@ -39,8 +39,8 @@
         "linientyp": "Volllinie (schmal)",
         "eig_farbe": true,
         "staerke": 0.35,
-        "cx": 0,
-        "cy": 0,
+        "cx": 0.0,
+        "cy": -7.5,
         "r": 3.5
       },
       {
@@ -50,8 +50,8 @@
         "linientyp": "Volllinie (schmal)",
         "eig_farbe": true,
         "staerke": null,
-        "x": 0,
-        "y": 0,
+        "x": 0.0,
+        "y": -7.5,
         "inhalt": "A",
         "hoehe": 3.0,
         "winkel": 0.0,
@@ -65,8 +65,8 @@
         "linientyp": "Volllinie (schmal)",
         "eig_farbe": true,
         "staerke": 0.25,
-        "x": 0,
-        "y": 7.5,
+        "x": 0.0,
+        "y": 0.0,
         "inhalt": "1",
         "hoehe": 2.0,
         "winkel": 0.0,
@@ -76,7 +76,11 @@
         "prompt": "Pin 1",
         "wert": "1",
         "sichtbar": true,
-        "richtungen": null,
+        "text_dx": 0.0,
+        "text_dy": 0.0,
+        "richtungen": [
+          90
+        ],
         "radius": 0.5
       },
       {
@@ -86,8 +90,8 @@
         "linientyp": "Volllinie (schmal)",
         "eig_farbe": true,
         "staerke": 0.25,
-        "x": 0,
-        "y": -7.5,
+        "x": 0.0,
+        "y": -15.0,
         "inhalt": "2",
         "hoehe": 2.0,
         "winkel": 0.0,
@@ -97,7 +101,11 @@
         "prompt": "Pin 2",
         "wert": "2",
         "sichtbar": true,
-        "richtungen": null,
+        "text_dx": 0.0,
+        "text_dy": 0.0,
+        "richtungen": [
+          270
+        ],
         "radius": 0.5
       },
       {
@@ -108,14 +116,15 @@
         "eig_farbe": true,
         "staerke": null,
         "x": -4.5,
-        "y": -5.0,
+        "y": -12.5,
+        "versatz": {},
         "werte": {
-          "IND": "IND",
+          "IND": "-P",
           "TYP": "TYP",
           "PER": "PER"
         },
         "ausgeblendet": [],
-        "platzhalter": true,
+        "platzhalter": false,
         "rolle": "haupt",
         "spiegel": "liste",
         "sp_dx": 0.0,
