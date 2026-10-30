@@ -2,7 +2,7 @@
   "format": "katiecad-block",
   "version": 1,
   "block": {
-    "name": "Motor Gleichstrom",
+    "name": "Motor Gleich",
     "basispunkt": [
       0.0,
       0.0
@@ -44,32 +44,7 @@
         "x1": 0.0,
         "y1": 0.0,
         "x2": 0.0,
-        "y2": -3.0456439426821404
-      },
-      {
-        "typ": "vpunkt",
-        "layer": "0",
-        "farbe": "#c29bff",
-        "linientyp": "Volllinie (schmal)",
-        "eig_farbe": true,
-        "staerke": 0.25,
-        "x": 0.0,
-        "y": 0.0,
-        "inhalt": "A1",
-        "hoehe": 2.0,
-        "winkel": 0.0,
-        "schriftart": "Arial",
-        "einfuegepunkt": "mitte_links",
-        "tag": "VP1",
-        "prompt": "Pin 1",
-        "wert": "A1",
-        "sichtbar": true,
-        "text_dx": 0.0,
-        "text_dy": 0.0,
-        "richtungen": [
-          90
-        ],
-        "radius": 0.5
+        "y2": -3.0456439426821476
       },
       {
         "typ": "linie",
@@ -81,7 +56,7 @@
         "x1": 5.0,
         "y1": 0.0,
         "x2": 5.0,
-        "y2": -3.0456439426821404
+        "y2": -3.0456439426821476
       },
       {
         "typ": "vpunkt",
@@ -97,11 +72,11 @@
         "winkel": 0.0,
         "schriftart": "Arial",
         "einfuegepunkt": "mitte_links",
-        "tag": "VP2",
-        "prompt": "Pin 2",
+        "tag": "VP1",
+        "prompt": "Pin 1",
         "wert": "A2",
         "sichtbar": true,
-        "text_dx": 0.0,
+        "text_dx": -0.5,
         "text_dy": 0.0,
         "richtungen": [
           90
@@ -165,6 +140,31 @@
         "y1": -11.0,
         "x2": 5.0,
         "y2": -11.0
+      },
+      {
+        "typ": "vpunkt",
+        "layer": "0",
+        "farbe": "#c29bff",
+        "linientyp": "Volllinie (schmal)",
+        "eig_farbe": true,
+        "staerke": 0.25,
+        "x": 0.0,
+        "y": 0.0,
+        "inhalt": "A1",
+        "hoehe": 2.0,
+        "winkel": 0.0,
+        "schriftart": "Arial",
+        "einfuegepunkt": "mitte_links",
+        "tag": "VP2",
+        "prompt": "Pin 2",
+        "wert": "A1",
+        "sichtbar": true,
+        "text_dx": -0.5,
+        "text_dy": 0.0,
+        "richtungen": [
+          90
+        ],
+        "radius": 0.5
       }
     ]
   }
