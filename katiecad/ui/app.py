@@ -3067,6 +3067,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         modi = self.osnap_modi
         kand = []
         segs = []
+        kurven = []          # circles / arcs: (cx, cy, r, start|None, end|None) for intersections
 
         def sammle(x, y, typ, prio):
             d = math.hypot(x - mx, y - my)
@@ -3155,6 +3156,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                 for i in range(len(pts) - 1):
                     seg(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1])
             elif isinstance(el, Kreis):
+                kurven.append((el.cx, el.cy, el.r, None, None))
                 zentrum(el.cx, el.cy)
                 for (dx, dy) in ((1, 0), (-1, 0), (0, 1), (0, -1)):
                     quadrant(el.cx + dx * el.r, el.cy + dy * el.r)
@@ -3164,6 +3166,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                         sammle(el.cx + (mx - el.cx) / d * el.r,
                                el.cy + (my - el.cy) / d * el.r, "naechster", 5)
             elif isinstance(el, Bogen):
+                kurven.append((el.cx, el.cy, el.r, el.start, el.ende))
                 zentrum(el.cx, el.cy)
                 for a in (el.start, el.ende):
                     ende(el.cx + el.r * math.cos(math.radians(a)),
@@ -3212,6 +3215,20 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                     sp = linien_schnitt(*nah[i], *nah[j])
                     if sp:
                         sammle(sp[0], sp[1], "schnittpunkt", 3)
+            # circles / arcs: line x curve and curve x curve
+            nk = [k for k in kurven
+                  if abs(math.hypot(mx - k[0], my - k[1]) - k[2]) <= tol * 2 + 1e-9
+                  or any(abstand_punkt_segment(mx, my, *s) <= tol for s in nah)][:20]
+            for k in nk:
+                for s in nah:
+                    for (px, py) in self._segment_kreis_schnitt(*s, k[0], k[1], k[2]):
+                        if self._punkt_auf_kurve(k, px, py):
+                            sammle(px, py, "schnittpunkt", 3)
+            for i in range(len(nk)):
+                for j in range(i + 1, len(nk)):
+                    for (px, py) in self._kreis_kreis_schnitt(nk[i], nk[j]):
+                        if self._punkt_auf_kurve(nk[i], px, py) and self._punkt_auf_kurve(nk[j], px, py):
+                            sammle(px, py, "schnittpunkt", 3)
 
         if not kand:
             return None
@@ -3990,6 +4007,32 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             for i in range(len(pts) - 1):
                 segs.append((pts[i], pts[i + 1]))
         return segs
+
+    @staticmethod
+    def _punkt_auf_kurve(k, px, py):
+        """True if the point (on the circle) lies on the arc (circles: always)."""
+        if k[3] is None:
+            return True
+        w = math.degrees(math.atan2(py - k[1], px - k[0]))
+        return winkel_im_bogen(w, k[3], k[4])
+
+    @staticmethod
+    def _kreis_kreis_schnitt(k1, k2):
+        """Intersection points of the two full circles (cx, cy, r, ...)."""
+        x1, y1, r1 = k1[0], k1[1], k1[2]
+        x2, y2, r2 = k2[0], k2[1], k2[2]
+        d = math.hypot(x2 - x1, y2 - y1)
+        if d < 1e-9 or d > r1 + r2 + 1e-9 or d < abs(r1 - r2) - 1e-9:
+            return []
+        a = (r1 * r1 - r2 * r2 + d * d) / (2 * d)
+        h2 = r1 * r1 - a * a
+        h = math.sqrt(h2) if h2 > 0 else 0.0
+        mx_, my_ = x1 + a * (x2 - x1) / d, y1 + a * (y2 - y1) / d
+        ox, oy = -(y2 - y1) / d * h, (x2 - x1) / d * h
+        pts = [(mx_ + ox, my_ + oy)]
+        if h > 1e-9:
+            pts.append((mx_ - ox, my_ - oy))
+        return pts
 
     def _segment_kreis_schnitt(self, x1, y1, x2, y2, cx, cy, r):
         dx, dy = x2 - x1, y2 - y1

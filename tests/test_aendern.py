@@ -74,6 +74,26 @@ ln = core.Linie(0, 0, 10, 0); kr = core.Kreis(5, 5, 2)
 A.CadApp.ausrichten_2p_anwenden([ln, kr], (100, 50), 100, 50, 90.0, 1.0)
 check([round(v, 6) for v in (ln.x1, ln.y1, ln.x2, ln.y2)] == [100, 50, 100, 60] and (round(kr.cx, 6), round(kr.cy, 6)) == (95, 55), "ALIGN: anwenden dreht um den 1. Zielpunkt")
 check(core.BEFEHLE["ALIGN"] == "ausrichten2p" and core.BEFEHLE["AUSRICHTEN"] == "ausrichten2p" and core.BEFEHLE["AL"] == "ausrichten2p", "ALIGN: Befehle")
+# ---- Objektfang: Schnittpunkte mit Kreisen/Boegen
+import math as _m
+a.osnap_modi = {k: Var() for k in ("endpunkt", "mittelpunkt", "zentrum", "quadrant", "schnittpunkt", "naechster", "lot")}
+for k, v in a.osnap_modi.items(): v.set(k == "schnittpunkt")
+a._snap_ausschluss = None; a.layers = {"0": core.Layer("0")}
+kr = core.Kreis(0, 0, 10); ln = core.Linie(0, -20, 0, 20)
+t = a._finde_snap_in_liste([kr, ln], 0.2, 10.1, 2.0)
+check(t is not None and t[2] == "schnittpunkt" and abs(t[0]) < 1e-9 and abs(t[1] - 10) < 1e-9, f"Schnitt Linie x Kreis oben {t}")
+t = a._finde_snap_in_liste([kr, ln], 0.2, -9.9, 2.0)
+check(t is not None and abs(t[1] + 10) < 1e-9, "Schnitt Linie x Kreis unten")
+kr2 = core.Kreis(10, 0, 10)
+t = a._finde_snap_in_liste([kr, kr2], 5.1, 8.5, 2.0)
+check(t is not None and abs(t[0] - 5) < 1e-9 and abs(abs(t[1]) - _m.sqrt(75)) < 1e-9, f"Schnitt Kreis x Kreis {t}")
+bg = core.Bogen(0, 0, 10, 0, 90)                        # quarter circle top right
+t = a._finde_snap_in_liste([bg, core.Linie(-20, 0.0001, 20, 0.0001)], 10.0, 0.2, 2.0)
+check(t is not None and abs(t[0] - 10) < 1e-3, "Schnitt Bogen x Linie am Bogenende")
+t = a._finde_snap_in_liste([bg, core.Linie(-20, 0.0001, 20, 0.0001)], -10.0, 0.2, 2.0)
+check(t is None, "kein Schnitt ausserhalb des Bogens")
+t = a._finde_snap_in_liste([core.Kreis(0, 0, 10), core.Linie(30, 0, 40, 0)], 10.1, 0.0, 2.0)
+check(t is None, "kein Schnitt, wenn die Linie den Kreis nicht trifft")
 # ---- Von Layer: Staerke der neuen Objekte
 a.linienstaerke = Var(); a.linienstaerke.set("0,5"); check(a._staerke_neu() == 0.5, "Staerke 0,5")
 a.linienstaerke.set(katiecad_i18n.tr("tb.von_layer")); check(a._staerke_neu() is None, "Staerke Von Layer = None")

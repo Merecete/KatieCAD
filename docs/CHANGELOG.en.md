@@ -5,6 +5,7 @@
 - New symbols: category "11 Installation" (socket 1-/2-pole, with protective contact, CEE 4-/5-pole, luminaire) and emergency stop (1- and 2-channel)
 - New: **By layer** for colour and weight - check box and button in the colour dialog, "By layer" in the weight list of the toolbar, in the properties window and in the properties palette
 - New: **Align at two points** (`ALIGN` / `AUSRICHTEN` / `AL`) like in AutoCAD: source/destination points, move, rotate and optional scale, with preview; the former edge commands stay `AUSLINKS`, `AUSRECHTS`, `AUSOBEN`, `AUSUNTEN`, `AUSMITTEH`, `AUSMITTEV`
+- Object snap **Intersection** now also finds intersections of lines, rectangle and polyline edges with **circles and arcs** and of circles/arcs with each other (before: line x line only)
 - Version jump to 1.1.1
 
 ## 1.1.0

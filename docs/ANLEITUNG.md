@@ -64,7 +64,7 @@ Nächstes erwartet. **ESC** bricht den aktuellen Vorgang ab.
 
 | Taste | Funktion |
 |---|---|
-| F3 | Objektfang (Endpunkt, Mittelpunkt, Zentrum, Schnittpunkt, Quadrant, Lot, Nächster) |
+| F3 | Objektfang (Endpunkt, Mittelpunkt, Zentrum, Schnittpunkt – auch Linie × Kreis/Bogen und Kreis × Kreis –, Quadrant, Lot, Nächster) |
 | F7 | Raster anzeigen |
 | F8 | Ortho (nur waagerecht / senkrecht) |
 | F9 | Rasterfang |

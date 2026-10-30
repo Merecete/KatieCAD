@@ -64,7 +64,7 @@ The hint in the status bar always tells you what the active tool expects next.
 
 | Key | Function |
 |---|---|
-| F3 | Object snap (endpoint, midpoint, centre, intersection, quadrant, perpendicular, nearest) |
+| F3 | Object snap (endpoint, midpoint, centre, intersection - also line x circle/arc and circle x circle -, quadrant, perpendicular, nearest) |
 | F7 | Show grid |
 | F8 | Ortho (horizontal / vertical only) |
 | F9 | Grid snap |
