@@ -214,7 +214,7 @@ A **block** is a reusable group of objects (for example a symbol). **Blocks** me
 - **Define attribute (ATTDEF)**: a text field inside the symbol whose value differs
   per inserted block. Select it together with the symbol geometry and create the
   block. KatieCAD asks for the values on insertion. **Edit attributes (ATTEDIT)**
-  changes them later.
+  changes them later. For devices with very many pins (e.g. 16-channel PLC modules) the list in the window is **scrollable** (mouse wheel or bar on the right); OK and Cancel always stay visible.
 
 ## 8. Electrical: drawing a schematic
 

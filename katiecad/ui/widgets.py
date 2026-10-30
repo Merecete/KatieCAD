@@ -9,6 +9,7 @@ on it.
 """
 
 import tkinter as tk
+from tkinter import ttk
 
 from katiecad.model.core import FARBEN
 
@@ -146,3 +147,86 @@ class Tooltip:
             except tk.TclError:
                 pass
             self._fenster = None
+
+
+class ScrollFrame(ttk.Frame):
+    """Frame with a vertical scroll bar for dialogs with many rows.
+
+    Put the content into `.inner`. After building it call `anpassen(max_hoehe)`: the visible
+    height becomes min(content, max_hoehe), the scroll bar only shows when needed. The mouse
+    wheel scrolls while the pointer is over the area; tabbing into a hidden entry scrolls to it."""
+
+    def __init__(self, parent, bg=None, breite=None):
+        super().__init__(parent)
+        self._cv = tk.Canvas(self, bg=bg or FARBEN["bg_mittel"], highlightthickness=0,
+                             borderwidth=0, width=breite or 1, height=1)
+        self._sb = ttk.Scrollbar(self, orient=tk.VERTICAL, command=self._cv.yview)
+        self._cv.configure(yscrollcommand=self._sb.set)
+        self._cv.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.inner = ttk.Frame(self._cv)
+        self._fenster = self._cv.create_window(0, 0, window=self.inner, anchor=tk.NW)
+        self.inner.bind("<Configure>", self._inhalt_geaendert)
+        self._cv.bind("<Configure>", lambda e: self._cv.itemconfigure(self._fenster, width=e.width))
+        for w in (self._cv, self.inner):
+            w.bind("<Enter>", self._rad_an)
+            w.bind("<Leave>", self._rad_aus)
+        self.inner.bind_all("<FocusIn>", self._fokus, add="+")
+        self._sb_sichtbar = False
+
+    def _inhalt_geaendert(self, _e=None):
+        self._cv.configure(scrollregion=self._cv.bbox("all"))
+
+    def anpassen(self, max_hoehe):
+        """Visible height = content height, at most `max_hoehe` pixels."""
+        self.update_idletasks()
+        h = self.inner.winfo_reqheight()
+        self._cv.configure(width=self.inner.winfo_reqwidth(), height=min(h, max(120, int(max_hoehe))))
+        scroll = h > max_hoehe
+        if scroll and not self._sb_sichtbar:
+            self._sb.pack(side=tk.RIGHT, fill=tk.Y)
+            self._sb_sichtbar = True
+        elif not scroll and self._sb_sichtbar:
+            self._sb.pack_forget()
+            self._sb_sichtbar = False
+        self._inhalt_geaendert()
+
+    # ---- mouse wheel (only while the pointer is inside)
+    def _rad_an(self, _e=None):
+        self._cv.bind_all("<MouseWheel>", self._rad, add="+")
+        self._cv.bind_all("<Button-4>", self._rad, add="+")
+        self._cv.bind_all("<Button-5>", self._rad, add="+")
+
+    def _rad_aus(self, _e=None):
+        for ev in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+            try:
+                self._cv.unbind_all(ev)
+            except tk.TclError:
+                pass
+
+    def _rad(self, e):
+        if not self._sb_sichtbar:
+            return
+        if getattr(e, "num", 0) == 4 or getattr(e, "delta", 0) > 0:
+            self._cv.yview_scroll(-3, "units")
+        else:
+            self._cv.yview_scroll(3, "units")
+
+    def _fokus(self, e):
+        """Scrolls a focused widget of the inner frame into view."""
+        w = e.widget
+        try:
+            if not self._sb_sichtbar or not str(w).startswith(str(self.inner)):
+                return
+            self.update_idletasks()
+            y = w.winfo_rooty() - self.inner.winfo_rooty()
+            h = w.winfo_height()
+            gesamt = max(1, self.inner.winfo_height())
+            oben = self._cv.canvasy(0)
+            sicht = self._cv.winfo_height()
+            if y < oben:
+                self._cv.yview_moveto(y / gesamt)
+            elif y + h > oben + sicht:
+                self._cv.yview_moveto((y + h - sicht) / gesamt)
+        except tk.TclError:
+            pass
+

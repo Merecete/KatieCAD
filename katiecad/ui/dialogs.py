@@ -27,7 +27,7 @@ from katiecad.model.core import (
     parse_massstab, massstab_text,
 )
 from katiecad.model.project import name_pruefen
-from katiecad.ui.widgets import farb_swatch
+from katiecad.ui.widgets import farb_swatch, ScrollFrame
 
 
 def _grab_versuchen(dlg, versuche=40):
@@ -1656,10 +1656,13 @@ class BlockAttributeDialog(tk.Toplevel):
         self.transient(parent)
         _modal(self)
         self.configure(bg=FARBEN["bg_mittel"])
-        self.resizable(False, False)
+        self.resizable(False, True)
 
-        f = ttk.Frame(self, padding=14)
-        f.pack(fill=tk.BOTH, expand=True)
+        aussen = ttk.Frame(self, padding=14)
+        aussen.pack(fill=tk.BOTH, expand=True)
+        self._scroll = ScrollFrame(aussen)           # many rows (e.g. PLC modules): scrollable
+        self._scroll.pack(fill=tk.BOTH, expand=True)
+        f = self._scroll.inner
         self._vars = {}
         self._sicht = {}
         self._entries = []
@@ -1717,8 +1720,8 @@ class BlockAttributeDialog(tk.Toplevel):
                                 variable=self._v_spiegel).pack(anchor=tk.W)
             zeile += 1
 
-        bf = ttk.Frame(f)
-        bf.grid(row=zeile + 1, column=0, columnspan=3, pady=(10, 0))
+        bf = ttk.Frame(aussen)                        # buttons stay visible
+        bf.pack(pady=(10, 0))
         ttk.Button(bf, text=tr("dlg.ok"), command=self._ok).pack(
             side=tk.LEFT, padx=4)
         ttk.Button(bf, text=tr("dlg.abbrechen"),
@@ -1728,6 +1731,9 @@ class BlockAttributeDialog(tk.Toplevel):
         if self._entries:
             self._entries[0].focus_set()
             self._entries[0].select_range(0, tk.END)
+        self.update_idletasks()
+        max_h = int(self.winfo_screenheight() * 0.75) - 110
+        self._scroll.anpassen(max_h)
         _zentrieren(self, parent)
         self.wait_window(self)
 
