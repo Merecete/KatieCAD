@@ -121,6 +121,17 @@ ap.blatt_wechseln = wechsel; ap._ist_layout = lambda: False
 dl.tree.identify_row = lambda y: "1"
 dl.springen(NS(y=2))
 check(ap.projekt.aktiv == 1 and ap.zu_element_springen.call_args[0][0] is ap.elemente[0], "Springen: wechselt das Blatt und waehlt das Objekt")
+# ---- search/replace only in the selection
+ap.projekt.aktiv = 0
+t1, t2 = core.Text(0, 0, "Motor A"), core.Text(5, 5, "Motor B")
+ap.elemente = [t1, t2]; ap.auswahl = [t2]
+dl.v_such = NS(get=lambda: "Motor"); dl.v_neu = NS(get=lambda: "Pumpe"); dl.v_bereich = NS(get=lambda: "auswahl")
+dl._stand = 0; dl.suchen()
+check(len(dl._treffer) == 1 and dl._treffer[0].element is t2, "Nur Auswahl: nur das markierte Objekt wird gefunden")
+dl.ersetzen(nur_auswahl=False)
+check(t1.inhalt == "Motor A" and t2.inhalt == "Pumpe B", "Nur Auswahl: ersetzt nur im markierten Objekt")
+ap.auswahl = []; dl.v_status = MagicMock(); dl.suchen()
+check(dl._treffer == [] and dl.v_status.set.call_args[0][0] == katiecad_i18n.tr("dlg.sr.keine_auswahl"), "Nur Auswahl ohne Markierung: Hinweis")
 shutil.rmtree(tmp, ignore_errors=True)
 
 # ---- Match properties

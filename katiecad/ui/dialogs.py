@@ -3114,7 +3114,8 @@ class SuchenErsetzenDialog(tk.Toplevel):
         self.v_gross = tk.BooleanVar(value=False)
         self.v_wort = tk.BooleanVar(value=False)
         hat_projekt = app.projekt is not None
-        self.v_bereich = tk.StringVar(value="projekt" if hat_projekt else "blatt")
+        self.v_bereich = tk.StringVar(value="auswahl" if app.auswahl else (
+            "projekt" if hat_projekt else "blatt"))
         ttk.Label(f, text=tr("dlg.sr.suchen")).grid(row=0, column=0, sticky=tk.W, pady=3)
         e1 = ttk.Entry(f, textvariable=self.v_such, width=40)
         e1.grid(row=0, column=1, columnspan=3, sticky=tk.EW)
@@ -3133,6 +3134,8 @@ class SuchenErsetzenDialog(tk.Toplevel):
         rb.grid(row=3, column=2, sticky=tk.W)
         if not hat_projekt:
             rb.state(["disabled"])
+        ttk.Radiobutton(f, text=tr("dlg.sr.auswahl"), value="auswahl",
+                        variable=self.v_bereich).grid(row=3, column=3, sticky=tk.W, padx=(8, 0))
         spalten = ("blatt", "objekt", "feld", "text", "neu")
         self.tree = ttk.Treeview(f, columns=spalten, show="headings",
                                  height=12, selectmode="extended")
@@ -3238,9 +3241,14 @@ class SuchenErsetzenDialog(tk.Toplevel):
         app = self.app
         app._blatt_sichern()
         self._stand = app.projekt.aktiv if app.projekt is not None else 0
+        nur_auswahl = self.v_bereich.get() == "auswahl"
+        if nur_auswahl and not app.auswahl:
+            self.v_status.set(tr("dlg.sr.keine_auswahl"))
+            return
         self._treffer, self._daten = SU.suche_projekt(
-            app.projekt, app.elemente, such, self.v_gross.get(),
-            self.v_wort.get(), self.v_bereich.get() == "projekt", self._lade)
+            app.projekt, list(app.auswahl) if nur_auswahl else app.elemente, such,
+            self.v_gross.get(), self.v_wort.get(),
+            self.v_bereich.get() == "projekt", self._lade)
         neu = self.v_neu.get()
         for i, t in enumerate(self._treffer):
             self.tree.insert("", "end", iid=str(i), values=(
