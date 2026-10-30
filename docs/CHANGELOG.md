@@ -3,6 +3,8 @@
 ## 1.1.1
 - Neu: **Projekt › Listen als Excel-Datei exportieren…** – Auswahl der Listen, eine .xlsx mit einem Tabellenblatt je Liste (ohne Zusatzbibliothek)
 - Neue Symbole: Kategorie „11 Installation“ (Steckdose 1-/2-polig, mit Schutzkontakt, CEE 4-/5-polig, Leuchte) und Not-Halt (1- und 2-kanalig)
+- Neu: **Von Layer** für Farbe und Stärke – Haken „Von Layer“ und Knopf im Farbdialog, „Von Layer“ in der Stärke-Auswahl der Leiste, im Eigenschaften-Fenster und in der Eigenschaftenpalette
+- Neu: **Ausrichten an zwei Punkten** (`AUSRICHTEN` / `ALIGN` / `AL`) wie in AutoCAD: Quell-/Zielpunkte, Verschieben, Drehen und optional Skalieren, mit Vorschau; die bisherigen Kanten-Befehle heißen weiter `AUSLINKS`, `AUSRECHTS`, `AUSOBEN`, `AUSUNTEN`, `AUSMITTEH`, `AUSMITTEV`
 - Versionssprung auf 1.1.1
 
 ## 1.1.0

@@ -105,7 +105,9 @@ line weight in the toolbar.
 
 **Change length (Edit > Change length, toolbar, command `LAENGE`):** click the line near the end that is to change. Then either click the new end (it is projected onto the line direction, object snap works) or type the change in the input line: `+5` lengthens by 5, `-5` shortens by 5, `=50` sets the length to 50 (project unit). Then click the next line or ESC.
 
-**Align (Edit > Align, commands `AUSLINKS`, `AUSRECHTS`, `AUSOBEN`, `AUSUNTEN`, `AUSMITTEH`, `AUSMITTEV`):** select at least two objects; they are moved to the left/right/top/bottom edge or the centre of the whole selection box.
+**Align at two points (Edit > Align > At two points, command `ALIGN` / `AUSRICHTEN` / `AL`, as in AutoCAD):** select objects (Enter), then **1st source point** (a point on the object) → **1st destination point**, **2nd source point** → **2nd destination point**. With one point pair only (Enter at the 2nd source point) the objects are simply moved; with two pairs they are also rotated about the 1st destination point so that the line source 1-2 points along destination 1-2. Finally the program asks "Scale objects based on alignment points?" (default **No**); with **Yes** they are scaled so that both distances are equal. Object snap, ortho and typed coordinates work as for Move, a preview shows the result; locked in 3D.
+
+**Align edges (Edit > Align, commands `AUSLINKS`, `AUSRECHTS`, `AUSOBEN`, `AUSUNTEN`, `AUSMITTEH`, `AUSMITTEV`):** select at least two objects; they are moved to the left/right/top/bottom edge or the centre of the whole selection box.
 
 **Manipulator (Edit > Manipulator, toolbar, command `MANIP`):** switches an axis cross on the selection on/off. Click the **red X arrow** or the **green Y arrow**: the object moves only along that axis. When you click the target point only its component along the axis counts - even if the object snap hits a point beside the axis, the device stays on its line. Or type the distance (`25`, `-10`). The **yellow square** moves freely. ESC cancels.
 
@@ -379,6 +381,8 @@ On the Mac, Cmd replaces Ctrl.
 **Moving the contact mirror:** Select the device - a yellow grip appears at the upper left of the mirror. Drag it to move the mirror freely; the position stays relative to the device. It is reset when the display mode is changed.
 
 ## Properties (Ctrl+1)
+**By layer (colour and weight):** the colour area of the toolbar has a **By layer** check box next to the colour field, and the colour dialog has a **By layer** button: new objects then take the colour of the current layer (the colour field shows it). In the **Weight** list **By layer** is the first entry: the line weight then comes from the layer and follows it. With a selection, changing the weight applies it to existing objects too; the properties window (double-click) and the properties palette (Ctrl+1) offer the same "By layer" choice.
+
 Edit › Properties opens a window for the current selection, also mixed (lines, texts, symbols ...): layer, colour (or "By layer"), linetype, line weight and - as soon as texts are included - text height, angle and font. Differing values show as *VARIES*; a change applies at once to all selected objects.
 
 ## Scale and mirror

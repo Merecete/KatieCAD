@@ -104,7 +104,9 @@ und Farbe, Linienart und Linienstärke in der Werkzeugleiste.
 
 **Länge ändern (Bearbeiten › Länge ändern, Werkzeugleiste, Befehl `LAENGE`):** Linie nahe an dem Ende anklicken, das sich ändern soll. Dann entweder das neue Ende anklicken (es wird auf die Linienrichtung projiziert, Objektfang darf benutzt werden) oder die Änderung in die Eingabezeile tippen: `+5` verlängert um 5, `-5` kürzt um 5, `=50` setzt die Länge auf 50 (Einheit wie im Projekt). Danach die nächste Linie anklicken oder ESC.
 
-**Ausrichten (Bearbeiten › Ausrichten, Befehle `AUSLINKS`, `AUSRECHTS`, `AUSOBEN`, `AUSUNTEN`, `AUSMITTEH`, `AUSMITTEV`):** mindestens zwei Objekte markieren; sie werden an die linke/rechte/obere/untere Kante oder die Mitte des gesamten Auswahlrahmens verschoben.
+**Ausrichten an zwei Punkten (Bearbeiten › Ausrichten › An zwei Punkten, Befehl `AUSRICHTEN` / `ALIGN` / `AL`, wie in AutoCAD):** Objekte wählen (Enter), dann **1. Quellpunkt** (Punkt am Objekt) → **1. Zielpunkt**, **2. Quellpunkt** → **2. Zielpunkt**. Mit nur einem Punktepaar (Enter beim 2. Quellpunkt) wird das Objekt einfach verschoben; mit zwei Paaren wird es zusätzlich um den 1. Zielpunkt so gedreht, dass die Linie Quellpunkt 1–2 in Richtung Zielpunkt 1–2 zeigt. Zum Schluss fragt das Programm „Objekte anhand der Ausrichtepunkte skalieren?“ (Standard **Nein**); bei **Ja** werden sie zusätzlich so skaliert, dass beide Strecken gleich lang sind. Objektfang, Ortho und Eingabe von Koordinaten gehen wie bei Verschieben, eine Vorschau zeigt das Ergebnis; in 3D gesperrt.
+
+**Kanten ausrichten (Bearbeiten › Ausrichten, Befehle `AUSLINKS`, `AUSRECHTS`, `AUSOBEN`, `AUSUNTEN`, `AUSMITTEH`, `AUSMITTEV`):** mindestens zwei Objekte markieren; sie werden an die linke/rechte/obere/untere Kante oder die Mitte des gesamten Auswahlrahmens verschoben.
 
 **Manipulator (Bearbeiten › Manipulator, Werkzeugleiste, Befehl `MANIP`):** Schaltet ein Achsenkreuz an der Auswahl ein/aus. Auf den **roten X-Pfeil** oder den **grünen Y-Pfeil** klicken: Das Objekt bewegt sich nur auf dieser Achse. Beim Klick auf den Zielpunkt zählt nur der Anteil in Achsrichtung – auch wenn der Objektfang einen Punkt neben der Achse trifft, bleibt das Gerät auf seiner Flucht. Alternativ den Abstand tippen (`25`, `-10`). Das **gelbe Quadrat** verschiebt frei. ESC bricht ab.
 
@@ -392,6 +394,8 @@ gleichem Kennzeichen ermittelt; Schließer/Öffner/Wechsler aus den Pin-Bezeichn
 **Kontaktspiegel verschieben:** Das Gerät markieren – am Kontaktspiegel erscheint ein gelber Griff (oben links). Ziehen verschiebt den Spiegel frei; die Lage bleibt relativ zum Gerät erhalten. Beim Wechsel der Darstellung wird die Position zurückgesetzt.
 
 ## Eigenschaften (Strg+1)
+**Von Layer (Farbe und Stärke):** In der Leiste „Farbe“ gibt es neben dem Farbfeld den Haken **Von Layer**, und im Farbdialog den Knopf **Von Layer**: Neue Objekte übernehmen dann die Farbe des aktuellen Layers (das Farbfeld zeigt sie an). In der Auswahlliste **Stärke** steht **Von Layer** als erster Eintrag: Die Linienstärke kommt dann vom Layer und ändert sich mit ihm. Auswahl markieren und Stärke/Farbe ändern wirkt auch auf vorhandene Objekte; im Eigenschaften-Fenster (Doppelklick) und in der Eigenschaftenpalette (Strg+1) gibt es dieselbe Auswahl „Von Layer“.
+
 Bearbeiten › Eigenschaften öffnet ein Fenster für die aktuelle Auswahl – auch gemischt (Linien, Texte, Symbole …): Layer, Farbe (oder „Von Layer“), Linientyp, Linienstärke und – sobald Texte dabei sind – Texthöhe, Winkel und Schriftart. Unterschiedliche Werte zeigt das Feld als *VERSCHIEDEN*; eine Änderung gilt sofort für alle gewählten Objekte.
 
 ## Skalieren und Spiegeln
