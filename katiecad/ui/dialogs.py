@@ -2223,6 +2223,11 @@ class SchriftenDialog(tk.Toplevel):
         e = ttk.Entry(zf, textvariable=self._suche, width=24)
         e.pack(side=tk.LEFT, padx=6)
         self._suche.trace_add("write", lambda *a: self._fuellen())
+        self._nur_gewaehlt = tk.BooleanVar(value=False)
+        ttk.Checkbutton(zf, text=tr("dlg.schriften.nur_gewaehlt"), variable=self._nur_gewaehlt,
+                        command=self._fuellen).pack(side=tk.LEFT, padx=(8, 0))
+        ttk.Button(zf, text=tr("dlg.schriften.keine_waehlen"),
+                   command=self._alle_ab).pack(side=tk.RIGHT)
         lf = ttk.Frame(f)
         lf.pack(fill=tk.BOTH, expand=True)
         self.lb = tk.Listbox(lf, selectmode=tk.MULTIPLE, height=16, width=44, exportselection=False,
@@ -2247,13 +2252,18 @@ class SchriftenDialog(tk.Toplevel):
 
     def _fuellen(self):
         t = self._suche.get().strip().lower()
-        self._sichtbar = [n for n in self._namen if t in n.lower()]
+        self._sichtbar = [n for n in self._namen if t in n.lower()
+                          and (not self._nur_gewaehlt.get() or n in self._gewaehlt)]
         self.lb.delete(0, tk.END)
         for i, n in enumerate(self._sichtbar):
             self.lb.insert(tk.END, n + ("   " + tr("dlg.schriften.nur_bildschirm") if self._cff[n] else ""))
             if n in self._gewaehlt:
                 self.lb.selection_set(i)
         self._zaehler()
+
+    def _alle_ab(self):
+        self._gewaehlt.clear()
+        self._fuellen()
 
     def _auswahl_merken(self):
         sel = set(self.lb.curselection())

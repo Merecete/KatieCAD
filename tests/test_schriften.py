@@ -56,6 +56,6 @@ check(SF.breite("GibtEsNicht") is None and SF.pdf_ttf("GibtEsNicht") is None, "u
 sp = core.PdfSeite(50, 50); sp.text(5, 5, "x", 3, 0, "#000000", False, False, "GibtEsNicht")
 check(b"/F1" in core.pdf_mehrseitig([sp]) and not hasattr(sp, "zusatz"), "Fallback Helvetica")
 for k in ("menu.ansicht.schriften", "dlg.schriften.titel", "dlg.schriften.hinweis", "dlg.schriften.suche",
-          "dlg.schriften.nur_bildschirm", "dlg.schriften.zaehler", "dlg.schriften.keine", "msg.schriften_gesetzt"):
+          "dlg.schriften.nur_bildschirm", "dlg.schriften.nur_gewaehlt", "dlg.schriften.keine_waehlen", "dlg.schriften.zaehler", "dlg.schriften.keine", "msg.schriften_gesetzt"):
     check(k in I.TEXTE["de"] and k in I.TEXTE["en"], k)
 print(f"test_schriften - {ok} Checks bestanden")
