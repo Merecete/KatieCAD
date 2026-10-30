@@ -6,6 +6,8 @@ It covers the complete workflow of an electrical project: draw circuit diagrams 
 
 KatieCAD brings everything you need for daily work into one tool: electrical diagrams with automatic documentation, a complete 2D CAD and simple 3D modelling, ready to use, free and open source.
 
+![KatieCAD Banner1](Screenshots/KatieCAD Banner.png)
+
 ![Screenshot1](Screenshots/Screenshot1.png)
 
 ![Screenshot2](Screenshots/Screenshot2.png)
