@@ -18,6 +18,7 @@ from copy import deepcopy
 
 from katiecad.common.i18n import tr, SPRACHE
 from katiecad.model.geom2d import ellipse_punkte, spline_punkte
+from katiecad.model import schriften as SCHRIFTEN
 from katiecad.model.geom3d import (prisma_netz_gerundet, profil_abrunden, v_rotieren, punkt_rotieren, prisma_netz, pyramide_netz, kugel_netz, kreis_profil,
                                    rechteck_profil, netz_abbilden, ebene_punkt, ebene_basis, BODEN_EBENE, v_cross)
 
@@ -83,8 +84,13 @@ BG_PRESETS = {
     "Beige (Sepia)":        "#f4ecd8",
 }
 
-SCHRIFTARTEN = ["Arial", "Courier New", "Times New Roman",
-                "Consolas", "Verdana", "Tahoma", "Segoe UI"]
+SCHRIFTARTEN = list(SCHRIFTEN.STANDARD_SCHRIFTEN)     # default fonts + user-chosen ones
+
+
+def schriftarten_aktualisieren():
+    """Default fonts followed by the fonts chosen in the font manager (in place)."""
+    SCHRIFTARTEN[:] = SCHRIFTEN.STANDARD_SCHRIFTEN + SCHRIFTEN.aktive_namen()
+    return SCHRIFTARTEN
 
 LINIENSTAERKEN = [0.13, 0.18, 0.25, 0.35, 0.5, 0.7, 1.0, 1.4, 2.0]
 
@@ -697,7 +703,11 @@ def schrift_setzen(name, fett):
     return schrift_name(name) + (FETT_MARKE if fett else "")
 
 
-def pdf_textbreite(s, schriftgroesse, fett=False):
+def pdf_textbreite(s, schriftgroesse, fett=False, familie=None):
+    if familie:                                  # additional installed font: real metrics
+        fn = SCHRIFTEN.breite(familie, fett)
+        if fn is not None:
+            return fn(s) * schriftgroesse / 1000.0
     tab = _HELV_FETT if fett else _HELV
     w = 0
     for ch in s:
@@ -772,7 +782,7 @@ class PdfSeite:
         self._op(" ".join(o))
 
     def text(self, x, y, inhalt, hoehe, winkel=0.0, farbe="#000000", mitte=False,
-             fett=False):
+             fett=False, familie=None):
         fs = hoehe / CAD_VERSALHOEHE
         a = math.radians(winkel)
         ex, ey = (math.cos(a), math.sin(a)), (-math.sin(a), math.cos(a))
@@ -783,9 +793,26 @@ class PdfSeite:
             up = (n - 1 - i) * TEXT_ZEILE * hoehe
             ox, oy = x + ey[0] * up, y + ey[1] * up
             if mitte:
-                w = pdf_textbreite(z, fs, fett)
+                w = pdf_textbreite(z, fs, fett, familie)
                 ox -= ex[0] * w / 2 + ey[0] * hoehe / 2
                 oy -= ex[1] * w / 2 + ey[1] * hoehe / 2
+            ttf = SCHRIFTEN.pdf_ttf(familie, fett) if familie else None
+            if ttf is not None:                  # embedded extra font: glyph numbers (Identity-H)
+                if not hasattr(self, "zusatz"):
+                    self.zusatz = {}                  # (family, bold) -> {glyph: char}
+                key = (familie, bool(fett))
+                if key not in self.zusatz:
+                    self.zusatz[key] = {}
+                idx = list(self.zusatz).index(key)
+                hexs = []
+                for ch in z:
+                    gid = ttf.gid(ch)
+                    self.zusatz[key].setdefault(gid, ch)
+                    hexs.append("%04X" % gid)
+                self._op(
+                    "BT /FX%d %.4f Tf %.4f %.4f %.4f rg %.6f %.6f %.6f %.6f %.4f %.4f Tm <%s> Tj ET"
+                    % (idx, fs, r, g, b, ex[0], ex[1], -ex[1], ex[0], ox, oy, "".join(hexs)))
+                continue
             self._op(
                 "BT /%s %.4f Tf %.4f %.4f %.4f rg %.6f %.6f %.6f %.6f %.4f %.4f Tm (%s) Tj ET"
                 % ("F2" if fett else "F1", fs, r, g, b, ex[0], ex[1], -ex[1], ex[0], ox, oy, _pdf_str(z)))
@@ -842,6 +869,7 @@ def pdf_mehrseitig(seiten):
     fett_nr = 4 + 2 * n
     naechste = 5 + 2 * n                    # first free object number (images)
     ocg = {}                                # layer name -> object number
+    zusatz_nr = {}                          # (font, bold) -> (first object number, TTF, glyphs)
     for sp in seiten:
         for nm in sp.ebenen:
             if nm not in ocg:
@@ -863,7 +891,15 @@ def pdf_mehrseitig(seiten):
             for k, t in enumerate(teile):
                 objs[nr + k] = t
             xobj += "/%s %d 0 R " % (name, nr)
-        res = "/Font << /F1 3 0 R /F2 %d 0 R >>" % fett_nr + (" /XObject << %s>>" % xobj if xobj else "")
+        fx = ""
+        for k, key in enumerate(getattr(sp, "zusatz", {})):
+            if key not in zusatz_nr:
+                ttf = SCHRIFTEN.pdf_ttf(*key)
+                zusatz_nr[key] = (naechste, ttf, {})
+                naechste += 5
+            zusatz_nr[key][2].update(sp.zusatz[key])
+            fx += "/FX%d %d 0 R " % (k, zusatz_nr[key][0])
+        res = "/Font << /F1 3 0 R /F2 %d 0 R %s>>" % (fett_nr, fx) + (" /XObject << %s>>" % xobj if xobj else "")
         if sp.ebenen:
             res += " /Properties << %s>>" % "".join(
                 "/OC%d %d 0 R " % (k + 1, ocg[nm]) for k, nm in enumerate(sp.ebenen))
@@ -872,6 +908,9 @@ def pdf_mehrseitig(seiten):
                      % (w, h, cid, res)).encode("latin-1")
         objs[cid] = (b"<< /Length %d /Filter /FlateDecode >>\nstream\n" % len(strom)
                      + strom + b"\nendstream")
+    for (fam, fett), (nr0, ttf, gids) in zusatz_nr.items():
+        for k, body in enumerate(SCHRIFTEN.pdf_objekte(ttf, fam + ("-Bold" if fett else ""), gids, nr0)):
+            objs[nr0 + k] = body
     if ocg:
         refs = " ".join("%d 0 R" % nr for nr in ocg.values())
         objs[1] = ("<< /Type /Catalog /Pages 2 0 R /OCProperties << /OCGs [%s] "
@@ -1303,7 +1342,8 @@ class Text(Element):
         # "A" is wider than "1". A fixed width per character let texts
         # protrude beyond the insertion point.
         fs = self.hoehe / CAD_VERSALHOEHE
-        w = max(max(pdf_textbreite(z, fs, schrift_fett(self.schriftart)) for z in zeilen),
+        fam = schrift_name(self.schriftart)
+        w = max(max(pdf_textbreite(z, fs, schrift_fett(self.schriftart), fam) for z in zeilen),
                 TEXT_BREITE * self.hoehe)
         h = (len(zeilen) - 1) * TEXT_ZEILE * self.hoehe + 1.4 * self.hoehe
         return w, h

@@ -63,7 +63,7 @@ from katiecad.ui.sidebar import Seitenleiste
 from katiecad.ui.widgets import FlatButton, farb_swatch, Tooltip
 from katiecad.model.core import (
     FARBEN, EINHEITEN, ZEICHNUNGSFORMATE, MASSSTAEBE, LINIENTYPEN,
-    schrift_fett, schrift_name, schrift_setzen,
+    schrift_fett, schrift_name, schrift_setzen, schriftarten_aktualisieren, SCHRIFTEN,
     RASTER_GROESSEN, BG_PRESETS, SCHRIFTARTEN, LINIENSTAERKEN,
     GRIFF_RADIUS, MIN_VP_GROESSE, PASTE_OFFSET_MM,
     TEXT_BREITE, TEXT_ZEILE, CAD_VERSALHOEHE, LW_PX_FAKTOR, BEM_RICHTUNGEN,
@@ -97,7 +97,7 @@ from katiecad.ui.dialogs import (
     BauteilkatalogDialog, SchnellauswahlDialog, SuchenErsetzenDialog, QuerverweisDialog, PruefungDialog, EigenschaftenPalette, VerbindungspunkteDialog, ProjektDruckDialog,
     VerbindungspunktDialog, VerbindungDialog, FestMaskeDialog,
     KoordinatenfeldDialog,
-    TitleBlockDialog, DokumentationDialog, ListenAuswahlDialog, ProjektEigenschaftenDialog,
+    TitleBlockDialog, DokumentationDialog, ListenAuswahlDialog, SchriftenDialog, ProjektEigenschaftenDialog,
 )
 from katiecad.reports import seiten as SEI, anwenden as ANW
 from katiecad.fileio.pdf import pdf_erzeugen, pdf_senden, pdf_mehrseitig_erzeugen
@@ -255,6 +255,12 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
 
         _cfg = lade_konfiguration()
         setze_sprache(_cfg.get("sprache", "en"))
+        if _cfg.get("schriften"):                       # extra fonts chosen by the user
+            try:
+                SCHRIFTEN.aktiviere(list(_cfg["schriften"]))
+                schriftarten_aktualisieren()
+            except Exception as e:
+                print(f"[KatieCAD] Zusatzschriften nicht geladen: {e}")
 
         try:
             from katiecad.manifest import fehlende_module, VERSION
@@ -1237,6 +1243,9 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         m_ansicht.add_separator()
         m_ansicht.add_command(label=tr("menu.ansicht.reset"),
                               command=self._reset_view)
+        m_ansicht.add_separator()
+        m_ansicht.add_command(label=tr("menu.ansicht.schriften"),
+                              command=self.schriften_verwalten)
         menubar.add_cascade(label=tr("menu.ansicht"), menu=m_ansicht)
 
         # Blocks
@@ -8096,6 +8105,26 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             self._layer_info_aktualisieren()
         except Exception:
             pass
+        self._schriften_der_zeichnung_laden()
+
+    def _schriften_der_zeichnung_laden(self):
+        """Fonts used by the texts of a loaded drawing that are installed here but not yet
+        in the lists are switched on for this session (the PDF then embeds them)."""
+        try:
+            benutzt = {schrift_name(e.schriftart) for e in self.elemente if isinstance(e, Text)}
+            fehlt = {n for n in benutzt if n and n not in SCHRIFTARTEN}
+            if not fehlt:
+                return
+            gefunden = SCHRIFTEN.scan()
+            neu = [n for n in fehlt if n in gefunden]
+            if neu:
+                SCHRIFTEN.aktiviere(SCHRIFTEN.aktive_namen() + neu, gefunden)
+                schriftarten_aktualisieren()
+                self._font_cache.clear()
+                self.cb_schrift["values"] = SCHRIFTARTEN
+                self.redraw()
+        except Exception as e:
+            print(f"[KatieCAD] Schriften der Zeichnung: {e}")
 
     def _projekt_fuer_einzeldatei_schliessen(self):
         if self.projekt is not None:
@@ -9992,6 +10021,33 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                                  tr("msg.doku.fehler", fehler=e), parent=self.root)
             return
         self.status.set(tr("msg.doku.csv_fertig", n=len(pfade), ordner=ziel))
+
+    def schriften_verwalten(self):
+        """Choose additional installed fonts for texts (shown in all font lists)."""
+        self.root.config(cursor="watch")
+        self.root.update_idletasks()
+        try:
+            gefunden = SCHRIFTEN.scan()
+        finally:
+            self.root.config(cursor="")
+        if not gefunden:
+            messagebox.showinfo(tr("dlg.schriften.titel"), tr("dlg.schriften.keine"), parent=self.root)
+            return
+        dlg = SchriftenDialog(self.root, gefunden, SCHRIFTEN.aktive_namen())
+        if dlg.result is None:
+            return
+        SCHRIFTEN.aktiviere(dlg.result, gefunden)
+        schriftarten_aktualisieren()
+        self._font_cache.clear()
+        try:
+            self.cb_schrift["values"] = SCHRIFTARTEN
+        except Exception:
+            pass
+        cfg = lade_konfiguration()
+        cfg["schriften"] = SCHRIFTEN.aktive_namen()
+        speichere_konfiguration(cfg)
+        self.redraw()
+        self.status.set(tr("msg.schriften_gesetzt", n=len(SCHRIFTEN.aktive_namen())))
 
     def dokumentation_excel(self):
         """Lists (device list, terminal diagram, cable plan, parts list ...) as ONE Excel

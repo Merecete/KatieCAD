@@ -2196,6 +2196,82 @@ class ListenAuswahlDialog(tk.Toplevel):
         self.destroy()
 
 
+class SchriftenDialog(tk.Toplevel):
+    """Font manager: choose installed fonts that show up in the font lists.
+    result: list of the chosen font names or None."""
+
+    def __init__(self, parent, gefunden, aktiv):
+        super().__init__(parent)
+        self.result = None
+        self.title(tr("dlg.schriften.titel"))
+        self.transient(parent)
+        _modal(self)
+        self.configure(bg=FARBEN["bg_mittel"])
+        from katiecad.model.schriften import STANDARD_SCHRIFTEN
+        self._namen = sorted((n for n in gefunden if n not in STANDARD_SCHRIFTEN), key=str.lower)
+        self._cff = {n: gefunden[n]["cff"] for n in self._namen}
+        self._gewaehlt = set(n for n in aktiv if n in gefunden)
+        self._sichtbar = []
+        f = ttk.Frame(self, padding=14)
+        f.pack(fill=tk.BOTH, expand=True)
+        ttk.Label(f, text=tr("dlg.schriften.hinweis"), style="Hint.TLabel",
+                  wraplength=420, justify=tk.LEFT).pack(anchor=tk.W)
+        zf = ttk.Frame(f)
+        zf.pack(fill=tk.X, pady=(8, 4))
+        ttk.Label(zf, text=tr("dlg.schriften.suche")).pack(side=tk.LEFT)
+        self._suche = tk.StringVar()
+        e = ttk.Entry(zf, textvariable=self._suche, width=24)
+        e.pack(side=tk.LEFT, padx=6)
+        self._suche.trace_add("write", lambda *a: self._fuellen())
+        lf = ttk.Frame(f)
+        lf.pack(fill=tk.BOTH, expand=True)
+        self.lb = tk.Listbox(lf, selectmode=tk.MULTIPLE, height=16, width=44, exportselection=False,
+                             bg=FARBEN["bg_dunkel"], fg=FARBEN["text"],
+                             selectbackground=FARBEN["cyan"], selectforeground=FARBEN["bg_dunkel"],
+                             highlightthickness=0, activestyle="none")
+        sb = ttk.Scrollbar(lf, orient=tk.VERTICAL, command=self.lb.yview)
+        self.lb.configure(yscrollcommand=sb.set)
+        self.lb.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        sb.pack(side=tk.LEFT, fill=tk.Y)
+        self.lb.bind("<<ListboxSelect>>", lambda ev: self._auswahl_merken())
+        self.zaehler = ttk.Label(f, style="Hint.TLabel")
+        self.zaehler.pack(anchor=tk.W, pady=(4, 0))
+        bf = ttk.Frame(f)
+        bf.pack(pady=(10, 0))
+        ttk.Button(bf, text=tr("dlg.ok"), command=self._ok).pack(side=tk.LEFT, padx=4)
+        ttk.Button(bf, text=tr("dlg.abbrechen"), command=self.destroy).pack(side=tk.LEFT, padx=4)
+        self.bind("<Escape>", lambda ev: self.destroy())
+        self._fuellen()
+        e.focus_set()
+        self.wait_window(self)
+
+    def _fuellen(self):
+        t = self._suche.get().strip().lower()
+        self._sichtbar = [n for n in self._namen if t in n.lower()]
+        self.lb.delete(0, tk.END)
+        for i, n in enumerate(self._sichtbar):
+            self.lb.insert(tk.END, n + ("   " + tr("dlg.schriften.nur_bildschirm") if self._cff[n] else ""))
+            if n in self._gewaehlt:
+                self.lb.selection_set(i)
+        self._zaehler()
+
+    def _auswahl_merken(self):
+        sel = set(self.lb.curselection())
+        for i, n in enumerate(self._sichtbar):
+            if i in sel:
+                self._gewaehlt.add(n)
+            else:
+                self._gewaehlt.discard(n)
+        self._zaehler()
+
+    def _zaehler(self):
+        self.zaehler.config(text=tr("dlg.schriften.zaehler", n=len(self._gewaehlt), m=len(self._namen)))
+
+    def _ok(self):
+        self.result = sorted(self._gewaehlt, key=str.lower)
+        self.destroy()
+
+
 class DokumentationDialog(tk.Toplevel):
     """Choose report sheets (cover sheet, table of contents, device list,
     terminal diagram, cable plan) and project data.
