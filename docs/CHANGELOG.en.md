@@ -7,6 +7,7 @@
 - New: **Align at two points** (`ALIGN` / `AUSRICHTEN` / `AL`) like in AutoCAD: source/destination points, move, rotate and optional scale, with preview; the former edge commands stay `AUSLINKS`, `AUSRECHTS`, `AUSOBEN`, `AUSUNTEN`, `AUSMITTEH`, `AUSMITTEV`
 - Object snap **Intersection** now also finds intersections of lines, rectangle and polyline edges with **circles and arcs** and of circles/arcs with each other (before: line x line only)
 - Fix: the "Edit attributes" window (insert/change device) no longer grows taller than the screen with many pins (e.g. 16-channel PLC module): the list is **scrollable**, OK/Cancel stay visible
+- New: 3D right-click menu **Copy** - copy a control cabinet or any 3D body; the copy hangs on the mouse with preview and object snap and is put down with a click
 - Find and replace: new scope **Selection only** - searches and replaces only in the selected objects (preset when the window opens with a selection)
 - About window: the title text "KatieCAD" is replaced by the **lettering banner** (file `KatieCAD_Banner.png`; without the file the text appears as before)
 - Version jump to 1.1.1

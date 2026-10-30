@@ -13,6 +13,7 @@ also pulls closed 2D shapes up or down into solids ("push/pull").
 
 import math
 import re
+from copy import deepcopy
 import tkinter as tk
 from tkinter import ttk, messagebox
 
@@ -1293,10 +1294,14 @@ class Ansicht3D(tk.Frame):
             p, fang = self._platz_pos(pl["maus"], pl)
             if p is not None:
                 self._fang_marke(fang)
-                body = koerper_bauen(pl["art"], pl["par"], p[0], p[1], p[2])
-                for nz in (body.netze() if hasattr(body, "netze") else [body.netz()]):
-                    for (i, j) in nz.kanten:
-                        self._linie(nz.punkte[i], nz.punkte[j], gelb, 1, (4, 3), "vorschau")
+                if pl.get("kopie"):
+                    koerper = [b for b in self._kopie_bilden(pl, p) if hasattr(b, "netz") or hasattr(b, "netze")]
+                else:
+                    koerper = [koerper_bauen(pl["art"], pl["par"], p[0], p[1], p[2])]
+                for body in koerper:
+                    for nz in (body.netze() if hasattr(body, "netze") else [body.netz()]):
+                        for (i, j) in nz.kanten:
+                            self._linie(nz.punkte[i], nz.punkte[j], gelb, 1, (4, 3), "vorschau")
         if not sk or not self._maus:
             return
         if sk["form"] == "messen":
@@ -1718,8 +1723,10 @@ class Ansicht3D(tk.Frame):
         if not self.app.osnap.get():
             return p, []
         mx, my = self._mitte()
-        body = koerper_bauen(pl["art"], pl["par"], p[0], p[1], p[2])
-        eigene = self._ecken_von([body])
+        if pl.get("kopie"):
+            eigene = self._ecken_von(self._kopie_bilden(pl, p))
+        else:
+            eigene = self._ecken_von([koerper_bauen(pl["art"], pl["par"], p[0], p[1], p[2])])
         andere = S.fang_kandidaten(self._sichtbare())
         best, bd = None, 16.0
         for c in eigene:
@@ -1745,6 +1752,15 @@ class Ansicht3D(tk.Frame):
             self.info_var.set(tr("d3.msg.keine_ebene"))
             return
         self._platz = None
+        if pl.get("kopie"):
+            neu = self._kopie_bilden(pl, pos)
+            self.app._snapshot()
+            self.app.elemente.extend(neu)
+            self.app.auswahl = list(neu)
+            self.app.redraw()
+            self.zeichne()
+            self.info_var.set(tr("d3.msg.kopiert", n=len(neu)))
+            return
         self._erzeuge(pl["art"], pl["par"], pos)
 
     def abbrechen(self):
@@ -1917,6 +1933,7 @@ class Ansicht3D(tk.Frame):
             m.add_command(label=tr("d3.ctx.eigenschaften"), command=self._ctx_eigenschaften)
             if len([x for x in self.app.auswahl if S.parameter(x)]) == 1:
                 m.add_command(label=tr("d3.ctx.mass"), command=self.massdialog)
+            m.add_command(label=tr("d3.ctx.kopieren"), command=self._ctx_kopieren)
             m.add_command(label=tr("d3.ctx.layer_aus"), command=self._ctx_layer_aus)
             m.add_command(label=tr("d3.ctx.loeschen"), command=self._ctx_loeschen)
             m.add_separator()
@@ -1955,6 +1972,41 @@ class Ansicht3D(tk.Frame):
     def _ctx_loeschen(self):
         self.app.auswahl_loeschen()
         self.zeichne()
+
+    def _ctx_kopieren(self):
+        """Copy the selected 3D objects (cabinet, bodies ...): the copy hangs on the mouse
+        (with object snap) and is put down with a click."""
+        self._kopie_starten([x for x in self.app.auswahl if S.ist_raum(x)])
+
+    def _kopie_starten(self, quellen):
+        if not quellen:
+            self.info_var.set(tr("d3.msg.kopie_nichts"))
+            return
+        self._modus_ende()
+        vorlagen = [deepcopy(x) for x in quellen]
+        bs = []
+        for x in vorlagen:
+            b = x.bbox3() if hasattr(x, "bbox3") else None
+            if b:
+                bs.append(b)
+        if bs:
+            ref = (min(b[0] for b in bs), min(b[1] for b in bs), min(b[2] for b in bs))
+        else:
+            ref = (0.0, 0.0, 0.0)
+        self._platz = {"art": None, "par": None, "z": ref[2], "maus": None,
+                       "kopie": vorlagen, "ref": ref}
+        self.info_var.set(tr("d3.msg.kopie_platzieren"))
+        self.zeichne()
+
+    def _kopie_bilden(self, pl, pos):
+        """Moved copies of the template objects, base corner at `pos`."""
+        d = (pos[0] - pl["ref"][0], pos[1] - pl["ref"][1], pos[2] - pl["ref"][2])
+        out = []
+        for x in pl["kopie"]:
+            k = deepcopy(x)
+            k.verschieben(*d)
+            out.append(k)
+        return out
 
 
 def frage_text(parent, titel, text, vorgabe):

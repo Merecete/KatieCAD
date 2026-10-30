@@ -299,4 +299,14 @@ for k in ("dlg.farbe.titel", "dlg.farbe.ral", "dlg.farbe.hex", "dlg.farbe.system
           "dlg.farbe.ral_unbekannt", "dlg.farbe.fam_0", "dlg.farbe.fam_9", "dlg.farbe.familie", "dlg.farbe.alle",
           "dlg.farbe.rot", "dlg.farbe.gruen", "dlg.farbe.blau", "dlg.farbe.ral_tippen"):
     check(k in I.TEXTE["de"] and k in I.TEXTE["en"], k)
+# --- 3D copy via right-click menu
+for k in ("d3.ctx.kopieren", "d3.msg.kopie_nichts", "d3.msg.kopie_platzieren", "d3.msg.kopiert"):
+    check(k in I.TEXTE["de"] and k in I.TEXTE["en"], k)
+_sc = SCH.schrank_bauen(600, 1800, 300, 100, 200, 0, None, 0, True, False, False, False)
+_pl = {"kopie": [_sc], "ref": (100.0, 200.0, 0.0)}
+_kk = W.Ansicht3D._kopie_bilden(None, _pl, (1000.0, 500.0, 0.0))
+check(len(_kk) == 1 and _kk[0] is not _sc and isinstance(_kk[0], Gruppe3D), "Kopie: neue Gruppe")
+check(abs(_kk[0].teile[0].bbox3()[0] - _sc.teile[0].bbox3()[0] - 900.0) < 1e-6, "Kopie um +900 in X verschoben")
+check(abs(_kk[0].teile[0].bbox3()[1] - _sc.teile[0].bbox3()[1] - 300.0) < 1e-6, "Kopie um +300 in Y verschoben")
+check(len(_kk[0].teile) == len(_sc.teile), "Kopie: gleiche Teile (Tür, Griff ...)")
 print(f"test_3d - {ok} Checks bestanden")
