@@ -57,7 +57,7 @@ Ready-made installers for **Windows**, **Linux** (`.deb` / `.tar.gz`) and **macO
 **Debian/Ubuntu** (`.deb` from the Releases page):
 
 ```bash
-sudo apt install ./KatieCAD-*-Linux-*.deb
+sudo apt install ./KatieCAD-*Linux-*.deb
 katiecad
 ```
 
