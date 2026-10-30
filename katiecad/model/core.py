@@ -617,7 +617,7 @@ BEFEHLE = {
     "3DABRUNDEN": "3d:abrunden", "3DFILLET": "3d:abrunden",
     "3DPIVOT": "3d:pivot", "MANIPVERSETZEN": "3d:pivot",
     "3DBLOCK": "3d:block", "3DAUFLOESEN": "3d:aufloesen",
-    "AUSRICHTEN": "ausrichten:links", "ALIGN": "ausrichten:links",
+    "AUSRICHTEN": "ausrichten2p", "ALIGN": "ausrichten2p", "AL": "ausrichten2p",
     "AUSLINKS": "ausrichten:links", "AUSRECHTS": "ausrichten:rechts",
     "AUSOBEN": "ausrichten:oben", "AUSUNTEN": "ausrichten:unten",
     "AUSMITTEH": "ausrichten:mitte_h", "AUSMITTEV": "ausrichten:mitte_v",
