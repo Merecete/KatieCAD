@@ -5149,9 +5149,10 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                 logo_lbl.image = logo_photo
                 logo_lbl.pack(side="left", padx=(0, 16))
 
-        tk.Label(title_row, text="KatieCAD",
-                 font=("Helvetica", 18, "bold"),
-                 bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"]).pack(side="left", anchor="w")
+        if not self._info_banner(title_row):          # fallback: plain text
+            tk.Label(title_row, text="KatieCAD",
+                     font=("Helvetica", 18, "bold"),
+                     bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"]).pack(side="left", anchor="w")
 
         tk.Frame(frame, bg=FARBEN["rand"], height=1).pack(fill="x", pady=(12, 8))
 
@@ -5196,6 +5197,33 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         w = info_win.winfo_width()
         h = info_win.winfo_height()
         info_win.geometry(f"+{mx - w // 2}+{my - h // 2}")
+
+    def _info_banner(self, eltern, breite=260):
+        """KatieCAD lettering (file KatieCAD_Banner.png next to KatieCAD.png) instead of the
+        plain title text of the About window. -> True if it was shown."""
+        pfad = _symbol_datei("KatieCAD_Banner.png")
+        if pfad is None:
+            return False
+        bild = None
+        if PILLOW_VERFUEGBAR:
+            try:
+                img = Image.open(pfad).convert("RGBA")
+                h = max(1, round(img.height * breite / img.width))
+                bild = ImageTk.PhotoImage(img.resize((breite, h), Image.Resampling.LANCZOS))
+            except Exception as e:
+                print(f"[KatieCAD] Banner (Pillow): {e}")
+        if bild is None:
+            try:
+                p = tk.PhotoImage(file=pfad)
+                n = max(1, round(p.width() / breite))
+                bild = p.subsample(n, n) if n > 1 else p
+            except tk.TclError as e:
+                print(f"[KatieCAD] Banner konnte nicht geladen werden: {e}")
+                return False
+        lbl = tk.Label(eltern, image=bild, bg=FARBEN["bg_mittel"], bd=0, highlightthickness=0)
+        lbl.image = bild
+        lbl.pack(side="left", anchor="w")
+        return True
 
     def _info_maskottchen(self, eltern, hoehe=300):
         """Mascot picture on the left of the About window (optional file

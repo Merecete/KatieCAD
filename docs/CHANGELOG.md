@@ -7,6 +7,8 @@
 - Neu: **Ausrichten an zwei Punkten** (`AUSRICHTEN` / `ALIGN` / `AL`) wie in AutoCAD: Quell-/Zielpunkte, Verschieben, Drehen und optional Skalieren, mit Vorschau; die bisherigen Kanten-Befehle heißen weiter `AUSLINKS`, `AUSRECHTS`, `AUSOBEN`, `AUSUNTEN`, `AUSMITTEH`, `AUSMITTEV`
 - Objektfang **Schnittpunkt** findet jetzt auch Schnitte von Linien, Rechteck- und Polylinienkanten mit **Kreisen und Bögen** sowie von Kreisen/Bögen untereinander (bisher nur Linie × Linie)
 - Fix: Das Fenster „Attribute bearbeiten“ (Gerät einfügen/ändern) wird bei vielen Anschlüssen (z. B. SPS-Baugruppe mit 16 Kanälen) nicht mehr höher als der Bildschirm: Die Liste ist **scrollbar**, OK/Abbrechen bleiben sichtbar
+- Suchen und Ersetzen: neuer Bereich **Nur Auswahl** – sucht und ersetzt nur in den markierten Objekten (beim Öffnen mit Markierung schon voreingestellt)
+- Info-Fenster: Der Titeltext „KatieCAD“ ist durch den **Schriftzug-Banner** ersetzt (Datei `KatieCAD_Banner.png`, ohne die Datei erscheint wie bisher der Text)
 - Versionssprung auf 1.1.1
 
 ## 1.1.0
