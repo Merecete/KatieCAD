@@ -1330,6 +1330,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                          command=lambda: self.ansicht3d_befehl("block"))
         m_3d.add_command(label=tr("menu.3d.aufloesen"),
                          command=lambda: self.ansicht3d_befehl("aufloesen"))
+        m_3d.add_command(label=tr("menu.3d.verschmelzen"),
+                         command=lambda: self.ansicht3d_befehl("verschmelzen"))
         menubar.add_cascade(label=tr("menu.3d"), menu=m_3d)
 
         # Language

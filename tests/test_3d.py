@@ -366,6 +366,78 @@ _vp2 = core.Viewport.from_dict(_vp.to_dict()) if hasattr(core.Viewport, "from_di
 if _vp2 is not None:
     check(_vp2.ansicht3d.get("verdeckt") is True, "Viewport: verdeckt wird mitgespeichert")
 check("d3.vp.verdeckt" in I.TEXTE["de"] and "d3.vp.verdeckt" in I.TEXTE["en"], "i18n d3.vp.verdeckt")
+# --- Verschmelzen (Boolesche Vereinigung) ---------------------------------------------
+import json as _json
+import math
+from katiecad.model import csg3d as _C
+
+
+def _vol(d):
+    P, v = d["p"], 0.0
+    for f in d["f"]:
+        for i in range(1, len(f) - 1):
+            a, b, c = P[f[0]], P[f[i]], P[f[i + 1]]
+            v += _C._dot(a, _C._cross(b, c)) / 6.0
+    return v
+
+
+_q1 = core.quader(0, 0, 100, 100, 0, 100)
+_q2 = core.quader(50, 50, 150, 150, 0, 100)
+_u = _C.vereinigen([(_q1.netz(), []), (_q2.netz(), [])])
+check(abs(_vol(_u) - 1750000.0) < 1.0, "Vereinigung überlappender Quader: Volumen")
+check(len(_u["k"]) == 24, "Vereinigung: Umriss hat 24 Kanten (Innenkanten weg)")
+_q3 = core.quader(100, 0, 200, 100, 0, 100)
+_u = _C.vereinigen([(_q1.netz(), []), (_q3.netz(), [])])
+check(len(_u["k"]) == 12 and abs(_vol(_u) - 2000000.0) < 1.0, "aneinander liegende Quader = ein Quader")
+_pl = core.quader(0, 0, 200, 200, 0, 100)
+_bohr = G.prisma_netz(G.kreis_profil(100, 100, 20, 24), -1, 102, True)
+_u = _C.vereinigen([(_pl.netz(), [_bohr])])
+check(abs(_vol(_u) - (4000000.0 - 0.5 * 24 * 400 * math.sin(math.radians(15)) * 100)) < 5.0, "Bohrung wird abgezogen")
+_zyl = core.Koerper3D(art="prisma", profil=G.kreis_profil(100, 50, 30, 32), z0=0, hoehe=150, rund=True)
+_kug = core.Koerper3D(art="kugel", kugel=(50, 50, 120, 40))
+_kg = core.Koerper3D(art="pyramide", profil=G.kreis_profil(50, 50, 40, 24), z0=100, hoehe=60, rund=True)
+for _n, _ks in (("Quader+Zylinder", [_q1, _zyl]), ("Quader+Kugel", [_q1, _kug]), ("Quader+Kegel", [_q1, _kg])):
+    _u = _C.vereinigen([(k.netz(), []) for k in _ks])
+    check(len(_u["f"]) > 0 and len(_u["k"]) > 0 and _vol(_u) > 0, "Vereinigung " + _n)
+_ku = _C.vereinigen([(_kug.netz(), [])])
+check(len(_ku["k"]) > 0, "glatte Kugel behält ihre Linien")
+# offenes Netz wird abgelehnt
+_off = core.quader(0, 0, 10, 10, 0, 10).netz()
+_off.flaechen = _off.flaechen[:-1]
+try:
+    _C.vereinigen([(_off, []), (_q1.netz(), [])])
+    check(False, "offenes Netz abgelehnt")
+except _C.CSGFehler:
+    check(True, "offenes Netz abgelehnt")
+# Szene: verschmelzen ersetzt die Körper, undo-Hook, Speichern/Laden
+_a = core.quader(0, 0, 100, 100, 0, 100); _b = core.quader(50, 50, 150, 150, 0, 100)
+_a.loch_hinzufuegen(25, 25, 10)
+_el = [_a, _b]; _hook = []
+_nn = _S3.verschmelzen(_el, [_a, _b], lambda: _hook.append(1))
+check(_el == [_nn] and _nn.art == "netz" and _hook == [1], "verschmelzen ersetzt die Körper")
+check(_S3.verschmelzen([_a], [_a]) is None, "ein Körper allein: nichts zu tun")
+_bb = _nn.bbox3()
+check(_bb == (0.0, 0.0, 0.0, 150.0, 150.0, 100.0), "Maße des verschmolzenen Körpers")
+_nn.verschieben(10, 20, 5)
+check(_nn.bbox3()[:3] == (10.0, 20.0, 5.0), "verschmolzener Körper verschiebbar")
+_nn.drehen3((0, 0, 0), (0, 0, 1), 90)
+check(abs(_nn.bbox3()[3] - (-20.0)) < 1e-6, "verschmolzener Körper drehbar (3D)")
+_dd = _nn.to_dict()
+check("_netz_cache" not in _dd, "Cache wird nicht gespeichert")
+_dd = _json.loads(_json.dumps(_dd)); _dd.pop("typ", None)
+_ld = core.Koerper3D(**_dd)
+check(_ld.art == "netz" and _ld.bbox3() == _nn.bbox3(), "Speichern/Laden des verschmolzenen Körpers")
+check(len(_nn.aufgeloest()) > 0, "2D-Draufsicht des verschmolzenen Körpers")
+_k0 = core.Koerper3D(art="netz", netzdaten=_dd["netzdaten"]); _k0.skalieren(0, 0, 2.0)
+check(abs(_k0.bbox3()[3] - 2 * _ld.bbox3()[3]) < 1e-6, "Skalieren des verschmolzenen Körpers")
+_sg2 = _SCH2.schrank_bauen(600, 1800, 300, 0, 0, 0, (500, 1600), 100, True, True, True, False)
+_els = [_sg2]; _res = _S3.verschmelzen(_els, [_sg2])
+check(_res is not None and _res.art == "netz" and _els == [_res], "Schrank zu einem Körper")
+_vs = G.sichtbare_linien_je([("x", [_res.netz()])], G.Kamera(yaw=-30.0, pitch=20.0, skala=0.3), 450, 300)
+check(len(_vs["x"][0]) > 0, "verdeckte Kanten für verschmolzenen Körper")
+for k in ("menu.3d.verschmelzen", "d3.ctx.verschmelzen", "d3.msg.verschm_min2", "d3.msg.verschm_fehler",
+          "d3.msg.verschmolzen"):
+    check(k in I.TEXTE["de"] and k in I.TEXTE["en"], k)
 for k in ("tb.wz.verdeckt3d",):
     check(k in I.TEXTE["de"] and k in I.TEXTE["en"], k)
 check("verdeckt3d" in IC.NAMEN, "Icon verdeckt3d")

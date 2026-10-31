@@ -13,6 +13,7 @@ from katiecad.model.core import (Koerper3D, Gruppe3D, Skizze3D, Bemassung3D, Tex
                                  Polylinie, Kreis, Bogen, Ellipse, ZUSAMMENGESETZT, bogen_punkte,
                                  bogen_sweep, profil_aus_element, extrusion)
 from katiecad.model import geom3d as G
+from katiecad.model.core import G_dot_tiefe as core_dot_tiefe
 
 KOERPER_TYPEN = (Koerper3D, Gruppe3D)
 
@@ -334,6 +335,56 @@ def gruppe_bilden(elemente, auswahl, name="3D-Block"):
     rest.insert(min(pos, len(rest)), g)
     elemente[:] = rest
     return g
+
+
+def _schnittkoerper(k):
+    """Cutters (holes, cut-outs) of a body as closed meshes, slightly longer than the cut so
+    that no coplanar faces remain after the subtraction."""
+    host = k.netz()
+    out = []
+    if k.art != "prisma":
+        return out
+    if not k.ebene:
+        oben = max(k.z0, k.z0 + k.hoehe)
+        unten = min(k.z0, k.z0 + k.hoehe)
+        for (x, y, r, tiefe) in k.loecher:
+            h = (oben - unten) if tiefe is None else min(abs(tiefe), oben - unten)
+            extra = 1.0 if tiefe is None else 0.0
+            out.append(G.prisma_netz(G.kreis_profil(x, y, r, 24), oben - h - extra,
+                                     h + extra + 1.0, True))
+    for a in k.ausschnitte:
+        e, tiefe = a["ebene"], a["tiefe"]
+        extra = 0.0
+        if tiefe is None:
+            tiefe = max([core_dot_tiefe(e, p) for p in host.punkte] or [0.0])
+            extra = 1.0
+        tiefe = max(tiefe, 1e-3)
+        out.append(G.netz_abbilden(G.prisma_netz(a["profil"], 1.0, -(tiefe + 1.0 + extra),
+                                                 a["rund"]), e))
+    return out
+
+
+def verschmelzen(elemente, auswahl, vorher=None):
+    """Boolean union of the selected 3D bodies (also the parts of 3D blocks) to ONE body
+    (replaces them in `elemente`). Returns the new body; ValueError (csg3d.CSGFehler)
+    if the bodies cannot be merged; None if fewer than two bodies are selected."""
+    from katiecad.model import csg3d
+    ziele = [e for e in auswahl if ist_3d(e) and e in elemente]
+    teile = [k for e in ziele for k in e.koerper()]
+    if len(teile) < 2:
+        return None
+    erg = csg3d.vereinigen([(k.netz(), _schnittkoerper(k)) for k in teile])
+    if vorher:
+        vorher()                      # e.g. undo snapshot - only when the merge worked
+    ids = {id(t) for t in ziele}
+    pos = min(i for i, e in enumerate(elemente) if id(e) in ids)
+    rest = [e for e in elemente if id(e) not in ids]
+    n = Koerper3D(art="netz", netzdaten=erg, layer=ziele[0].layer, farbe=ziele[0].farbe,
+                  linientyp=ziele[0].linientyp, eig_farbe=ziele[0].eig_farbe,
+                  staerke=ziele[0].staerke)
+    rest.insert(min(pos, len(rest)), n)
+    elemente[:] = rest
+    return n
 
 
 def gruppe_aufloesen(elemente, gruppen):

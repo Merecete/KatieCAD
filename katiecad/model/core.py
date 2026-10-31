@@ -20,7 +20,7 @@ from katiecad.common.i18n import tr, SPRACHE
 from katiecad.model.geom2d import ellipse_punkte, spline_punkte
 from katiecad.model import schriften as SCHRIFTEN
 from katiecad.model.geom3d import (prisma_netz_gerundet, profil_abrunden, v_rotieren, punkt_rotieren, prisma_netz, pyramide_netz, kugel_netz, kreis_profil,
-                                   rechteck_profil, netz_abbilden, ebene_punkt, ebene_basis, BODEN_EBENE, v_cross)
+                                   rechteck_profil, netz_abbilden, Netz, ebene_punkt, ebene_basis, BODEN_EBENE, v_cross)
 
 
 # ============================================================
@@ -623,6 +623,7 @@ BEFEHLE = {
     "3DABRUNDEN": "3d:abrunden", "3DFILLET": "3d:abrunden",
     "3DPIVOT": "3d:pivot", "MANIPVERSETZEN": "3d:pivot",
     "3DBLOCK": "3d:block", "3DAUFLOESEN": "3d:aufloesen",
+    "3DVERSCHMELZEN": "3d:verschmelzen", "VERSCHMELZEN": "3d:verschmelzen", "3DUNION": "3d:verschmelzen", "UNION": "3d:verschmelzen",
     "AUSRICHTEN": "ausrichten2p", "ALIGN": "ausrichten2p", "AL": "ausrichten2p",
     "AUSLINKS": "ausrichten:links", "AUSRECHTS": "ausrichten:rechts",
     "AUSOBEN": "ausrichten:oben", "AUSUNTEN": "ausrichten:unten",
@@ -3782,12 +3783,19 @@ class Koerper3D(Element):
              {"ebene": 9-tuple, "profil": [(x, y)...], "tiefe": mm | None
               (None = through), "rund": bool}.
     In the 2D drawing the body appears as its plan view (top view)."""
-    ARTEN = ("prisma", "pyramide", "kugel")
+    ARTEN = ("prisma", "pyramide", "kugel", "netz")
 
     def __init__(self, art="prisma", profil=None, z0=0.0, hoehe=10.0, spitze=None,
                  rund=False, kugel=None, bez="", loecher=None, ebene=None,
-                 ausschnitte=None, glatt=None, r_oben=0.0, r_unten=0.0, **kw):
+                 ausschnitte=None, glatt=None, r_oben=0.0, r_unten=0.0, netzdaten=None, **kw):
         super().__init__("koerper3d", **kw)
+        # art "netz": merged body (union of several bodies) = free mesh
+        # {"p": [[x, y, z]...], "k": [[i, j]...] edges, "f": [[i, j, k...]...] faces}
+        self.netzdaten = None if not netzdaten else {
+            "p": [[float(c) for c in p] for p in netzdaten.get("p", [])],
+            "k": [[int(i), int(j)] for i, j in netzdaten.get("k", [])],
+            "f": [[int(i) for i in f] for f in netzdaten.get("f", [])]}
+        self._netz_cache = None
         self.r_oben, self.r_unten = float(r_oben or 0.0), float(r_unten or 0.0)
         self.glatt = [bool(g) for g in glatt] if glatt else None
         self.art = art if art in self.ARTEN else "prisma"
@@ -3810,7 +3818,25 @@ class Koerper3D(Element):
                 "rund": bool(a.get("rund", False))})
 
     # ---- geometry ---------------------------------------------------------
+    def _netzdaten_abbilden(self, f):
+        """Applies f(x, y, z) -> (x, y, z) to all points of a merged body."""
+        if self.netzdaten:
+            self.netzdaten["p"] = [list(f(*p)) for p in self.netzdaten["p"]]
+        self._netz_cache = None
+
     def netz(self):
+        if self.art == "netz":
+            if self._netz_cache is None:
+                nz = Netz()
+                d = self.netzdaten or {}
+                for p in d.get("p", []):
+                    nz.punkt(p)
+                for i, j in d.get("k", []):
+                    nz.kante(i, j)
+                for fl in d.get("f", []):
+                    nz.flaeche(fl)
+                self._netz_cache = nz
+            return self._netz_cache
         if self.art == "kugel" and self.kugel:
             return kugel_netz(*self.kugel)
         if self.art == "pyramide":
@@ -3864,7 +3890,7 @@ class Koerper3D(Element):
         if self.art == "kugel" and self.kugel:
             cx, cy, _cz, r = self.kugel
             return (cx - r, cy - r, cx + r, cy + r)
-        if self.ebene:
+        if self.ebene or self.art == "netz":
             b = self.bbox3()
             return (b[0], b[1], b[3], b[4]) if b else (0, 0, 0, 0)
         if not self.profil:
@@ -3916,7 +3942,9 @@ class Koerper3D(Element):
             f(a)
 
     def verschieben(self, dx, dy, dz=0.0):
-        if self.ebene:
+        if self.art == "netz":
+            self._netzdaten_abbilden(lambda x, y, z: (x + dx, y + dy, z + dz))
+        elif self.ebene:
             self.ebene = _ebene_verschieben(self.ebene, dx, dy, dz)
         else:
             self.profil = [(x + dx, y + dy) for (x, y) in self.profil]
@@ -3931,7 +3959,10 @@ class Koerper3D(Element):
             a["ebene"] = _ebene_verschieben(a["ebene"], dx, dy, dz)
 
     def drehen(self, cx, cy, winkel_deg):
-        if self.ebene:
+        if self.art == "netz":
+            self._netzdaten_abbilden(
+                lambda x, y, z: punkte_drehen(x, y, cx, cy, winkel_deg) + (z,))
+        elif self.ebene:
             self.ebene = _ebene_drehen(self.ebene, cx, cy, winkel_deg)
         else:
             self.loecher = [punkte_drehen(x, y, cx, cy, winkel_deg) + (r, t)
@@ -3946,7 +3977,9 @@ class Koerper3D(Element):
             a["ebene"] = _ebene_drehen(a["ebene"], cx, cy, winkel_deg)
 
     def skalieren(self, cx, cy, f):
-        if self.ebene:
+        if self.art == "netz":
+            self._netzdaten_abbilden(lambda x, y, z: _skal_pt(x, y, cx, cy, f) + (z * f,))
+        elif self.ebene:
             self.ebene = _ebene_skalieren(self.ebene, cx, cy, f)
             self.profil = [(x * f, y * f) for (x, y) in self.profil]
             if self.spitze:
@@ -3971,7 +4004,10 @@ class Koerper3D(Element):
                 a["tiefe"] *= f
 
     def spiegeln(self, ax, ay, bx, by):
-        if self.ebene:
+        if self.art == "netz":
+            self._netzdaten_abbilden(
+                lambda x, y, z: punkt_spiegeln(x, y, ax, ay, bx, by) + (z,))
+        elif self.ebene:
             self.ebene = _ebene_spiegeln(self.ebene, ax, ay, bx, by)
             self.profil = [(x, -y) for (x, y) in self.profil]
             if self.spitze:
@@ -3992,7 +4028,7 @@ class Koerper3D(Element):
     def _ebene_aktivieren(self):
         """Gives a body without work plane the ground plane (legacy vertical holes become
         cut-outs) so that it can be rotated freely."""
-        if self.ebene or self.art == "kugel":
+        if self.ebene or self.art in ("kugel", "netz"):
             return
         oben = max(self.z0, self.z0 + self.hoehe)
         for (x, y, r, t) in self.loecher:
@@ -4009,7 +4045,9 @@ class Koerper3D(Element):
             u = v_rotieren(e[3:6], achse, winkel_deg)
             v = v_rotieren(e[6:9], achse, winkel_deg)
             return tuple(o) + tuple(u) + tuple(v)
-        if self.art == "kugel" and self.kugel:
+        if self.art == "netz":
+            self._netzdaten_abbilden(lambda x, y, z: tuple(punkt_rotieren((x, y, z), p0, achse, winkel_deg)))
+        elif self.art == "kugel" and self.kugel:
             c = punkt_rotieren(self.kugel[:3], p0, achse, winkel_deg)
             self.kugel = (c[0], c[1], c[2], self.kugel[3])
         else:
@@ -4051,6 +4089,8 @@ class Koerper3D(Element):
     def to_dict(self):
         d = super().to_dict()
         d["profil"] = [list(p) for p in self.profil]
+        d.pop("_netz_cache", None)
+        d["netzdaten"] = self.netzdaten
         d["glatt"] = list(self.glatt) if self.glatt else None
         d["r_oben"], d["r_unten"] = self.r_oben, self.r_unten
         d["spitze"] = list(self.spitze) if self.spitze else None

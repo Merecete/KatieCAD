@@ -1964,6 +1964,22 @@ class Ansicht3D(tk.Frame):
         self.zeichne()
         self.info_var.set(tr("d3.msg.block_gebildet", name=name))
 
+    def verschmelzen(self):
+        """Union of the selected bodies to one body."""
+        ziele = [x for x in self.app.auswahl if S.ist_3d(x)]
+        if sum(len(x.koerper()) for x in ziele) < 2:
+            self.info_var.set(tr("d3.msg.verschm_min2"))
+            return
+        try:
+            n = S.verschmelzen(self.app.elemente, self.app.auswahl, self.app._snapshot)
+        except ValueError as ex:
+            self.info_var.set(tr("d3.msg.verschm_fehler", grund=str(ex)))
+            return
+        self.app.auswahl = [n] if n else []
+        self.app.redraw()
+        self.zeichne()
+        self.info_var.set(tr("d3.msg.verschmolzen"))
+
     def block_aufloesen(self):
         gr = [x for x in self.app.auswahl if isinstance(x, Gruppe3D)]
         if not gr:
@@ -1994,6 +2010,8 @@ class Ansicht3D(tk.Frame):
             if len([x for x in self.app.auswahl if S.parameter(x)]) == 1:
                 m.add_command(label=tr("d3.ctx.mass"), command=self.massdialog)
             m.add_command(label=tr("d3.ctx.kopieren"), command=self._ctx_kopieren)
+            if len([x for x in self.app.auswahl if S.ist_3d(x)]) >= 2:
+                m.add_command(label=tr("d3.ctx.verschmelzen"), command=self.verschmelzen)
             m.add_command(label=tr("d3.ctx.layer_aus"), command=self._ctx_layer_aus)
             m.add_command(label=tr("d3.ctx.loeschen"), command=self._ctx_loeschen)
             m.add_separator()
@@ -2221,6 +2239,8 @@ class Ansicht3DMixin:
             w.block_bilden()
         elif cmd == "aufloesen":
             w.block_aufloesen()
+        elif cmd == "verschmelzen":
+            w.verschmelzen()
         elif cmd == "mass":
             w.massdialog()
         elif cmd == "drehen":
