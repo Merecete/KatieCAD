@@ -257,7 +257,7 @@ Symbol; Maske und Pins sind schon vorbereitet. Die Liste steht in
    Haupt-/Hilfsgerät bestätigen. Das Gerät liegt danach als Block vor und wird
    beim Speichern als Datei im Block-Ordner abgelegt.
 5. Platzieren kannst du es mit **Block/Gerät einfügen (I)** oder **Elektro > Gerät aus
-   Datei laden…**. Beim Einfügen fragt das Programm IND, TYP, PER und die Pin-Namen
+   Datei laden…**. Beim Einfügen fragt das Programm IND, MAN, TYP, PER und die Pin-Namen
    ab.
 
 Geräte mit **gleichem IND** gehören zusammen: Das Hauptgerät zeigt in REF die
@@ -291,7 +291,7 @@ Potential wie `L1`, das an vielen Stellen vorkommt, bleibt ein Endpunkt.
 
 **Texte des Querverweises:** Bezeichnung (z. B. `L1`) und Zielangabe (z. B. „(Blatt 6/1/D)“) stehen standardmäßig in einer Zeile nebeneinander und haben Standardhöhen von 2,5 mm und 1,5 mm. Im Querverweis-Dialog (Doppelklick) stellst du beide Höhen getrennt ein. Beide Texte lassen sich außerdem an ihrem gelben Griff verschieben. Mit **Textpositionen zurücksetzen** im Dialog stehen sie wieder in der Standardlage.
 
-**Texte frei verschieben:** Auch bei Klemmen, Masken (IND/TYP/PER/REF), Kabeln, Pins und Geräteblöcken lassen sich die Beschriftungen verschieben. Markiere das Objekt und ziehe den gelben Griff am jeweiligen Text. Bei einem eingefügten Gerät gilt die Verschiebung nur für dieses eine Exemplar. Im Rechtsklickmenü setzt **Textpositionen zurücksetzen** die Texte wieder in die Standardlage. Die Klemmennummer (NUM) ist seit 1.0.3 mit 1,75 mm besser lesbar.
+**Texte frei verschieben:** Auch bei Klemmen, Masken (IND/MAN/TYP/PER/REF), Kabeln, Pins und Geräteblöcken lassen sich die Beschriftungen verschieben. Markiere das Objekt und ziehe den gelben Griff am jeweiligen Text. Bei einem eingefügten Gerät gilt die Verschiebung nur für dieses eine Exemplar. Im Rechtsklickmenü setzt **Textpositionen zurücksetzen** die Texte wieder in die Standardlage. Die Klemmennummer (NUM) ist seit 1.0.3 mit 1,75 mm besser lesbar.
 
 ### Klemmen und Kabel
 
@@ -320,7 +320,8 @@ geprüft von, Revision, Datum) und das Blattformat. Die Berichtsblätter werden 
 neu erzeugt. Handänderungen darin gehen verloren, deine Zeichnungsblätter bleiben
 unverändert.
 
-- Die Listen entstehen aus den Masken (IND/TYP/PER), den Klemmen, den Kabeln und
+- **Hersteller (Feld `MAN`):** Die Gerätemaske hat neben IND, TYP und PER das Feld **MAN** (engl. *manufacturer*). Reihenfolge von oben nach unten: **IND, MAN, TYP, PER, REF**. Der Hersteller erscheint in der **Geräteliste** (Spalte *Hersteller*) und in der **Stückliste**: Dort gilt zuerst das MAN-Feld des Geräts, fehlt es, der Hersteller aus dem Bauteilkatalog zum TYP; gleicher Typ von verschiedenen Herstellern steht in getrennten Zeilen. Ein leeres Feld wird nicht gezeichnet; bereits platzierte Geräte in alten Projekten bleiben unverändert, bis du MAN einträgst (Doppelklick auf das Gerät). **Bestehende Symbole ergänzen:** `python tools/symbole_man_ergaenzen.py` (im Projektordner) fügt allen Masken in `symbols/` das Feld MAN hinzu und ändert sonst nichts; mit `--pruefen` zeigt es nur an, was es ändern würde.
+- Die Listen entstehen aus den Masken (IND/MAN/TYP/PER), den Klemmen, den Kabeln und
   den Leitungen dazwischen. Fundstellen stehen als Blatt/Spalte/Zeile.
 - **Bauteilkatalog (Projekt › Bauteilkatalog…):** Hier ordnest du jedem TYP Hersteller, Bestellnummer und Beschreibung zu. „Typen aus Zeichnung übernehmen“ trägt alle gefundenen TYP-Werte ein, du musst nur noch die Angaben ergänzen. Die Stückliste übernimmt sie automatisch. Der Katalog liegt in der Projektdatei.
 - **Geräte automatisch nummerieren (Projekt › Geräte automatisch nummerieren, Befehl `NUMMERIEREN`):** Geräte, deren Kennzeichen (IND) nur aus einem Präfix besteht (`-K`, `K?`), bekommen die nächste freie Nummer: `-K1`, `-K2` … Die Nummern setzen hinter der höchsten schon vergebenen im ganzen Projekt fort; vergebene Nummern ändern sich nie. Nummeriert wird nur das Hauptsymbol, von oben nach unten und links nach rechts, wahlweise für das ganze Projekt oder nur das aktuelle Blatt. Hilfsteile (Kontakte) werden nicht verändert.

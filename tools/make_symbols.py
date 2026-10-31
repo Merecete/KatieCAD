@@ -76,7 +76,7 @@ class Sym:
                                         staerke=0.25, **STYLE))
 
     def mask(self, x, y, rolle="haupt"):
-        self.el.append(ElektroMaske(x, y, {"IND": "IND", "TYP": "TYP", "PER": "PER"},
+        self.el.append(ElektroMaske(x, y, {"IND": "IND", "MAN": "MAN", "TYP": "TYP", "PER": "PER"},
                                     rolle=rolle, staerke=None, **STYLE))
 
     # --- output --------------------------------------------------

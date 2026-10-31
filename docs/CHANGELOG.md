@@ -7,6 +7,7 @@
 - Neu: **Ausrichten an zwei Punkten** (`AUSRICHTEN` / `ALIGN` / `AL`) wie in AutoCAD: Quell-/Zielpunkte, Verschieben, Drehen und optional Skalieren, mit Vorschau; die bisherigen Kanten-Befehle heißen weiter `AUSLINKS`, `AUSRECHTS`, `AUSOBEN`, `AUSUNTEN`, `AUSMITTEH`, `AUSMITTEV`
 - Objektfang **Schnittpunkt** findet jetzt auch Schnitte von Linien, Rechteck- und Polylinienkanten mit **Kreisen und Bögen** sowie von Kreisen/Bögen untereinander (bisher nur Linie × Linie)
 - Fix: Das Fenster „Attribute bearbeiten“ (Gerät einfügen/ändern) wird bei vielen Anschlüssen (z. B. SPS-Baugruppe mit 16 Kanälen) nicht mehr höher als der Bildschirm: Die Liste ist **scrollbar**, OK/Abbrechen bleiben sichtbar
+- Neu: **Hersteller-Feld `MAN`** in der Gerätemaske (Reihenfolge IND, MAN, TYP, PER, REF); Spalte *Hersteller* in der Geräteliste; die Stückliste nutzt MAN (sonst den Bauteilkatalog) und trennt gleiche Typen verschiedener Hersteller. Alle Symbole bekommen MAN über `tools/symbole_man_ergaenzen.py`
 - Neu: **Eigene Schriften** (Ansicht › Schriften verwalten…) – installierte TrueType/OpenType-Schriften wählbar, echte Zeichenbreiten, Einbettung in PDF
 - Neu: 3D-Rechtsklickmenü **Kopieren** – Schaltschrank oder beliebige 3D-Körper kopieren; die Kopie hängt mit Vorschau und Objektfang an der Maus und wird per Klick abgesetzt
 - Suchen und Ersetzen: neuer Bereich **Nur Auswahl** – sucht und ersetzt nur in den markierten Objekten (beim Öffnen mit Markierung schon voreingestellt)

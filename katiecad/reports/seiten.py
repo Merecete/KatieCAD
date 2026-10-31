@@ -95,6 +95,7 @@ _STANDARD = {
                ("typ", "rep.col.art", 24, "l")],
     "geraete": [("pos", "rep.col.pos", 6, "r"), ("ind", "rep.col.ind", 18, "l"),
                 ("einbauort", "rep.col.einbauort", 26, "l"),
+                ("hersteller", "rep.col.hersteller", 26, "l"),
                 ("typ", "rep.col.typ", 40, "l"), ("per", "rep.col.per", 40, "l"),
                 ("anzahl", "rep.col.anzahl", 9, "r"),
                 ("ort", "rep.col.fundstellen", 50, "l"),

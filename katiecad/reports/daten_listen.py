@@ -91,23 +91,26 @@ def katalog_dict(katalog):
 
 def stueckliste(blaetter, nummer, netz, katalog=None, einbauorte=None):
     """Parts list: devices, single terminals and cables grouped by TYP.
-    Manufacturer / order number / description come from the catalogue.
+    Manufacturer: the MAN field of the device, otherwise the catalogue entry of the TYP;
+    order number / description come from the catalogue. The same TYP from different
+    manufacturers is listed separately.
     Rows: pos, anzahl, typ, hersteller, bestellnr, beschreibung, kennzeichen."""
     kat = katalog_dict(katalog)
     gruppen, reihenfolge = {}, []
 
-    def zaehle(typ, kennz):
+    def zaehle(typ, kennz, man=""):
         typ = (typ or "").strip()
-        schl = typ.upper()
+        man = (man or "").strip() or str(kat.get(typ.upper(), {}).get("hersteller", "") or "").strip()
+        schl = (typ.upper(), man.upper())
         if schl not in gruppen:
-            gruppen[schl] = {"typ": typ, "n": 0, "kz": []}
+            gruppen[schl] = {"typ": typ, "man": man, "n": 0, "kz": []}
             reihenfolge.append(schl)
         gruppen[schl]["n"] += 1
         if kennz:
             gruppen[schl]["kz"].append(kennz)
 
     for z in D.geraeteliste(blaetter, nummer, None, False, einbauorte):
-        zaehle(z["typ"], z["ind"])
+        zaehle(z["typ"], z["ind"], z.get("hersteller", ""))
     if netz is not None:
         for kl in netz.klemmen:
             k = kl["obj"]
@@ -121,13 +124,13 @@ def stueckliste(blaetter, nummer, netz, katalog=None, einbauorte=None):
     zeilen = []
     for schl in reihenfolge:
         g = gruppen[schl]
-        e = kat.get(schl, {})
+        e = kat.get(schl[0], {})
         zeilen.append({"anzahl": str(g["n"]), "typ": g["typ"],
-                       "hersteller": str(e.get("hersteller", "") or ""),
+                       "hersteller": g["man"],
                        "bestellnr": str(e.get("bestellnr", "") or ""),
                        "beschreibung": str(e.get("beschreibung", "") or ""),
                        "kennzeichen": sorted(g["kz"], key=natuerlich)})
-    zeilen.sort(key=lambda r: (r["typ"] == "", natuerlich(r["typ"])))
+    zeilen.sort(key=lambda r: (r["typ"] == "", natuerlich(r["typ"]), natuerlich(r["hersteller"])))
     for i, z in enumerate(zeilen, 1):
         z["pos"] = str(i)
     return zeilen

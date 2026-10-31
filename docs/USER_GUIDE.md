@@ -256,7 +256,7 @@ are already prepared. The list is in `symbols/README.md`.
    name and confirm main/auxiliary device. The device is now a block and is saved
    as a file in the block folder.
 5. Place it with **Insert block/device (I)** or **Blocks > Load block/device from file…**.
-   On insertion the program asks for IND, TYP, PER and the pin names.
+   On insertion the program asks for IND, MAN, TYP, PER and the pin names.
 
 Devices with the **same IND** belong together: the main device shows the sheets of
 all auxiliary devices in REF, an auxiliary device shows the main device. This way you
@@ -289,7 +289,7 @@ places stays an end point.
 
 **Cross-reference texts:** the identifier (e.g. `L1`) and the target note (e.g. "(Sheet 6/1/D)") stand side by side on one line by default and have default heights of 2.5 mm and 1.5 mm. In the cross-reference dialog (double-click) you set both heights separately. Both texts can also be moved with their yellow grips. **Reset text positions** in the dialog puts them back to the default position.
 
-**Moving texts freely:** The labels of terminals, masks (IND/TYP/PER/REF), cables, pins and device blocks can be moved as well. Select the object and drag the yellow grip at the text. For an inserted device the move applies to that one instance only. **Reset text positions** in the right-click menu puts the texts back to their default position. Since 1.0.3 the terminal number (NUM) is more readable at 1.75 mm.
+**Moving texts freely:** The labels of terminals, masks (IND/MAN/TYP/PER/REF), cables, pins and device blocks can be moved as well. Select the object and drag the yellow grip at the text. For an inserted device the move applies to that one instance only. **Reset text positions** in the right-click menu puts the texts back to their default position. Since 1.0.3 the terminal number (NUM) is more readable at 1.75 mm.
 
 ### Terminals and cables
 
@@ -314,7 +314,8 @@ In the dialog you choose the sheets, the title block template and the project da
 revision, date) and the sheet format. The report sheets are rebuilt completely on every run. Manual
 changes in them are lost; your drawing sheets stay untouched.
 
-- The lists are built from the masks (IND/TYP/PER), terminals, cables and the wires
+- **Manufacturer (field `MAN`):** besides IND, TYP and PER the device mask has the field **MAN** (*manufacturer*). Order from top to bottom: **IND, MAN, TYP, PER, REF**. The manufacturer appears in the **device list** (column *Manufacturer*) and in the **parts list**: the MAN field of the device is used first, if it is empty the manufacturer from the parts catalogue for the TYP; the same type from different manufacturers is listed in separate rows. An empty field is not drawn; devices already placed in old projects stay as they are until you enter MAN (double-click the device). **Updating existing symbols:** `python tools/symbole_man_ergaenzen.py` (in the project folder) adds the field MAN to every mask in `symbols/` and changes nothing else; with `--pruefen` it only shows what it would change.
+- The lists are built from the masks (IND/MAN/TYP/PER), terminals, cables and the wires
   between them. Locations are given as sheet/column/row.
 - **Parts catalogue (Project > Parts catalogue...):** assign manufacturer, order number and description to every TYP. "Take over types from drawing" enters all TYP values found, you only add the details. The parts list uses them automatically. The catalogue is stored in the project file.
 - **Number devices automatically (Project > Number devices automatically, command `NUMMERIEREN`):** devices whose designation (IND) is only a prefix (`-K`, `K?`) get the next free number: `-K1`, `-K2` ... Numbers continue after the highest one already used in the whole project; assigned numbers never change. Only the main symbol is numbered, top to bottom and left to right, for the whole project or the current sheet. Auxiliary parts (contacts) are not changed.

@@ -43,13 +43,21 @@ def _typ_per(obj):
     return wert_gesetzt(a.get("TYP"), "TYP"), wert_gesetzt(a.get("PER"), "PER")
 
 
+def _hersteller(obj):
+    """Manufacturer (field MAN) of a device mask / block."""
+    if isinstance(obj, ElektroMaske):
+        return wert_gesetzt(obj.werte.get("MAN"), "MAN")
+    a = getattr(obj, "attribute", {}) or {}
+    return wert_gesetzt(a.get("MAN"), "MAN")
+
+
 def geraeteliste(blaetter, nummer, netz=None, klemmenleisten=True,
                  einbauorte=None):
     """One row per equipment identifier (IND). Main symbol and auxiliary
     parts with the same IND count as one device.
     Same IND at different installation locations (sheet property) = different
     devices.
-    Rows: pos, ind, einbauort, typ, per, anzahl, orte (list), ort (text)."""
+    Rows: pos, ind, einbauort, hersteller, typ, per, anzahl, orte (list), ort (text)."""
     gruppen = {}
     reihenfolge = []
     for idx, el in blaetter:
@@ -60,12 +68,13 @@ def geraeteliste(blaetter, nummer, netz=None, klemmenleisten=True,
             eo = _eo(einbauorte, idx)
             schluessel = ("ind", eo, ind) if ind else ("ohne", id(g["obj"]))
             if schluessel not in gruppen:
-                gruppen[schluessel] = {"ind": ind, "eo": eo, "typ": "", "per": "",
+                gruppen[schluessel] = {"ind": ind, "eo": eo, "typ": "", "per": "", "man": "",
                                        "anzahl": 0, "orte": [], "haupt": None,
                                        "fpos": None}
                 reihenfolge.append(schluessel)
             z = gruppen[schluessel]
             typ, per = _typ_per(g["obj"])
+            man = _hersteller(g["obj"])
             z["anzahl"] += 1
             z["orte"].append((g["rolle"] != "haupt", idx, g["feld"]))
             if g["rolle"] == "haupt" or z["haupt"] is None:
@@ -75,7 +84,9 @@ def geraeteliste(blaetter, nummer, netz=None, klemmenleisten=True,
                     z["typ"] = typ or z["typ"]
                 if per or not z["per"]:
                     z["per"] = per or z["per"]
+                z["man"] = man or z["man"]
             else:
+                z["man"] = z["man"] or man
                 z["typ"] = z["typ"] or typ
                 z["per"] = z["per"] or per
     zeilen = []
@@ -84,7 +95,8 @@ def geraeteliste(blaetter, nummer, netz=None, klemmenleisten=True,
         z = gruppen[s]
         orte = [_ort(nummer, i, f) for _h, i, f in sorted(z["orte"])]
         fn = funktion_an(ftexte.get(z["fpos"][0], []), *z["fpos"][1:]) if z["fpos"] else []
-        zeilen.append({"ind": z["ind"], "einbauort": z["eo"], "typ": z["typ"],
+        zeilen.append({"ind": z["ind"], "einbauort": z["eo"], "hersteller": z["man"],
+                       "typ": z["typ"],
                        "per": z["per"], "anzahl": str(z["anzahl"]),
                        "orte": orte, "ort": ", ".join(orte), "funktion": fn})
     if klemmenleisten and netz is not None:
@@ -108,7 +120,7 @@ def geraeteliste(blaetter, nummer, netz=None, klemmenleisten=True,
                                                 *_pos(k))))
         for (_eo_, kz), z in leisten.items():
             orte = [_ort(nummer, i, f) for i, f in sorted(z["orte"])]
-            zeilen.append({"ind": kz, "einbauort": z["eo"], "typ": z["typ"],
+            zeilen.append({"ind": kz, "einbauort": z["eo"], "hersteller": "", "typ": z["typ"],
                            "per": z["per"], "anzahl": str(z["anzahl"]),
                            "orte": orte, "ort": ", ".join(orte),
                            "funktion": z["fn"] or []})

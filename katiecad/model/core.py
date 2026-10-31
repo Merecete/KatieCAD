@@ -1901,7 +1901,7 @@ class AttributDefinition(Text):
 
 
 def _attribut_defs(elemente):
-    """AttributDefinitionen + fixed fields (IND/TYP/PER/NUM) of masks."""
+    """AttributDefinitionen + fixed fields (IND/MAN/TYP/PER/NUM) of masks."""
     out = [e for e in elemente if isinstance(e, AttributDefinition)]
     vorhanden = {a.tag for a in out}
     for e in elemente:
@@ -3246,22 +3246,23 @@ class _FestMaske(Element):
 
 
 class ElektroMaske(_FestMaske):
-    """Base for electrical devices: <IND> (2.5), <TYP>, <PER>, <REF> (1.5 each).
+    """Base for electrical devices: <IND> (2.5), <MAN>, <TYP>, <PER>, <REF> (1.5 each).
 
     The insertion point (x, y) is the LOWER RIGHT corner of the mask; all
     texts are right-aligned and grow upwards so that the mask can be
     'attached' to a symbol.  REF is at the very bottom and grows upwards
     with the number of references (the other lines move up with it).
 
-    IND/TYP/PER are filled in. REF is created automatically: devices with
+    IND/MAN/TYP/PER are filled in (MAN = manufacturer, new in 1.1.1). REF is created automatically: devices with
     the same PER refer to each other (main symbol -> all auxiliary parts,
     auxiliary part -> only the main symbol), see katiecad.electrical.logic."""
-    FELDER = ("IND", "TYP", "PER")
+    FELDER = ("IND", "MAN", "TYP", "PER")
     ROLLEN = ("haupt", "hilfs")
     SPIEGEL = ("liste", "rechts", "unten")      # reference list / contact mirror
-    HOEHEN = {"IND": 2.5, "TYP": 1.5, "PER": 1.5}
+    HOEHEN = {"IND": 2.5, "MAN": 1.5, "TYP": 1.5, "PER": 1.5}
     REF_HOEHE = 1.5
-    ABSTAND = {"PER": 1.1, "TYP": 2.0, "IND": 3.0}   # centre to centre upwards
+    # centre to centre upwards; from top to bottom: IND, MAN, TYP, PER, REF
+    ABSTAND = {"PER": 1.1, "TYP": 2.0, "MAN": 2.0, "IND": 3.0}
     ZEILEN = ()
 
     def __init__(self, x, y, werte=None, rolle="haupt", spiegel="liste",
@@ -3428,7 +3429,7 @@ class ElektroMaske(_FestMaske):
         if mirror:
             out.extend(self._spiegel_elemente(st))
         y = ref.bbox()[3]                # Top edge of the (reserved) REF line
-        for tag in ("PER", "TYP", "IND"):
+        for tag in ("PER", "TYP", "MAN", "IND"):
             y += self.ABSTAND[tag]       # Centre of the respective line
             w = self.werte.get(tag, "")
             if tag in self.ausgeblendet or w == "":
