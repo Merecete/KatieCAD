@@ -261,7 +261,7 @@ def dreiecke_orientiert(netz):
             punkte.append((float(p[0]), float(p[1]), float(p[2])))
         return i
 
-    tris = []
+    polys = []
     for fl in netz.flaechen:
         ids = [vid(netz.punkte[i]) for i in fl]
         sauber = [ids[0]]
@@ -270,8 +270,19 @@ def dreiecke_orientiert(netz):
                 sauber.append(i)
         if len(sauber) > 1 and sauber[0] == sauber[-1]:
             sauber.pop()
-        if len(sauber) < 3:
-            continue
+        if len(sauber) >= 3:
+            polys.append(sauber)
+    # T-junctions (merged bodies): a point that lies on the edge of a neighbouring face is
+    # inserted into that edge, so that the surface is watertight
+    index = _Achsenindex(punkte, set(i for pl in polys for i in pl))
+    tris = []
+    for sauber in polys:
+        erweitert = []
+        for k in range(len(sauber)):
+            a, b = sauber[k], sauber[(k + 1) % len(sauber)]
+            erweitert.append(a)
+            erweitert.extend(index.auf_kante(a, b))
+        sauber = erweitert
         pts = [punkte[i] for i in sauber]
         for (i, j, k) in G.triangulieren(pts):
             t = (sauber[i], sauber[j], sauber[k])

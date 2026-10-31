@@ -435,6 +435,24 @@ _els = [_sg2]; _res = _S3.verschmelzen(_els, [_sg2])
 check(_res is not None and _res.art == "netz" and _els == [_res], "Schrank zu einem Körper")
 _vs = G.sichtbare_linien_je([("x", [_res.netz()])], G.Kamera(yaw=-30.0, pitch=20.0, skala=0.3), 450, 300)
 check(len(_vs["x"][0]) > 0, "verdeckte Kanten für verschmolzenen Körper")
+# --- bereits verschmolzene Körper erneut verschmelzen -------------------------------
+def _vol_k(n):
+    return abs(_vol(n.netzdaten))
+
+
+_m1 = core.quader(0, 0, 100, 100, 0, 100); _m2 = core.quader(50, 50, 150, 150, 0, 100)
+_M = _S3.verschmelzen([_m1, _m2], [_m1, _m2])
+_m3 = core.quader(100, 0, 200, 60, 0, 40)
+_M2 = _S3.verschmelzen([_M, _m3], [_M, _m3])
+check(_M2 is not None and abs(_vol_k(_M2) - 1970000.0) < 1.0, "verschmolzener Körper + Quader erneut verschmelzen")
+_zy2 = core.Koerper3D(art="prisma", profil=G.kreis_profil(100, 50, 30, 32), z0=0, hoehe=150, rund=True)
+_M3 = _S3.verschmelzen([_M2, _zy2], [_M2, _zy2])
+check(_M3 is not None and _vol_k(_M3) > _vol_k(_M2), "dritte Stufe mit Zylinder")
+_pa = core.quader(0, 0, 50, 50, 0, 50); _pb = core.quader(25, 25, 75, 75, 0, 50)
+_qa = core.quader(60, 0, 120, 50, 0, 50); _qb = core.quader(100, 25, 150, 75, 20, 50)
+_A = _S3.verschmelzen([_pa, _pb], [_pa, _pb]); _B = _S3.verschmelzen([_qa, _qb], [_qa, _qb])
+_Z = _S3.verschmelzen([_A, _B], [_A, _B])
+check(_Z is not None and abs(_vol_k(_Z) - 460000.0) < 1.0, "zwei verschmolzene Körper miteinander")
 for k in ("menu.3d.verschmelzen", "d3.ctx.verschmelzen", "d3.msg.verschm_min2", "d3.msg.verschm_fehler",
           "d3.msg.verschmolzen"):
     check(k in I.TEXTE["de"] and k in I.TEXTE["en"], k)
