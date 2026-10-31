@@ -121,7 +121,8 @@ def stueckliste(blaetter, nummer, netz, katalog=None, einbauorte=None):
                    wert_gesetzt(k.werte.get("MAN"), "MAN"))
         for kb in netz.kabel:
             w = kb["obj"].werte
-            zaehle((w.get("TYP", "") or "").strip(), (w.get("CAB", "") or "").strip())
+            zaehle((w.get("TYP", "") or "").strip(), (w.get("CAB", "") or "").strip(),
+                   (w.get("MAN", "") or "").strip())
     zeilen = []
     for schl in reihenfolge:
         g = gruppen[schl]

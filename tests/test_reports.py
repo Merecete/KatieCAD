@@ -241,7 +241,7 @@ with tempfile.TemporaryDirectory() as d:
     sp3, opt3 = S.lade_spalten("geraete", [d])
     check([s.titel for s in sp3] == ["BMK", "Typ"] and opt3["zeilenhoehe"] == 7.0, "Spalten ueber JSON anpassbar")
     with open(os.path.join(d, "kabel.json"), "w") as f: f.write("{kaputt")
-    check(len(S.lade_spalten("kabel", [d])[0]) == 7, "defekte JSON wird ignoriert")
+    check(len(S.lade_spalten("kabel", [d])[0]) == 8, "defekte JSON wird ignoriert")
 # CSV data
 tab = S.tabellen_fuer_export([(0, el1)], nr)
 check(set(tab) == set(S.LISTEN) and len(tab["klemmen"][1]) == 3, "Export-Tabellen")

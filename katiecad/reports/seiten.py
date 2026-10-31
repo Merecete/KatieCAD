@@ -111,6 +111,7 @@ _STANDARD = {
                 ("funktion", "rep.col.funktion", 40, "l")],
     "kabel": [("cab", "rep.col.cab", 14, "l"),
               ("einbauort", "rep.col.einbauort", 26, "l"),
+              ("hersteller", "rep.col.hersteller", 22, "l"),
               ("typ", "rep.col.typ", 26, "l"),
               ("ader", "rep.col.ader", 10, "l"), ("von", "rep.col.von", 50, "l"),
               ("nach", "rep.col.nach", 50, "l"), ("ort", "rep.col.ort", 18, "l")],
@@ -354,7 +355,7 @@ def tabellen_fuer_export(blaetter, nummer, ordner=(), klemmen_in_geraeteliste=Tr
 
 
 _GRUPPE = {"klemmen": ("_gk", ("leiste", "einbauort")),
-           "kabel": ("_gk", ("cab", "einbauort", "typ")),
+           "kabel": ("_gk", ("cab", "einbauort", "hersteller", "typ")),
            "stecker": ("_gk", ("stecker", "einbauort")),
            "sps": ("_gk", ("station", "baugruppe", "einbauort"))}
 

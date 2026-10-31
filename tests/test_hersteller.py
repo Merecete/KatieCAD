@@ -31,7 +31,12 @@ m3 = core.ElektroMaske(0, 0, {"IND": "K1", "MAN": "Siemens"}); d = m3.to_dict()
 check(d["werte"]["MAN"] == "Siemens", "to_dict enthält MAN")
 m3.setze_werte({"MAN": "ABB"}); check(m3.werte["MAN"] == "ABB", "setze_werte")
 # terminals and cables stay unchanged
-check("MAN" in core.Klemme.FELDER and "MAN" not in core.Kabel.FELDER, "MAN bei Klemme, nicht beim Kabel")
+check("MAN" in core.Klemme.FELDER and core.Kabel.FELDER == ("CAB", "MAN", "TYP"), "MAN bei Klemme und Kabel")
+c0 = core.Kabel(0, 0, {"CAB": "W1", "TYP": "NYM 5x1,5"})
+c1 = core.Kabel(0, 0, {"CAB": "W1", "MAN": "Lapp", "TYP": "NYM 5x1,5"})
+cy = lambda k, ph=False: {t.inhalt: t.y for t in k.aufgeloest(ph) if isinstance(t, core.Text)}
+check(cy(c0, True) == {"W1": 0.6, "NYM 5x1,5": -1.2}, "Kabel ohne MAN: Lage wie bisher, kein Platzhalter <MAN>")
+check(cy(c1) == {"W1": 2.3, "Lapp": 0.6, "NYM 5x1,5": -1.2}, "Kabel mit MAN: CAB, MAN, TYP")
 k0 = core.Klemme(0, 0, {"IND": "X1", "TYP": "WDU", "PER": "2,5", "NUM": "1"})
 k1 = core.Klemme(0, 0, {"IND": "X1", "MAN": "Weidmüller", "TYP": "WDU", "PER": "2,5", "NUM": "1"})
 ty = lambda k: {t.inhalt: t.y for t in k.aufgeloest() if isinstance(t, core.Text)}
@@ -85,6 +90,16 @@ gl2 = [z for z in D.geraeteliste(bl2, nr, n2) if z["ind"] == "X1"]
 check(gl2 and gl2[0]["hersteller"] == "Weidmüller", "Geräteliste: Klemmleiste mit Hersteller")
 sl2 = DL.stueckliste(bl2, nr, n2, [])
 check({(r["typ"], r["hersteller"]): r["anzahl"] for r in sl2} == {("WDU 2.5", "Weidmüller"): "1", ("WDU 2.5", ""): "1"}, "Stückliste: Klemmen nach Hersteller getrennt")
+
+# --- cables: MAN in cable plan and parts list
+kb = core.Kabel(40, 100, {"CAB": "W1", "MAN": "Lapp", "TYP": "Ölflex 5G1,5"}, laenge=40)
+bl3 = [(0, [core.Koordinatenfeld(0, 0, 287, 164, 6, 4), kb])]
+n3 = N.Netz.aufbauen(bl3)
+kpl = D.kabelplan(n3, bl3, nr)
+check(kpl and all(r["hersteller"] == "Lapp" for r in kpl), "Kabelplan: Hersteller")
+check("hersteller" in [c[0] for c in S._STANDARD["kabel"]], "Spalte Hersteller im Kabelplan")
+sl3 = DL.stueckliste(bl3, nr, n3, [])
+check([(r["typ"], r["hersteller"]) for r in sl3] == [("Ölflex 5G1,5", "Lapp")], "Stückliste: Kabel mit Hersteller")
 
 # --- column titles in the lists are readable names, not system tags
 for sp, de, en in (("rep.col.ind", "ID", "ID"), ("rep.col.typ", "Typenbezeichnung", "Type designation"),

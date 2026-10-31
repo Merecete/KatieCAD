@@ -3459,8 +3459,8 @@ class Kabel(_FestMaske):
     kreuzungen: (not saved) x positions of the crossings, computed by
     katiecad.electrical.logic.kabel_kreuzungen.
     adern: {distance from cable start ("%.1f"): designation} (changes)."""
-    FELDER = ("CAB", "TYP")
-    HOEHEN = {"CAB": 2.5, "TYP": 1.5}
+    FELDER = ("CAB", "MAN", "TYP")
+    HOEHEN = {"CAB": 2.5, "MAN": 1.5, "TYP": 1.5}
     REF_HOEHE = 1.5
     ADER_HOEHE = 2.0
     STRICH = 1.25                     # half stroke length (45 degrees)
@@ -3505,13 +3505,16 @@ class Kabel(_FestMaske):
         self._anker = {}
         out = [Linie(self.x, self.y, self.x + self.laenge, self.y, **st)]
         tx = self.x - self.TEXT_ABSTAND
-        for tag, dy, anker in (("CAB", 0.6, "unten_rechts"),
+        # MAN (manufacturer) sits between CAB and TYP; CAB moves up when MAN is filled in
+        mit_man = bool(self.werte.get("MAN", "")) and "MAN" not in self.ausgeblendet
+        for tag, dy, anker in (("CAB", 2.3 if mit_man else 0.6, "unten_rechts"),
+                               ("MAN", 0.6, "unten_rechts"),
                                ("TYP", -1.2, "mitte_rechts")):
             w = self.werte.get(tag, "")
             if tag in self.ausgeblendet:
                 continue
             if w == "":
-                if not ph:
+                if not ph or tag == "MAN":       # no placeholder for MAN: old cables stay as they are
                     continue
                 w = "<" + tag + ">"
             out.append(self._t(tag, tx, self.y + dy, w, self.HOEHEN[tag], anker, st))

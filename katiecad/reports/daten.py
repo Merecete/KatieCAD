@@ -270,7 +270,7 @@ def _bruecken(netz, zeilen):
 def kabelplan(netz, blaetter, nummer, einbauorte=None):
     """One row per core (or per cable without detected cores).
     Von = end above the cable (supply), Nach = end below.
-    Rows: cab, einbauort, typ, ader, von (list), nach (list), ort."""
+    Rows: cab, einbauort, hersteller, typ, ader, von (list), nach (list), ort."""
     felder = _felder(blaetter)
     nach_cab = defaultdict(list)
     for kb in netz.kabel:
@@ -284,12 +284,13 @@ def kabelplan(netz, blaetter, nummer, einbauorte=None):
             obj = kb["obj"]
             eo = _eo(einbauorte, kb["blatt"])
             typ = (obj.werte.get("TYP", "") or "").strip()
+            hers = (obj.werte.get("MAN", "") or "").strip()
             ort = _ort(nummer, kb["blatt"],
                        feld_an(felder.get(kb["blatt"], []), *_pos(obj)))
             adern = [a for a in kb["adern"] if a["kanten"]]
             if not adern:
                 zeilen.append({"cab": cab, "einbauort": eo, "_gk": (cab, eo),
-                               "typ": typ, "ader": "", "von": [],
+                               "hersteller": hers, "typ": typ, "ader": "", "von": [],
                                "nach": [], "ort": ort})
                 continue
             for a in adern:
@@ -298,7 +299,7 @@ def kabelplan(netz, blaetter, nummer, einbauorte=None):
                                else (kante.b, kante.a))
                 zeilen.append({
                     "cab": cab, "einbauort": eo, "_gk": (cab, eo),
-                    "typ": typ, "ader": a["name"],
+                    "hersteller": hers, "typ": typ, "ader": a["name"],
                     "von": ziele_texte(ende_ziele(netz, oben, kante)),
                     "nach": ziele_texte(ende_ziele(netz, unten, kante)),
                     "ort": ort})
