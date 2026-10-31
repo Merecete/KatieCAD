@@ -959,6 +959,7 @@
         "versatz": {},
         "werte": {
           "IND": "-Q",
+          "MAN": "MAN",
           "TYP": "TYP",
           "PER": "PER"
         },

@@ -99,6 +99,7 @@
         "versatz": {},
         "werte": {
           "IND": "A",
+          "MAN": "MAN",
           "TYP": "TYP",
           "PER": "PER"
         },

@@ -118,6 +118,7 @@
         "versatz": {},
         "werte": {
           "IND": "-G",
+          "MAN": "MAN",
           "TYP": "TYP",
           "PER": "PER"
         },
