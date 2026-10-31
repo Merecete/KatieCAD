@@ -117,7 +117,8 @@ def stueckliste(blaetter, nummer, netz, katalog=None, einbauorte=None):
             nm = wert_gesetzt(k.werte.get("NUM"), "NUM")
             zaehle(wert_gesetzt(k.werte.get("TYP"), "TYP"),
                    (kl["leiste"] + ":" + nm) if kl["leiste"] and nm
-                   else kl["leiste"] or nm)
+                   else kl["leiste"] or nm,
+                   wert_gesetzt(k.werte.get("MAN"), "MAN"))
         for kb in netz.kabel:
             w = kb["obj"].werte
             zaehle((w.get("TYP", "") or "").strip(), (w.get("CAB", "") or "").strip())

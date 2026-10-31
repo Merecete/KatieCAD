@@ -2,6 +2,8 @@
 
 ## 1.1.2
 - Neu: **Hersteller-Feld `MAN`** in der Gerätemaske (Reihenfolge IND, MAN, TYP, PER, REF); Spalte *Hersteller* in der Geräteliste; die Stückliste nutzt MAN (sonst den Bauteilkatalog) und trennt gleiche Typen verschiedener Hersteller. Alle Symbole bekommen MAN über `tools/symbole_man_ergaenzen.py`
+- Neu: **Klemmen** haben ebenfalls das Feld `MAN` (Klemmenplan, Geräteliste, Stückliste)
+- Änderung: Spaltentitel in den Listen verständlich: *ID* statt IND, *Typenbezeichnung* statt TYP, *Leistung* statt PER (Klemmleiste (ID)); auf den Zeichnungen bleiben die Kürzel
 - Versionssprung auf 1.1.2
 
 ## 1.1.1

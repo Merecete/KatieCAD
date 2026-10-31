@@ -102,6 +102,7 @@ _STANDARD = {
                 ("funktion", "rep.col.funktion", 40, "l")],
     "klemmen": [("leiste", "rep.col.leiste", 16, "l"),
                 ("einbauort", "rep.col.einbauort", 26, "l"),
+                ("hersteller", "rep.col.hersteller", 22, "l"),
                 ("typ", "rep.col.typ", 26, "l"),
                 ("oben", "rep.col.oben", 48, "l"),
                 ("num", "rep.col.num", 10, "l"),

@@ -108,19 +108,20 @@ def geraeteliste(blaetter, nummer, netz=None, klemmenleisten=True,
             if not kz:
                 continue
             eo = _eo(einbauorte, kl["blatt"])
-            z = leisten.setdefault((eo, kz), {"ind": kz, "eo": eo, "typ": "",
+            z = leisten.setdefault((eo, kz), {"ind": kz, "eo": eo, "typ": "", "man": "",
                                               "per": "", "anzahl": 0,
                                               "orte": set(), "fn": None})
             if z["fn"] is None:
                 z["fn"] = funktion_an(ftexte.get(kl["blatt"], []), *_pos(k))
             z["anzahl"] += 1
             z["typ"] = z["typ"] or wert_gesetzt(k.werte.get("TYP"), "TYP")
+            z["man"] = z["man"] or wert_gesetzt(k.werte.get("MAN"), "MAN")
             z["per"] = z["per"] or wert_gesetzt(k.werte.get("PER"), "PER")
             z["orte"].add((kl["blatt"], feld_an(felder.get(kl["blatt"], []),
                                                 *_pos(k))))
         for (_eo_, kz), z in leisten.items():
             orte = [_ort(nummer, i, f) for i, f in sorted(z["orte"])]
-            zeilen.append({"ind": kz, "einbauort": z["eo"], "hersteller": "", "typ": z["typ"],
+            zeilen.append({"ind": kz, "einbauort": z["eo"], "hersteller": z["man"], "typ": z["typ"],
                            "per": z["per"], "anzahl": str(z["anzahl"]),
                            "orte": orte, "ort": ", ".join(orte),
                            "funktion": z["fn"] or []})
@@ -137,7 +138,7 @@ def geraeteliste(blaetter, nummer, netz=None, klemmenleisten=True,
 # ------------------------------------------------------------------
 def klemmenplan(netz, blaetter, nummer, einbauorte=None):
     """One row per terminal, sorted by terminal strip (IND) and number (NUM).
-    Rows: leiste, einbauort, num, typ, per, oben (list), unten (list), ort.
+    Rows: leiste, einbauort, num, hersteller, typ, per, oben (list), unten (list), ort.
 
     Terminals of the same strip whose top (or bottom) sides are wired
     directly together form a BRIDGE group: only its first terminal lists the
@@ -153,6 +154,7 @@ def klemmenplan(netz, blaetter, nummer, einbauorte=None):
         zeilen.append({
             "leiste": kl["leiste"], "einbauort": eo, "_gk": (eo, kl["leiste"]),
             "num": wert_gesetzt(w.get("NUM"), "NUM"),
+            "hersteller": wert_gesetzt(w.get("MAN"), "MAN"),
             "typ": wert_gesetzt(w.get("TYP"), "TYP"),
             "per": wert_gesetzt(w.get("PER"), "PER"),
             "ort": _ort(nummer, kl["blatt"],

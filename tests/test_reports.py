@@ -297,7 +297,7 @@ with tempfile.TemporaryDirectory() as tmp:
     tab = S.tabellen_fuer_export([(0, el1)], nr)
     paths = ANW.csv_exportieren(os.path.join(tmp, "csv"), tab, {"geraete": "Geraeteliste", "klemmen": "Klemmenplan", "kabel": "Kabelplan"})
     txtk = open(paths[1], encoding="utf-8-sig").read().splitlines()
-    check(len(paths) == len(S.LISTEN) and txtk[0].split(";")[0] == "Klemmleiste (IND)" and txtk[1].startswith("X1;WDU 2.5;L1;1;U1 (W1/L1);1/1/B"), f"CSV Klemmenplan: {txtk[:2]}")
+    check(len(paths) == len(S.LISTEN) and txtk[0].split(";")[0] == "Klemmleiste (ID)" and txtk[1].startswith("X1;;WDU 2.5;L1;1;U1 (W1/L1);1/1/B"), f"CSV Klemmenplan: {txtk[:2]}")
 
 # PDF: report sheet is also printed from the layout for source 'modell'
 from katiecad.fileio import pdf as P

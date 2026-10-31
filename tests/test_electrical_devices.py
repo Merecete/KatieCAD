@@ -164,7 +164,7 @@ check(vv.arme in ([90, 180], [0, 270]) and vv.arme != [0, 90], "Verbindung drehe
 # ---- Round 5
 k = core.Klemme(0, 0, {"NUM": "1"})
 check([t.inhalt for t in k.aufgeloest() if isinstance(t, core.Text)] == ["1"], "Klemme: leere Felder ohne Text")
-check(set(k.werte) == {"IND", "TYP", "PER", "NUM"}, "Klemme: Attribute vorhanden")
+check(set(k.werte) == {"IND", "MAN", "TYP", "PER", "NUM"}, "Klemme: Attribute vorhanden")
 mk = core.ElektroMaske(100, 50, {"IND": "K1", "TYP": "LC1", "PER": "X"})
 b = mk.bbox()
 check(near(b[2], 100, 0.01) and b[1] >= 50 - 1.5, "Maske: Einfuegepunkt unten rechts (bbox %s)" % (b,))

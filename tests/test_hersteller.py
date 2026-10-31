@@ -31,7 +31,13 @@ m3 = core.ElektroMaske(0, 0, {"IND": "K1", "MAN": "Siemens"}); d = m3.to_dict()
 check(d["werte"]["MAN"] == "Siemens", "to_dict enthält MAN")
 m3.setze_werte({"MAN": "ABB"}); check(m3.werte["MAN"] == "ABB", "setze_werte")
 # terminals and cables stay unchanged
-check("MAN" not in core.Klemme.FELDER and "MAN" not in core.Kabel.FELDER, "Klemme/Kabel unverändert")
+check("MAN" in core.Klemme.FELDER and "MAN" not in core.Kabel.FELDER, "MAN bei Klemme, nicht beim Kabel")
+k0 = core.Klemme(0, 0, {"IND": "X1", "TYP": "WDU", "PER": "2,5", "NUM": "1"})
+k1 = core.Klemme(0, 0, {"IND": "X1", "MAN": "Weidmüller", "TYP": "WDU", "PER": "2,5", "NUM": "1"})
+ty = lambda k: {t.inhalt: t.y for t in k.aufgeloest() if isinstance(t, core.Text)}
+y0, y1 = ty(k0), ty(k1)
+check(y0["WDU"] == -3.0 and y0["2,5"] == -5.5, "Klemme ohne MAN: Lage wie bisher")
+check(y1["Weidmüller"] == -3.0 and y1["WDU"] == -5.5 and y1["2,5"] == -8.0 and y1["X1"] == 0.0, "Klemme mit MAN: MAN unter IND, TYP/PER eine Zeile tiefer")
 
 # --- block attributes get MAN
 bd = B.BlockDefinition("T", (0, 0), [core.Rechteck(-5, -5, 5, 5), core.ElektroMaske(8, 0)])
@@ -66,6 +72,24 @@ check(zs[("3RT2015", "Eaton")]["anzahl"] == "1", "Stückliste: anderer Herstelle
 check(zs[("3RT2015", "Schneider")]["anzahl"] == "1" and zs[("3RT2015", "Schneider")]["bestellnr"] == "X1",
       "Stückliste: ohne MAN gilt der Hersteller aus dem Teilekatalog")
 check(("S203", "") in zs, "Stückliste: ohne Hersteller")
+
+# --- terminals: MAN in terminal plan, strip row of the device list and parts list
+kk = [core.Klemme(60, 60, {"IND": "X1", "MAN": "Weidmüller", "TYP": "WDU 2.5", "NUM": "1"}),
+      core.Klemme(70, 60, {"IND": "X1", "TYP": "WDU 2.5", "NUM": "2"})]
+bl2 = [(0, [core.Koordinatenfeld(0, 0, 287, 164, 6, 4)] + kk)]
+n2 = N.Netz.aufbauen(bl2)
+kp = D.klemmenplan(n2, bl2, nr)
+check(sorted(r["hersteller"] for r in kp) == ["", "Weidmüller"], "Klemmenplan: Hersteller")
+check("hersteller" in [c[0] for c in S._STANDARD["klemmen"]], "Spalte Hersteller im Klemmenplan")
+gl2 = [z for z in D.geraeteliste(bl2, nr, n2) if z["ind"] == "X1"]
+check(gl2 and gl2[0]["hersteller"] == "Weidmüller", "Geräteliste: Klemmleiste mit Hersteller")
+sl2 = DL.stueckliste(bl2, nr, n2, [])
+check({(r["typ"], r["hersteller"]): r["anzahl"] for r in sl2} == {("WDU 2.5", "Weidmüller"): "1", ("WDU 2.5", ""): "1"}, "Stückliste: Klemmen nach Hersteller getrennt")
+
+# --- column titles in the lists are readable names, not system tags
+for sp, de, en in (("rep.col.ind", "ID", "ID"), ("rep.col.typ", "Typenbezeichnung", "Type designation"),
+                   ("rep.col.per", "Leistung", "Rating"), ("rep.col.leiste", "Klemmleiste (ID)", "Terminal strip (ID)")):
+    check(I.TEXTE["de"][sp] == de and I.TEXTE["en"][sp] == en, "Spaltentitel " + sp)
 
 # --- symbol script: adds only MAN, idempotent, keeps format
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tools"))

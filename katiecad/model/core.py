@@ -3201,12 +3201,16 @@ class _FestMaske(Element):
     def _zusatz(self, ph, st):
         return []
 
+    def _zeilen(self):
+        """Text lines (tag, dx, dy, height, anchor); subclasses may adapt them to the values."""
+        return self.ZEILEN
+
     def aufgeloest(self, platzhalter=None):
         ph = self.platzhalter if platzhalter is None else platzhalter
         st = self._stil()
         self._anker = {}
         out = []
-        for tag, dx, dy, h, anker in self.ZEILEN:
+        for tag, dx, dy, h, anker in self._zeilen():
             if tag in self.ausgeblendet:
                 continue
             w = self.werte.get(tag, "")
@@ -3550,8 +3554,10 @@ class Kabel(_FestMaske):
 
 class Klemme(_FestMaske):
     """Terminal: visible circle with two connections (top / bottom) and the
-    fixed fields <IND> (2.5), <TYP>, <PER> (1.5) and <NUM> (1.75)."""
-    FELDER = ("IND", "TYP", "PER", "NUM")
+    fixed fields <IND> (2.5), <MAN>, <TYP>, <PER> (1.5) and <NUM> (1.75).
+    MAN (manufacturer) is shown below IND only when it is filled in; then TYP and PER
+    move down one line, so terminals without MAN look exactly as before."""
+    FELDER = ("IND", "MAN", "TYP", "PER", "NUM")
     DURCHMESSER = 2.0
     # Label: right-aligned directly left of the circle. IND is at the
     # height of the circle centre, TYP and PER below it.
@@ -3562,6 +3568,17 @@ class Klemme(_FestMaske):
 
     def __init__(self, x, y, werte=None, **kw):
         super().__init__("klemme", x, y, werte, **kw)
+
+    def _zeilen(self):
+        if not self.werte.get("MAN", ""):
+            return self.ZEILEN
+        out = []
+        for z in self.ZEILEN:
+            if z[0] in ("TYP", "PER"):
+                z = (z[0], z[1], z[2] - 2.5, z[3], z[4])
+            out.append(z)
+        out.insert(1, ("MAN", -3.0, -3.0, 1.5, "mitte_rechts"))
+        return out
 
     def aufgeloest(self, platzhalter=None):
         # Empty fields stay empty (terminals should be able to sit close together)
