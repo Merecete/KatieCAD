@@ -191,7 +191,9 @@ def _pdf_viewport_3d(seite, vp, elemente, layers, farbig, cxp, cyp):
         return not (l and not l.sichtbar)
 
     kam = S.vp_kamera(vp, vp.zoom)
-    linien, texte = S.szene_segmente(elemente, kam, 0.0, 0.0, sichtbar)
+    linien, texte = S.szene_segmente(elemente, kam, 0.0, 0.0, sichtbar,
+                                   verdeckt=bool((vp.ansicht3d or {}).get("verdeckt")),
+                                   aufloesung=4.0)
     for el, ((x1, y1), (x2, y2)) in linien:
         farbe = _pdf_farbe(el, layers, farbig)
         w = _effektive_staerke_mm(el, layers)

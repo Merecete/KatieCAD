@@ -330,6 +330,42 @@ _gs = _SCH2.schrank_bauen(600, 1800, 300, 0, 0, 0, (500, 1600), 100, True, True,
 _ge = G.sichtbare_linien_je([(t.bez, t.netze()) for t in _gs.teile], _k, 450, 300)
 check(len(_ge["Montageplatte"][0]) == 0 and len(_ge["Montageplatte"][1]) > 0, "Schrank mit Tür: Montageplatte ist verdeckt")
 check(len(_ge["Tür"][0]) == 4, "Schrank mit Tür: Türrahmen sichtbar")
+# --- Schrank ohne Tür: vorne offen, Montageplatte sichtbar --------------------------
+from katiecad.model import szene3d as _S3
+_go = _SCH2.schrank_bauen(600, 1800, 300, 0, 0, 0, (500, 1600), 100, False, False, False, False)
+_pa, _of = _S3.koerper_netze_offen([_go])
+check(len(_of) == 1 and abs(_of[next(iter(_of))][1] + 1) < 1e-6, "Schrank ohne Tür: offene Seite = Front (-Y)")
+_ko = {t.bez: [] for t in _go.teile}
+_er = _S3.verdeckt_ergebnis(_pa, _of, G.Kamera(yaw=-30.0, pitch=20.0, skala=0.3), 450, 300)
+check(len(_er[id(_go)][0]) > 12 and len(_er[id(_go)][1]) > 0, "Schrank ohne Tür: Ergebnis vorhanden")
+_gt = _SCH2.schrank_bauen(600, 1800, 300, 0, 0, 0, (500, 1600), 100, True, False, False, False)
+check(_S3.koerper_netze_offen([_gt])[1] == {}, "Schrank mit Tür bleibt geschlossen")
+# gedrehter Schrank: Öffnung dreht mit
+_gd = _SCH2.schrank_bauen(600, 1800, 300, 0, 0, 0, (500, 1600), 0, False, False, False, False)
+_pl = _S3._offen_richtung(_gd.teile)
+check(_pl is not None and abs(_pl[1] + 1) < 1e-6, "Richtung der Öffnung ohne Sockel")
+_dir = (0.0, -1.0, 0.0)
+_k0 = G.Kamera(yaw=-20.0, pitch=15.0, skala=0.3)
+_vor = [(_go, nz) for nz in _go.netze()]
+_n_voll = len(_S3.verdeckt_ergebnis(_pa, {}, _k0, 450, 300)[id(_go)][0])
+_n_offen = len(_S3.verdeckt_ergebnis(_pa, _of, _k0, 450, 300)[id(_go)][0])
+check(_n_offen > _n_voll, "offener Schrank zeigt mehr sichtbare Kanten (Montageplatte)")
+# szene_segmente mit verdeckt
+_li0, _ = _S3.szene_segmente([_go], _k0, 450, 300)
+_li1, _ = _S3.szene_segmente([_go], _k0, 450, 300, verdeckt=True)
+check(0 < len(_li1) and len(_li1) != len(_li0), "szene_segmente(verdeckt=True)")
+_li2, _ = _S3.szene_segmente([_go], G.Kamera(yaw=-20.0, pitch=15.0, skala=0.03), 0.0, 0.0, verdeckt=True, aufloesung=10.0)
+check(len(_li2) > 0, "szene_segmente mit Auflösung (PDF)")
+# Viewport: Einstellung bleibt beim Ansichtswechsel erhalten
+_vp = core.Viewport(0, 0, 200, 150)
+_S3.vp_ansicht_setzen(_vp, [_go], -45.0, 35.0)
+_vp.ansicht3d["verdeckt"] = True
+_S3.vp_ansicht_setzen(_vp, [_go], 0.0, 90.0)
+check(_vp.ansicht3d.get("verdeckt") is True, "Viewport: verdeckt bleibt bei Ansichtswechsel")
+_vp2 = core.Viewport.from_dict(_vp.to_dict()) if hasattr(core.Viewport, "from_dict") else None
+if _vp2 is not None:
+    check(_vp2.ansicht3d.get("verdeckt") is True, "Viewport: verdeckt wird mitgespeichert")
+check("d3.vp.verdeckt" in I.TEXTE["de"] and "d3.vp.verdeckt" in I.TEXTE["en"], "i18n d3.vp.verdeckt")
 for k in ("tb.wz.verdeckt3d",):
     check(k in I.TEXTE["de"] and k in I.TEXTE["en"], k)
 check("verdeckt3d" in IC.NAMEN, "Icon verdeckt3d")

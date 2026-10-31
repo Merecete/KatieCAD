@@ -691,8 +691,8 @@ class Ansicht3D(tk.Frame):
             for (a, b, t) in self._messungen:
                 self._linie(a, b, FARBEN["gelb"], 1, (4, 3), "szene")
                 self._text3(G.v_mul(G.v_add(a, b), 0.5), t, FARBEN["gelb"])
-        paare = S.koerper_netze(elemente)
-        erg = self._verdeckt_ergebnis(paare) if self._verdeckt_an() else None
+        paare, offen = S.koerper_netze_offen(elemente)
+        erg = self._verdeckt_ergebnis(paare, offen) if self._verdeckt_an() else None
         self._verdeckt_aktuell = erg
         if erg is not None:
             fertig = set()
@@ -729,25 +729,13 @@ class Ansicht3D(tk.Frame):
         if len(pl) >= 2:
             self.canvas.create_line(*[v for p in pl for v in p], fill=farbe, width=breite, tags=tag)
 
-    def _verdeckt_ergebnis(self, paare):
+    def _verdeckt_ergebnis(self, paare, offen):
         """{id(element): (visible polylines, hidden polylines)} - cached as long as camera,
         window size and bodies stay the same."""
-        k = self.kamera
-        sig = [round(k.yaw, 4), round(k.pitch, 4), tuple(round(v, 3) for v in k.ziel),
-               round(k.abstand, 3), round(k.skala, 5), k.perspektive, self.breite, self.hoehe]
-        gruppen, index = [], {}
-        for el, nz in paare:
-            if id(el) not in index:
-                index[id(el)] = len(gruppen)
-                gruppen.append((id(el), []))
-            gruppen[index[id(el)]][1].append(nz)
-            sig.append((id(el), len(nz.punkte), round(sum(c for p in nz.punkte for c in p), 2)))
-        sig = tuple(sig)
-        if self._verdeckt_cache and self._verdeckt_cache[0] == sig:
-            return self._verdeckt_cache[1]
-        n_tri = sum(len(nz.dreiecke()) for _k, netze in gruppen for nz in netze)
-        erg = G.sichtbare_linien_je(gruppen, k, *self._mitte(), proben=10 if n_tri < 1500 else 5)
-        self._verdeckt_cache = (sig, erg)
+        c = [self._verdeckt_cache] if self._verdeckt_cache else []
+        erg = S.verdeckt_ergebnis(paare, offen, self.kamera, *self._mitte(), cache=c,
+                                  signatur_extra=(self.breite, self.hoehe))
+        self._verdeckt_cache = c[0] if c else None
         return erg
 
     def _achsenkreuz(self):

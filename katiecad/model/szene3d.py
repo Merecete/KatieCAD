@@ -6,6 +6,7 @@ Collects the 3D bodies and the flat 2D drawing of a sheet, picks objects,
 and does the maths of the 3D manipulator (X/Y/Z arrows).
 """
 
+import copy
 import math
 
 from katiecad.model.core import (Koerper3D, Gruppe3D, Skizze3D, Bemassung3D, Text3D, Linie, Rechteck,
@@ -48,6 +49,70 @@ def koerper_netze(elemente):
             for nz in el.netze():
                 out.append((el, nz))
     return out
+
+
+def _offen_richtung(teile):
+    """Cabinet without door: direction of its open front (None = closed / no cabinet).
+    Recognised by the part names of schrank.schrank_bauen: carcass + mounting plate, no door."""
+    namen = {getattr(t, "bez", None): t for t in teile if not isinstance(t, Gruppe3D)}
+    korpus, platte = namen.get("Schaltschrank"), namen.get("Montageplatte")
+    if korpus is None or platte is None or "Tür" in namen:
+        return None
+    bk, bp = korpus.bbox3(), platte.bbox3()
+    if not bk or not bp:
+        return None
+    d = tuple(((bk[i] + bk[i + 3]) - (bp[i] + bp[i + 3])) / 2.0 for i in range(3))
+    ln = math.sqrt(sum(c * c for c in d))
+    return None if ln < 1e-6 else tuple(c / ln for c in d)
+
+
+def koerper_netze_offen(elemente):
+    """Like koerper_netze, plus {id(mesh): direction} of the open sides (cabinets without door)."""
+    paare, offen = [], {}
+
+    def sammeln(top, el):
+        if isinstance(el, Gruppe3D):
+            r = _offen_richtung(el.teile)
+            for t in el.teile:
+                if isinstance(t, Gruppe3D):
+                    sammeln(top, t)
+                    continue
+                netze = t.netze()
+                paare.extend((top, nz) for nz in netze)
+                if r is not None and getattr(t, "bez", None) == "Schaltschrank" and netze:
+                    offen[id(netze[0])] = r
+        else:
+            paare.extend((top, nz) for nz in el.netze())
+
+    for el in elemente:
+        if ist_3d(el):
+            sammeln(el, el)
+    return paare, offen
+
+
+def verdeckt_ergebnis(paare, offen, kamera, cx, cy, cache=None, signatur_extra=()):
+    """Hidden-line run over [(element, mesh)] -> {id(element): (visible polylines, hidden polylines)}
+    in pixels. `cache` is a one-element list holding (signature, result)."""
+    sig = [round(kamera.yaw, 4), round(kamera.pitch, 4), tuple(round(v, 3) for v in kamera.ziel),
+           round(kamera.abstand, 3), round(kamera.skala, 5), kamera.perspektive,
+           round(cx, 2), round(cy, 2), tuple(signatur_extra)]
+    gruppen, index = [], {}
+    for el, nz in paare:
+        if id(el) not in index:
+            index[id(el)] = len(gruppen)
+            gruppen.append((id(el), []))
+        gruppen[index[id(el)]][1].append(nz)
+        sig.append((id(el), len(nz.punkte), round(sum(c for p in nz.punkte for c in p), 2),
+                    offen.get(id(nz))))
+    sig = tuple(sig)
+    if cache and cache[0] and cache[0][0] == sig:
+        return cache[0][1]
+    n_tri = sum(len(nz.dreiecke()) for _k, netze in gruppen for nz in netze)
+    erg = G.sichtbare_linien_je(gruppen, kamera, cx, cy, proben=10 if n_tri < 1500 else 5,
+                                offen=offen)
+    if cache is not None:
+        cache[:] = [(sig, erg)]
+    return erg
 
 
 def flache_zuege(el):
@@ -663,8 +728,11 @@ def vp_ansicht_setzen(vp, elemente, yaw, pitch, persp=False):
         zielz, abstand = k.ziel[2], k.abstand
     else:
         zielz, abstand = 0.0, 1500.0
+    verdeckt = bool((vp.ansicht3d or {}).get("verdeckt"))    # setting stays when the view changes
     vp.ansicht3d = {"yaw": float(yaw), "pitch": float(pitch), "persp": bool(persp),
                     "zielz": float(zielz), "abstand": float(abstand)}
+    if verdeckt:
+        vp.ansicht3d["verdeckt"] = True
 
 
 def vp_kamera(vp, skala):
@@ -675,13 +743,34 @@ def vp_kamera(vp, skala):
                     perspektive=bool(a.get("persp")))
 
 
-def szene_segmente(elemente, kamera, cx, cy, sichtbar=None):
-    """Projected wireframe of the scene: ([(element, ((x1, y1), (x2, y2))...)], [(element, (x, y), text)])."""
+def szene_segmente(elemente, kamera, cx, cy, sichtbar=None, verdeckt=False, cache=None, aufloesung=1.0):
+    """Projected wireframe of the scene: ([(element, ((x1, y1), (x2, y2))...)], [(element, (x, y), text)]).
+    verdeckt=True: only the visible edges of the 3D bodies (hidden-line removal, no dashed lines)."""
     linien, texte = [], []
+    if verdeckt:
+        sicht_el = [el for el in elemente if sichtbar is None or sichtbar(el)]
+        paare, offen = koerper_netze_offen(sicht_el)
+        f = float(aufloesung)            # PDF (mm): compute magnified, so the pixel tolerances fit
+        if f != 1.0:
+            k2 = copy.copy(kamera)
+            k2.skala = kamera.skala * f
+            erg = verdeckt_ergebnis(paare, offen, k2, cx * f, cy * f, cache) if paare else {}
+        else:
+            erg = verdeckt_ergebnis(paare, offen, kamera, cx, cy, cache) if paare else {}
+        fertig = set()
+        for el, _nz in paare:
+            if id(el) in fertig:
+                continue
+            fertig.add(id(el))
+            for pl in erg.get(id(el), ([], []))[0]:
+                linien.extend((el, ((a[0] / f, a[1] / f), (b[0] / f, b[1] / f)))
+                              for a, b in zip(pl, pl[1:]))
     for el in elemente:
         if sichtbar is not None and not sichtbar(el):
             continue
         if ist_3d(el):
+            if verdeckt:
+                continue
             for nz in el.netze():
                 for (i, j) in nz.kanten:
                     seg = kamera.proj_segment(nz.punkte[i], nz.punkte[j], cx, cy)

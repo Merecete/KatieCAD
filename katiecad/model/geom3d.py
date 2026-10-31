@@ -192,11 +192,28 @@ class Netz:
         zs = [p[2] for p in self.punkte]
         return (min(xs), min(ys), min(zs), max(xs), max(ys), max(zs))
 
-    def dreiecke(self):
-        """All faces as triangles (a, b, c) in world coordinates."""
+    def dreiecke(self, ohne_richtung=None, min_dot=0.9):
+        """All faces as triangles (a, b, c) in world coordinates.
+        ohne_richtung: unit vector - faces whose outward normal points that way are left
+        out (an open side of a hollow body, e.g. the open front of a cabinet)."""
         out = []
+        mitte = None
+        if ohne_richtung is not None and self.punkte:
+            n_ = len(self.punkte)
+            mitte = (sum(p[0] for p in self.punkte) / n_, sum(p[1] for p in self.punkte) / n_,
+                     sum(p[2] for p in self.punkte) / n_)
         for fl in self.flaechen:
             pts = [self.punkte[i] for i in fl]
+            if mitte is not None and len(pts) >= 3:
+                nm = _flaechen_normale(pts)
+                ln = math.sqrt(nm[0] ** 2 + nm[1] ** 2 + nm[2] ** 2)
+                if ln > 1e-12:
+                    c = (sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts),
+                         sum(p[2] for p in pts) / len(pts))
+                    if nm[0] * (c[0] - mitte[0]) + nm[1] * (c[1] - mitte[1]) + nm[2] * (c[2] - mitte[2]) < 0:
+                        nm = (-nm[0], -nm[1], -nm[2])
+                    if (nm[0] * ohne_richtung[0] + nm[1] * ohne_richtung[1] + nm[2] * ohne_richtung[2]) / ln >= min_dot:
+                        continue
             for (i, j, k) in triangulieren(pts):
                 out.append((pts[i], pts[j], pts[k]))
         return out
@@ -500,11 +517,12 @@ def _strahl_dreieck(o, d, tri):
     return v_dot(e2, qv) * inv
 
 
-def _tris_vorbereiten(netze, kamera, cx, cy):
-    """[(triangle, screen bbox or None)] of all meshes (occluders)."""
+def _tris_vorbereiten(netze, kamera, cx, cy, offen=None):
+    """[(triangle, screen bbox or None)] of all meshes (occluders).
+    offen: {id(mesh): direction} - the face of that mesh pointing that way does not hide."""
     tris = []
     for nz in netze:
-        tris.extend(nz.dreiecke())
+        tris.extend(nz.dreiecke((offen or {}).get(id(nz))))
     out = []
     for t in tris:
         pj = [kamera.proj(p, cx, cy) for p in t]
@@ -540,35 +558,56 @@ def _sichtbarkeit(netze, tris, kamera, cx, cy, rad, proben, min_px):
             ey0, ey1 = min(y1, y2) - 1, max(y1, y2) + 1
             kand = [(tri, bb) for tri, bb in tris
                     if bb is None or not (bb[2] < ex0 or bb[0] > ex1 or bb[3] < ey0 or bb[1] > ey1)]
-            teile = []
-            for k in range(n):
-                t0, t1 = k / n, (k + 1) / n
-                tm = (t0 + t1) / 2
-                pm = (p[0] + (q[0] - p[0]) * tm, p[1] + (q[1] - p[1]) * tm,
-                      p[2] + (q[2] - p[2]) * tm)
+            def frei(t):
+                """True = visible, False = hidden, None = not computable at parameter t."""
+                pm = (p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t,
+                      p[2] + (q[2] - p[2]) * t)
                 a = kamera.proj(pm, cx, cy)
                 if a is None:
-                    continue
+                    return None
                 if kamera.perspektive:
                     o = eye
                 else:
                     o = v_sub(pm, v_mul(f, rad))
                 d = v_sub(pm, o)
-                dl = v_len(d)
-                if dl < 1e-9:
-                    continue
-                ok = True
+                if v_len(d) < 1e-9:
+                    return None
                 for tri, bb in kand:
                     if bb is not None and (a[0] < bb[0] - 1 or a[0] > bb[2] + 1
                                            or a[1] < bb[1] - 1 or a[1] > bb[3] + 1):
                         continue
-                    t = _strahl_dreieck(o, d, tri)
-                    if t is not None and t > 1e-6 and t < 1.0 - 1e-4:
-                        ok = False
-                        break
+                    tt = _strahl_dreieck(o, d, tri)
+                    if tt is not None and tt > 1e-6 and tt < 1.0 - 1e-4:
+                        return False
+                return True
+
+            zust = [frei((k + 0.5) / n) for k in range(n)]
+            grenzen = [0.0]
+            for k in range(1, n):                    # refine the switch between two samples
+                lo, hi = (k - 0.5) / n, (k + 0.5) / n
+                zl, zh = zust[k - 1], zust[k]
+                if zl is not None and zh is not None and zl != zh:
+                    for _ in range(6):
+                        mi = (lo + hi) / 2
+                        zm = frei(mi)
+                        if zm is None:
+                            break
+                        if zm == zl:
+                            lo = mi
+                        else:
+                            hi = mi
+                    grenzen.append((lo + hi) / 2)
+                else:
+                    grenzen.append(k / n)
+            grenzen.append(1.0)
+            teile = []
+            for k in range(n):
+                if zust[k] is None:
+                    continue
+                t0, t1 = grenzen[k], grenzen[k + 1]
                 s0 = (x1 + (x2 - x1) * t0, y1 + (y2 - y1) * t0)
                 s1 = (x1 + (x2 - x1) * t1, y1 + (y2 - y1) * t1)
-                teile.append((ok, s0, s1))
+                teile.append((zust[k], s0, s1))
             _sammeln(teile, True, sicht)
             _sammeln(teile, False, verdeckt)
     return sicht, verdeckt
@@ -591,12 +630,13 @@ def sichtbare_linien(netze, kamera, cx, cy, proben=14, min_px=10.0, zeichnen=Non
     return _sichtbarkeit(zu, tris, kamera, cx, cy, rad, proben, min_px)
 
 
-def sichtbare_linien_je(gruppen, kamera, cx, cy, proben=10, min_px=14.0):
+def sichtbare_linien_je(gruppen, kamera, cx, cy, proben=10, min_px=14.0, offen=None):
     """Hidden-line removal for several objects at once (every object keeps its own
     colour when drawn). gruppen: [(key, [Netz, ...]), ...]; all meshes hide each other.
+    offen: {id(Netz): direction} for hollow bodies with an open side.
     -> {key: (sichtbar, verdeckt)}; polylines [(sx, sy), ...] in pixels."""
     alle = [nz for _k, netze in gruppen for nz in netze]
-    tris = _tris_vorbereiten(alle, kamera, cx, cy)
+    tris = _tris_vorbereiten(alle, kamera, cx, cy, offen)
     rad = _strahl_laenge(alle, kamera)
     out = {}
     for key, netze in gruppen:

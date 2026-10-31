@@ -2796,6 +2796,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                 k.orbit(event.x - x0, event.y - y0)
                 a3["yaw"], a3["pitch"] = k.yaw, k.pitch
                 self._vp_orbit_pos = (event.x, event.y)
+                self._vp_bewegt = True
                 self.redraw()
                 return
             if vp.gesperrt:
@@ -2812,6 +2813,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             dy_lay = -dy_px / v["zoom"]
             vp.modell_zentrum_x = cx0 - dx_lay / vp.zoom
             vp.modell_zentrum_y = cy0 - dy_lay / vp.zoom
+            self._vp_bewegt = True
             self.redraw()
             return
         if not self.pan_start:
@@ -2826,6 +2828,9 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
     def on_pan_end(self, event):
         self.pan_start = None
         self._vp_pan_start = None
+        if getattr(self, "_vp_bewegt", False):          # hidden edges are computed again
+            self._vp_bewegt = False
+            self.redraw()
 
     def on_rechtsklick_start(self, event):
         self._rc_start = (event.x, event.y)
@@ -2967,6 +2972,9 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             m3.add_command(label=tr("d3.vp." + nm), command=lambda n=nm: self._vp_3d_ansicht(vp, n))
         m3.add_separator()
         m3.add_command(label=tr("d3.vp.fenster"), command=lambda: self._vp_3d_von_fenster(vp))
+        if vp.ansicht3d:
+            m3.add_command(label=("✓ " if vp.ansicht3d.get("verdeckt") else "    ")
+                           + tr("d3.vp.verdeckt"), command=lambda: self._vp_3d_verdeckt(vp))
         m3.add_command(label=tr("d3.vp.aus"), command=lambda: self._vp_3d_aus(vp))
         menu.add_cascade(label=tr("d3.vp.menue"), menu=m3)
         menu.add_separator()
@@ -4900,7 +4908,12 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             return not (l and not l.sichtbar)
 
         kam = S3.vp_kamera(vp, skala)
-        linien, texte = S3.szene_segmente(self.elemente, kam, vcx, vcy, sichtbar)
+        verdeckt = bool((vp.ansicht3d or {}).get("verdeckt"))
+        if verdeckt and getattr(self, "_vp_bewegt", False):
+            verdeckt = False                  # fast wireframe while the view is being moved
+        cache = self.__dict__.setdefault("_vp_verdeckt_cache", {}).setdefault(id(vp), [])
+        linien, texte = S3.szene_segmente(self.elemente, kam, vcx, vcy, sichtbar,
+                                          verdeckt=verdeckt, cache=cache)
         for el, seg in linien:
             seg = S3.clip_segment(seg, clip)
             if seg is None:
@@ -4928,9 +4941,23 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
     def _vp_3d_von_fenster(self, vp):
         """Takes the camera of the 3D view for the viewport."""
         from katiecad.model import szene3d as S3
-        k = self._3d_zustand()["kamera"]
+        z = self._3d_zustand()
+        k = z["kamera"]
         self._snapshot()
         S3.vp_ansicht_setzen(vp, self.elemente, k.yaw, k.pitch, k.perspektive)
+        if z["verdeckt"].get():               # hidden-edge setting comes along
+            vp.ansicht3d["verdeckt"] = True
+        self.redraw()
+
+    def _vp_3d_verdeckt(self, vp):
+        """Toggles hidden-edge removal of the viewport (stored with the project)."""
+        if not vp.ansicht3d:
+            return
+        self._snapshot()
+        if vp.ansicht3d.get("verdeckt"):
+            vp.ansicht3d.pop("verdeckt", None)
+        else:
+            vp.ansicht3d["verdeckt"] = True
         self.redraw()
 
     def _vp_3d_aus(self, vp):
