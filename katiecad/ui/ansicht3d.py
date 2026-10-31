@@ -446,6 +446,12 @@ class Ansicht3D(tk.Frame):
         self.kamera = z["kamera"]
         self.wuerfel_var, self.persp_var, self.hoehe_var = z["wuerfel"], z["persp"], z["hoehe"]
         self.raster_var = z["raster"]
+        if "verdeckt" not in z:
+            z["verdeckt"] = tk.BooleanVar(value=False)
+        self.verdeckt_var = z["verdeckt"]          # hide hidden edges
+        self._verdeckt_cache = None                # (signature, result of the hidden-line run)
+        self._verdeckt_aktuell = None              # result used by the current drawing
+        self._ruhe_id = None                       # wheel zoom: draw fast until it stops
         self.breite, self.hoehe = 900, 600
         self._drag = None
         self._platz = None
@@ -477,6 +483,7 @@ class Ansicht3D(tk.Frame):
         a._umschalt_knopf(bar, "wuerfel", farbe, self.wuerfel_var, self.zeichne)
         a._umschalt_knopf(bar, "persp", farbe, self.persp_var, self._persp)
         a._umschalt_knopf(bar, "raster3d", farbe, self.raster_var, self.zeichne)
+        a._umschalt_knopf(bar, "verdeckt3d", farbe, self.verdeckt_var, self.zeichne)
         a._befehl_knopf(bar, "iso3d", farbe, lambda: self.ansicht("iso_so"))
         a._befehl_knopf(bar, "einpassen3d", farbe, self.einpassen)
         ttk.Separator(bar, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=8)
@@ -546,6 +553,17 @@ class Ansicht3D(tk.Frame):
 
     def _zoom(self, f):
         self.kamera.zoom(f)
+        if self.verdeckt_var.get():               # fast wireframe while the wheel turns
+            if self._ruhe_id is not None:
+                try:
+                    self.after_cancel(self._ruhe_id)
+                except Exception:
+                    pass
+            self._ruhe_id = self.after(300, self._ruhe_ende)
+        self.zeichne()
+
+    def _ruhe_ende(self):
+        self._ruhe_id = None
         self.zeichne()
 
     def on_rad(self, e):
@@ -575,6 +593,8 @@ class Ansicht3D(tk.Frame):
             self._drag = None
             if d.get("rechts") and abs(e.x - d["x0"]) + abs(e.y - d["y0"]) < 4:
                 self.kontextmenue(e)
+            elif self.verdeckt_var.get():
+                self.zeichne_spaeter()            # full hidden-line drawing after the move
 
     # ------------------------------------------------------------------
     # drawing (wireframe only)
@@ -671,10 +691,23 @@ class Ansicht3D(tk.Frame):
             for (a, b, t) in self._messungen:
                 self._linie(a, b, FARBEN["gelb"], 1, (4, 3), "szene")
                 self._text3(G.v_mul(G.v_add(a, b), 0.5), t, FARBEN["gelb"])
-        for el, nz in S.koerper_netze(elemente):
-            farbe, br = self._farbe(el), self._breite(el)
-            for (i, j) in nz.kanten:
-                self._linie(nz.punkte[i], nz.punkte[j], farbe, br)
+        paare = S.koerper_netze(elemente)
+        erg = self._verdeckt_ergebnis(paare) if self._verdeckt_an() else None
+        self._verdeckt_aktuell = erg
+        if erg is not None:
+            fertig = set()
+            for el, _nz in paare:
+                if id(el) in fertig:
+                    continue
+                fertig.add(id(el))
+                farbe, br = self._farbe(el), self._breite(el)
+                for pl in erg.get(id(el), ([], []))[0]:
+                    self._zug_px(pl, farbe, br)
+        else:
+            for el, nz in paare:
+                farbe, br = self._farbe(el), self._breite(el)
+                for (i, j) in nz.kanten:
+                    self._linie(nz.punkte[i], nz.punkte[j], farbe, br)
         self._ebene_zeichnen()
         self._auswahl_zeichnen()
         self._vorschau_zeichnen()
@@ -682,6 +715,40 @@ class Ansicht3D(tk.Frame):
             self._wuerfel_zeichnen()
         self._manip_zeichnen()
         self._hover_zeichnen()
+
+    # ---- hidden edges ----------------------------------------------------
+    def _verdeckt_an(self):
+        """Hidden edges are removed - but not while the view is being turned or zoomed."""
+        if not self.verdeckt_var.get() or self._ruhe_id is not None:
+            return False
+        d = self._drag
+        return not (d and d.get("art") in ("orbit", "pan"))
+
+    def _zug_px(self, pl, farbe, breite=1, tag="szene"):
+        """Polyline given in pixels."""
+        if len(pl) >= 2:
+            self.canvas.create_line(*[v for p in pl for v in p], fill=farbe, width=breite, tags=tag)
+
+    def _verdeckt_ergebnis(self, paare):
+        """{id(element): (visible polylines, hidden polylines)} - cached as long as camera,
+        window size and bodies stay the same."""
+        k = self.kamera
+        sig = [round(k.yaw, 4), round(k.pitch, 4), tuple(round(v, 3) for v in k.ziel),
+               round(k.abstand, 3), round(k.skala, 5), k.perspektive, self.breite, self.hoehe]
+        gruppen, index = [], {}
+        for el, nz in paare:
+            if id(el) not in index:
+                index[id(el)] = len(gruppen)
+                gruppen.append((id(el), []))
+            gruppen[index[id(el)]][1].append(nz)
+            sig.append((id(el), len(nz.punkte), round(sum(c for p in nz.punkte for c in p), 2)))
+        sig = tuple(sig)
+        if self._verdeckt_cache and self._verdeckt_cache[0] == sig:
+            return self._verdeckt_cache[1]
+        n_tri = sum(len(nz.dreiecke()) for _k, netze in gruppen for nz in netze)
+        erg = G.sichtbare_linien_je(gruppen, k, *self._mitte(), proben=10 if n_tri < 1500 else 5)
+        self._verdeckt_cache = (sig, erg)
+        return erg
 
     def _achsenkreuz(self):
         L = 60.0 / self.kamera.skala
@@ -754,6 +821,11 @@ class Ansicht3D(tk.Frame):
         farbe = FARBEN["cyan"]
         for el in self.app.auswahl:
             if S.ist_3d(el):
+                erg = self._verdeckt_aktuell
+                if erg is not None and id(el) in erg:      # only the visible edges
+                    for pl in erg[id(el)][0]:
+                        self._zug_px(pl, farbe, 3, "auswahl")
+                    continue
                 for nz in el.netze():
                     for (i, j) in nz.kanten:
                         self._linie(nz.punkte[i], nz.punkte[j], farbe, 3, None, "auswahl")
@@ -2026,6 +2098,7 @@ class Ansicht3DMixin:
             self._3d_state = {"kamera": G.Kamera(), "wuerfel": tk.BooleanVar(value=True),
                               "persp": tk.BooleanVar(value=False),
                               "hoehe": tk.BooleanVar(value=False),
+                              "verdeckt": tk.BooleanVar(value=False),
                               "raster": self.raster_sichtbar, "plane": None, "auto": True}
         return self._3d_state
 

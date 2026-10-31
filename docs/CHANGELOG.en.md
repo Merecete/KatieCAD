@@ -2,6 +2,7 @@
 
 ## 1.1.2
 - New: **Manufacturer field `MAN`** in the device mask (order IND, MAN, TYP, PER, REF); *Manufacturer* column in the device list; the parts list uses MAN (otherwise the parts catalogue) and keeps the same type from different manufacturers apart. All symbols get MAN via `tools/symbole_man_ergaenzen.py`
+- New: **Hide hidden edges** in the 3D view (button in the 3D bar): bodies look solid, edges behind them disappear, cabinets read unambiguously
 - New: **terminals and cables** have the field `MAN` as well (terminal plan, cable plan, device list, parts list)
 - Change: readable column titles in the lists: *ID* instead of IND, *Type designation* instead of TYP, *Rating* instead of PER (Terminal strip (ID)); the drawings keep the short tags
 - Version jump to 1.1.2

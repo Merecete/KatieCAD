@@ -309,4 +309,28 @@ check(len(_kk) == 1 and _kk[0] is not _sc and isinstance(_kk[0], Gruppe3D), "Kop
 check(abs(_kk[0].teile[0].bbox3()[0] - _sc.teile[0].bbox3()[0] - 900.0) < 1e-6, "Kopie um +900 in X verschoben")
 check(abs(_kk[0].teile[0].bbox3()[1] - _sc.teile[0].bbox3()[1] - 300.0) < 1e-6, "Kopie um +300 in Y verschoben")
 check(len(_kk[0].teile) == len(_sc.teile), "Kopie: gleiche Teile (Tür, Griff ...)")
+# --- hidden edges (solid view)
+from katiecad.model import schrank as _SCH2
+_k = G.Kamera()
+_wf = core.quader(0, 0, 100, 100, 0, 100)
+_gr = G.sichtbare_linien_je([("a", [_wf.netz()])], _k, 400, 300)
+_s1, _v1 = G.sichtbare_linien([_wf.netz()], _k, 400, 300, proben=10, min_px=14.0)
+check(len(_gr["a"][0]) == len(_s1) and len(_gr["a"][1]) == len(_v1) and len(_v1) > 0, "sichtbare_linien_je = sichtbare_linien (ein Körper)")
+_a = core.quader(0, 0, 100, 100, 0, 100)
+_b = core.quader(200, 0, 300, 100, 0, 100)
+_gr2 = G.sichtbare_linien_je([("a", [_a.netz()]), ("b", [_b.netz()])], _k, 400, 300)
+check(set(_gr2) == {"a", "b"} and all(len(v[0]) > 0 for v in _gr2.values()), "je Körper eigenes Ergebnis")
+# a box standing in front hides the box behind it (camera looks from -x/-y)
+_hint = core.quader(100, 100, 200, 200, 0, 100)
+_vorn = core.quader(0, 0, 100, 100, 0, 100)
+_ohne = G.sichtbare_linien_je([("h", [_hint.netz()])], _k, 400, 300)["h"]
+_mit = G.sichtbare_linien_je([("h", [_hint.netz()]), ("v", [_vorn.netz()])], _k, 400, 300)["h"]
+check(len(_mit[1]) >= len(_ohne[1]) and len(_mit[0]) < len(_ohne[0]) + 1, "vorderer Körper verdeckt Kanten dahinter")
+_gs = _SCH2.schrank_bauen(600, 1800, 300, 0, 0, 0, (500, 1600), 100, True, True, True, False)
+_ge = G.sichtbare_linien_je([(t.bez, t.netze()) for t in _gs.teile], _k, 450, 300)
+check(len(_ge["Montageplatte"][0]) == 0 and len(_ge["Montageplatte"][1]) > 0, "Schrank mit Tür: Montageplatte ist verdeckt")
+check(len(_ge["Tür"][0]) == 4, "Schrank mit Tür: Türrahmen sichtbar")
+for k in ("tb.wz.verdeckt3d",):
+    check(k in I.TEXTE["de"] and k in I.TEXTE["en"], k)
+check("verdeckt3d" in IC.NAMEN, "Icon verdeckt3d")
 print(f"test_3d - {ok} Checks bestanden")

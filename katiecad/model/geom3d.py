@@ -500,33 +500,30 @@ def _strahl_dreieck(o, d, tri):
     return v_dot(e2, qv) * inv
 
 
-def sichtbare_linien(netze, kamera, cx, cy, proben=14, min_px=10.0, zeichnen=None):
-    """Hidden-line removal for a list of Netz objects.
-    -> (sichtbar, verdeckt): lists of polylines [(sx, sy), ...] in pixels."""
+def _tris_vorbereiten(netze, kamera, cx, cy):
+    """[(triangle, screen bbox or None)] of all meshes (occluders)."""
     tris = []
     for nz in netze:
         tris.extend(nz.dreiecke())
-    r, u, f = kamera.basis()
-    eye = kamera.auge()
-    tmp = []
+    out = []
     for t in tris:
         pj = [kamera.proj(p, cx, cy) for p in t]
         if any(p is None for p in pj):
-            tmp.append((t, None))
+            out.append((t, None))
         else:
-            xs = [p[0] for p in pj]; ys = [p[1] for p in pj]
-            tmp.append((t, (min(xs), min(ys), max(xs), max(ys))))
-    tris = tmp
-    # ray length for parallel projection: beyond all geometry
-    alle = [p for nz in netze for p in nz.punkte]
-    if alle:
-        rad = max(v_len(v_sub(p, kamera.ziel)) for p in alle) + kamera.abstand
-    else:
-        rad = kamera.abstand
+            xs = [p[0] for p in pj]
+            ys = [p[1] for p in pj]
+            out.append((t, (min(xs), min(ys), max(xs), max(ys))))
+    return out
+
+
+def _sichtbarkeit(netze, tris, kamera, cx, cy, rad, proben, min_px):
+    """Visible / hidden parts of the edges of `netze` against the occluders `tris`.
+    -> (sichtbar, verdeckt): polylines [(sx, sy), ...] in pixels."""
+    r, u, f = kamera.basis()
+    eye = kamera.auge()
     sicht, verdeckt = [], []
     for nz in netze:
-        if zeichnen is not None and id(nz) not in zeichnen:
-            continue
         for (i, j) in nz.kanten:
             p, q = nz.punkte[i], nz.punkte[j]
             seg = kamera.proj_segment(p, q, cx, cy)
@@ -538,6 +535,11 @@ def sichtbare_linien(netze, kamera, cx, cy, proben=14, min_px=10.0, zeichnen=Non
             if not tris:
                 sicht.append([(x1, y1), (x2, y2)])
                 continue
+            # only triangles whose screen box touches the edge can hide a part of it
+            ex0, ex1 = min(x1, x2) - 1, max(x1, x2) + 1
+            ey0, ey1 = min(y1, y2) - 1, max(y1, y2) + 1
+            kand = [(tri, bb) for tri, bb in tris
+                    if bb is None or not (bb[2] < ex0 or bb[0] > ex1 or bb[3] < ey0 or bb[1] > ey1)]
             teile = []
             for k in range(n):
                 t0, t1 = k / n, (k + 1) / n
@@ -556,7 +558,7 @@ def sichtbare_linien(netze, kamera, cx, cy, proben=14, min_px=10.0, zeichnen=Non
                 if dl < 1e-9:
                     continue
                 ok = True
-                for tri, bb in tris:
+                for tri, bb in kand:
                     if bb is not None and (a[0] < bb[0] - 1 or a[0] > bb[2] + 1
                                            or a[1] < bb[1] - 1 or a[1] > bb[3] + 1):
                         continue
@@ -570,6 +572,38 @@ def sichtbare_linien(netze, kamera, cx, cy, proben=14, min_px=10.0, zeichnen=Non
             _sammeln(teile, True, sicht)
             _sammeln(teile, False, verdeckt)
     return sicht, verdeckt
+
+
+def _strahl_laenge(netze, kamera):
+    """Ray length for the parallel projection: beyond all geometry."""
+    alle = [p for nz in netze for p in nz.punkte]
+    if alle:
+        return max(v_len(v_sub(p, kamera.ziel)) for p in alle) + kamera.abstand
+    return kamera.abstand
+
+
+def sichtbare_linien(netze, kamera, cx, cy, proben=14, min_px=10.0, zeichnen=None):
+    """Hidden-line removal for a list of Netz objects.
+    -> (sichtbar, verdeckt): lists of polylines [(sx, sy), ...] in pixels."""
+    tris = _tris_vorbereiten(netze, kamera, cx, cy)
+    rad = _strahl_laenge(netze, kamera)
+    zu = [nz for nz in netze if zeichnen is None or id(nz) in zeichnen]
+    return _sichtbarkeit(zu, tris, kamera, cx, cy, rad, proben, min_px)
+
+
+def sichtbare_linien_je(gruppen, kamera, cx, cy, proben=10, min_px=14.0):
+    """Hidden-line removal for several objects at once (every object keeps its own
+    colour when drawn). gruppen: [(key, [Netz, ...]), ...]; all meshes hide each other.
+    -> {key: (sichtbar, verdeckt)}; polylines [(sx, sy), ...] in pixels."""
+    alle = [nz for _k, netze in gruppen for nz in netze]
+    tris = _tris_vorbereiten(alle, kamera, cx, cy)
+    rad = _strahl_laenge(alle, kamera)
+    out = {}
+    for key, netze in gruppen:
+        s, v = _sichtbarkeit(netze, tris, kamera, cx, cy, rad, proben, min_px)
+        a, b = out.get(key, ([], []))
+        out[key] = (a + s, b + v)
+    return out
 
 
 def _sammeln(teile, gewollt, ziel):

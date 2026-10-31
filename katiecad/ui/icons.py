@@ -193,6 +193,11 @@ def _zeichne(name, d, c, f):
     elif name == "raster3d":
         for t in (14, 38, 62, 86):
             L([(t, 14), (t, 86)], 4); L([(14, t), (86, t)], 4)
+    elif name == "verdeckt3d":
+        L([(50, 8), (88, 29), (88, 71), (50, 92), (12, 71), (12, 29), (50, 8)], 6)
+        L([(12, 29), (50, 50), (88, 29)], 6)
+        for a_, b_ in (((50, 50), (50, 58)), ((50, 66), (50, 74)), ((50, 82), (50, 92))):
+            L([a_, b_], 5)
     elif name == "flaeche3d":
         d.polygon([(50 * f, 8 * f), (88 * f, 29 * f), (50 * f, 50 * f), (12 * f, 29 * f)], fill=c)
         L([(12, 29), (12, 71), (50, 92), (88, 71), (88, 29)], 5); L([(50, 50), (50, 92)], 5)
@@ -268,7 +273,7 @@ NAMEN = ("auswahl", "linie", "polylinie", "kreis", "bogen", "ellipse", "spline",
          "zoom_grenzen", "reset", "ftext", "laenge", "manip",
          "ansicht3d", "wuerfel", "k_quader", "k_schrank", "k_zylinder", "k_kegel", "k_pyramide",
          "k_kugel", "extrudieren", "loch", "block3d", "aufloesen3d", "persp",
-         "einpassen3d", "iso3d", "hoehe3d", "raster3d", "flaeche3d", "skizze_kreis",
+         "einpassen3d", "iso3d", "hoehe3d", "raster3d", "verdeckt3d", "flaeche3d", "skizze_kreis",
          "skizze_rechteck", "skizze_linie", "skizze_poly", "ebene0", "bem3d", "mass3d", "drehen3d", "abrunden3d", "manip_pivot")
 
 
