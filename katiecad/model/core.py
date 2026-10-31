@@ -3253,7 +3253,7 @@ class ElektroMaske(_FestMaske):
     'attached' to a symbol.  REF is at the very bottom and grows upwards
     with the number of references (the other lines move up with it).
 
-    IND/MAN/TYP/PER are filled in (MAN = manufacturer, new in 1.1.1). REF is created automatically: devices with
+    IND/MAN/TYP/PER are filled in (MAN = manufacturer, new in 1.1.2). REF is created automatically: devices with
     the same PER refer to each other (main symbol -> all auxiliary parts,
     auxiliary part -> only the main symbol), see katiecad.electrical.logic."""
     FELDER = ("IND", "MAN", "TYP", "PER")

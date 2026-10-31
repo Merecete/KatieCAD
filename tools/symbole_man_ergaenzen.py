@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 tools/symbole_man_ergaenzen.py - adds the manufacturer field <MAN> to the device masks of
-the symbol library (version 1.1.1).
+the symbol library (version 1.1.2).
 
 What it does (and ONLY this): in every .katieblock file below the given folder, each device
 mask (typ "maske") that has no MAN field yet gets  "MAN": "MAN"  right after "IND".

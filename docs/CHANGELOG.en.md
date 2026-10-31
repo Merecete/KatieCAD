@@ -1,5 +1,9 @@
 # Changes
 
+## 1.1.2
+- New: **Manufacturer field `MAN`** in the device mask (order IND, MAN, TYP, PER, REF); *Manufacturer* column in the device list; the parts list uses MAN (otherwise the parts catalogue) and keeps the same type from different manufacturers apart. All symbols get MAN via `tools/symbole_man_ergaenzen.py`
+- Version jump to 1.1.2
+
 ## 1.1.1
 - New: **Project > Export lists as Excel file...** - choose the lists, one .xlsx with one sheet per list (no extra library)
 - New symbols: category "11 Installation" (socket 1-/2-pole, with protective contact, CEE 4-/5-pole, luminaire) and emergency stop (1- and 2-channel)
@@ -7,7 +11,6 @@
 - New: **Align at two points** (`ALIGN` / `AUSRICHTEN` / `AL`) like in AutoCAD: source/destination points, move, rotate and optional scale, with preview; the former edge commands stay `AUSLINKS`, `AUSRECHTS`, `AUSOBEN`, `AUSUNTEN`, `AUSMITTEH`, `AUSMITTEV`
 - Object snap **Intersection** now also finds intersections of lines, rectangle and polyline edges with **circles and arcs** and of circles/arcs with each other (before: line x line only)
 - Fix: the "Edit attributes" window (insert/change device) no longer grows taller than the screen with many pins (e.g. 16-channel PLC module): the list is **scrollable**, OK/Cancel stay visible
-- New: **Manufacturer field `MAN`** in the device mask (order IND, MAN, TYP, PER, REF); *Manufacturer* column in the device list; the parts list uses MAN (otherwise the parts catalogue) and keeps the same type from different manufacturers apart. All symbols get MAN via `tools/symbole_man_ergaenzen.py`
 - New: **Own fonts** (View > Manage fonts...) - installed TrueType/OpenType fonts selectable, real character widths, embedded in the PDF
 - New: 3D right-click menu **Copy** - copy a control cabinet or any 3D body; the copy hangs on the mouse with preview and object snap and is put down with a click
 - Find and replace: new scope **Selection only** - searches and replaces only in the selected objects (preset when the window opens with a selection)

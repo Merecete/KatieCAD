@@ -1,7 +1,7 @@
 ; Inno Setup script - Windows installer for KatieCAD
-; Build:  iscc /DAppVersion=1.1.1 installer\KatieCAD.iss
+; Build:  iscc /DAppVersion=1.1.2 installer\KatieCAD.iss
 #ifndef AppVersion
-  #define AppVersion "1.1.1"
+  #define AppVersion "1.1.2"
 #endif
 
 [Setup]
