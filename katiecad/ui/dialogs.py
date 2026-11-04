@@ -1057,12 +1057,10 @@ class LayerDialog(tk.Toplevel):
     def _aktualisiere(self):
         for item in self.tree.get_children():
             self.tree.delete(item)
-        de = SPRACHE["aktuell"] == "de"
         for name, l in self.app.layers.items():
             self.tree.insert("", "end",
                              values=(name, l.farbe, l.staerke,
-                                     ("ja" if l.sichtbar else "nein") if de
-                                     else ("yes" if l.sichtbar else "no")))
+                                     (tr("txt.0300") if l.sichtbar else tr("txt.0301"))))
 
     def _selektiert(self):
         sel = self.tree.selection()
@@ -1075,10 +1073,8 @@ class LayerDialog(tk.Toplevel):
         if dlg.result:
             name, farbe, staerke, sichtbar = dlg.result
             if name in self.app.layers:
-                de = SPRACHE["aktuell"] == "de"
                 messagebox.showerror("Layer",
-                    (f"Layer '{name}' existiert." if de
-                     else f"Layer '{name}' already exists."))
+                    (tr("txt.0236", p0=name)))
                 return
             self.app._snapshot()
             self.app.layers[name] = Layer(name, farbe, staerke, sichtbar)
@@ -1094,9 +1090,8 @@ class LayerDialog(tk.Toplevel):
         if dlg.result:
             neuer_name, farbe, staerke, sichtbar = dlg.result
             if neuer_name != name and neuer_name in self.app.layers:
-                de = SPRACHE["aktuell"] == "de"
                 messagebox.showerror("Layer",
-                    ("Name existiert." if de else "Name already exists."))
+                    (tr("txt.0237")))
                 return
             self.app._snapshot()
             if neuer_name != name:
@@ -1113,10 +1108,8 @@ class LayerDialog(tk.Toplevel):
         name = self._selektiert()
         if not name or name == "0":
             return
-        de = SPRACHE["aktuell"] == "de"
         if messagebox.askyesno("Layer",
-                               (f"Layer '{name}' löschen?" if de
-                                else f"Delete layer '{name}'?")):
+                               (tr("txt.0220", p0=name))):
             self.app._snapshot()
             for el in self.app.elemente + self.app.layout_elemente:
                 if el.layer == name:
@@ -1267,17 +1260,16 @@ class SchraffurDialog(tk.Toplevel):
 
     def __init__(self, parent):
         super().__init__(parent)
-        de = SPRACHE["aktuell"] == "de"
         self.result = None
-        self.title("Schraffur" if de else "Hatch")
+        self.title(tr("txt.0221"))
         self.transient(parent)
         _modal(self)
         self.configure(bg=FARBEN["bg_mittel"])
         f = ttk.Frame(self, padding=12)
         f.pack(fill=tk.BOTH, expand=True)
-        self._arten = [("linien", "Linien" if de else "Lines"),
-                       ("solid", "Vollfläche" if de else "Solid fill")]
-        ttk.Label(f, text="Art:" if de else "Type:").grid(
+        self._arten = [("linien", tr("txt.0231")),
+                       ("solid", tr("txt.0232"))]
+        ttk.Label(f, text=tr("txt.0239")).grid(
             row=0, column=0, sticky=tk.W, pady=4)
         self.art = tk.StringVar(value=self._arten[0][1])
         cb = ttk.Combobox(f, textvariable=self.art, state="readonly", width=16,
@@ -1286,11 +1278,11 @@ class SchraffurDialog(tk.Toplevel):
         cb.bind("<<ComboboxSelected>>", lambda e: self._umschalten())
         self.abstand = tk.StringVar(value="5.0")
         self.winkel = tk.StringVar(value="45")
-        ttk.Label(f, text="Abstand (mm):" if de else "Spacing (mm):").grid(
+        ttk.Label(f, text=tr("txt.0240")).grid(
             row=1, column=0, sticky=tk.W, pady=4)
         self.e1 = ttk.Entry(f, textvariable=self.abstand, width=18)
         self.e1.grid(row=1, column=1, sticky=tk.W, pady=4, padx=(8, 0))
-        ttk.Label(f, text="Winkel (Grad):" if de else "Angle (deg):").grid(
+        ttk.Label(f, text=tr("txt.0241")).grid(
             row=2, column=0, sticky=tk.W, pady=4)
         self.e2 = ttk.Entry(f, textvariable=self.winkel, width=18)
         self.e2.grid(row=2, column=1, sticky=tk.W, pady=4, padx=(8, 0))
@@ -1322,14 +1314,10 @@ class SchraffurDialog(tk.Toplevel):
                 abstand = float(self.abstand.get().replace(",", "."))
                 winkel = float(self.winkel.get().replace(",", "."))
             except ValueError:
-                messagebox.showerror(self.title(), "Bitte Zahlen eingeben."
-                                     if SPRACHE["aktuell"] == "de"
-                                     else "Please enter numbers.", parent=self)
+                messagebox.showerror(self.title(), tr("txt.0263"), parent=self)
                 return
             if abstand <= 0:
-                messagebox.showerror(self.title(), "Abstand muss größer als 0 sein."
-                                     if SPRACHE["aktuell"] == "de"
-                                     else "Spacing must be greater than 0.",
+                messagebox.showerror(self.title(), tr("txt.0262"),
                                      parent=self)
                 return
         self.result = (muster, abstand, winkel)
@@ -1369,13 +1357,11 @@ class ArrayDialog(tk.Toplevel):
         self.wait_window(self)
 
     def _ok(self):
-        de = SPRACHE["aktuell"] == "de"
         try:
             g = lambda k: float(self.v[k].get().replace(",", "."))
             nx, ny = int(g("nx")), int(g("ny"))
             if nx < 1 or ny < 1 or nx * ny > 10000:
-                raise ValueError(("Anzahl muss zwischen 1 und 10000 liegen." if de
-                                  else "Count must be between 1 and 10000."))
+                raise ValueError((tr("txt.0238")))
             self.result = (nx, ny, g("dx") * self.einh, g("dy") * self.einh)
             self.destroy()
         except Exception as e:
@@ -3218,7 +3204,7 @@ class KoordinatenfeldDialog(tk.Toplevel):
         pf = ttk.Frame(f)
         pf.grid(row=0, column=0, columnspan=2, sticky=tk.W, pady=(0, 6))
         for key, text in (("a4", "DIN A4"), ("a3", "DIN A3"),
-                          ("own", "Eigene" if SPRACHE["aktuell"] == "de" else "Custom")):
+                          ("own", tr("txt.0261"))):
             ttk.Radiobutton(pf, text=text, value=key, variable=self.v_preset,
                             command=self._preset_gewaehlt).pack(side=tk.LEFT, padx=(0, 14))
         for i, (key, label, std) in enumerate(felder):
@@ -3735,21 +3721,20 @@ class SchnellauswahlDialog(tk.Toplevel):
     def __init__(self, parent, werte):
         """werte: {"typ": [...], "layer": [...], "farbe": [...], "linientyp": [...]}"""
         super().__init__(parent)
-        de = SPRACHE["aktuell"] == "de"
         self.result = None
-        self.title("Schnellauswahl" if de else "Quick select")
+        self.title(tr("txt.0222"))
         self.transient(parent)
         _modal(self)
         self.configure(bg=FARBEN["bg_mittel"])
         f = ttk.Frame(self, padding=12)
         f.pack(fill=tk.BOTH, expand=True)
-        alle = "(alle)" if de else "(all)"
+        alle = tr("txt.0219")
         self._alle = alle
         self.vars = {}
-        felder = (("typ", "Objektart:" if de else "Object type:"),
+        felder = (("typ", tr("txt.0233")),
                   ("layer", "Layer:"),
-                  ("farbe", "Farbe:" if de else "Colour:"),
-                  ("linientyp", "Linientyp:" if de else "Line type:"))
+                  ("farbe", tr("txt.0234")),
+                  ("linientyp", tr("txt.0235")))
         for row, (key, text) in enumerate(felder):
             ttk.Label(f, text=text).grid(row=row, column=0, sticky=tk.W, pady=4)
             v = tk.StringVar(value=alle)
@@ -3759,12 +3744,10 @@ class SchnellauswahlDialog(tk.Toplevel):
                 row=row, column=1, sticky=tk.W, pady=4, padx=(8, 0))
         self.negiert = tk.BooleanVar(value=False)
         self.hinzu = tk.BooleanVar(value=False)
-        ttk.Checkbutton(f, text="Alles AUSSER diesen Treffern auswählen" if de
-                        else "Select everything EXCEPT these matches",
+        ttk.Checkbutton(f, text=tr("txt.0242"),
                         variable=self.negiert).grid(
             row=4, column=0, columnspan=2, sticky=tk.W, pady=(8, 0))
-        ttk.Checkbutton(f, text="Zur bestehenden Auswahl hinzufügen" if de
-                        else "Add to the current selection",
+        ttk.Checkbutton(f, text=tr("txt.0243"),
                         variable=self.hinzu).grid(
             row=5, column=0, columnspan=2, sticky=tk.W)
         bf = ttk.Frame(f)
@@ -3797,24 +3780,19 @@ class BauteilkatalogDialog(tk.Toplevel):
 
     def __init__(self, parent, katalog, vorschlaege=()):
         super().__init__(parent)
-        de = SPRACHE["aktuell"] == "de"
         self.result = None
         self._vorschlaege = list(vorschlaege)
-        self.title("Bauteilkatalog" if de else "Parts catalogue")
+        self.title(tr("txt.0223"))
         self.transient(parent)
         _modal(self)
         self.configure(bg=FARBEN["bg_mittel"])
         f = ttk.Frame(self, padding=12)
         f.pack(fill=tk.BOTH, expand=True)
-        ttk.Label(f, text=("Hersteller, Bestellnummer und Beschreibung je Typ (TYP). "
-                           "Die Stückliste übernimmt die Angaben automatisch."
-                           if de else
-                           "Manufacturer, order number and description per type (TYP). "
-                           "The parts list uses them automatically."),
+        ttk.Label(f, text=(tr("txt.0244")),
                   style="Hint.TLabel", wraplength=620, justify=tk.LEFT).pack(anchor=tk.W)
-        titel = {"typ": "TYP", "hersteller": "Hersteller" if de else "Manufacturer",
-                 "bestellnr": "Bestellnummer" if de else "Order number",
-                 "beschreibung": "Beschreibung" if de else "Description"}
+        titel = {"typ": "TYP", "hersteller": tr("txt.0224"),
+                 "bestellnr": tr("txt.0225"),
+                 "beschreibung": tr("txt.0226")}
         breiten = {"typ": 150, "hersteller": 150, "bestellnr": 170, "beschreibung": 260}
         self.tree = ttk.Treeview(f, columns=self.SPALTEN, show="headings",
                                  height=12, selectmode="extended")
@@ -3828,14 +3806,13 @@ class BauteilkatalogDialog(tk.Toplevel):
                 self._zeile_einfuegen(e)
         bf = ttk.Frame(f)
         bf.pack(fill=tk.X)
-        ttk.Button(bf, text="Hinzufügen" if de else "Add",
+        ttk.Button(bf, text=tr("txt.0245"),
                    command=self._hinzufuegen).pack(side=tk.LEFT, padx=2)
-        ttk.Button(bf, text="Bearbeiten" if de else "Edit",
+        ttk.Button(bf, text=tr("txt.0246"),
                    command=self._bearbeiten).pack(side=tk.LEFT, padx=2)
-        ttk.Button(bf, text="Löschen" if de else "Delete",
+        ttk.Button(bf, text=tr("txt.0082"),
                    command=self._loeschen).pack(side=tk.LEFT, padx=2)
-        ttk.Button(bf, text="Typen aus Zeichnung übernehmen" if de
-                   else "Take over types from drawing",
+        ttk.Button(bf, text=tr("txt.0247"),
                    command=self._uebernehmen).pack(side=tk.LEFT, padx=12)
         ok = ttk.Frame(f)
         ok.pack(pady=(10, 0))
@@ -3861,17 +3838,16 @@ class BauteilkatalogDialog(tk.Toplevel):
                 self._zeile_einfuegen({"typ": t})
 
     def _formular(self, werte):
-        de = SPRACHE["aktuell"] == "de"
         dlg = tk.Toplevel(self)
-        dlg.title("Bauteil" if de else "Part")
+        dlg.title(tr("txt.0227"))
         dlg.transient(self)
         _modal(dlg)
         dlg.configure(bg=FARBEN["bg_mittel"])
         g = ttk.Frame(dlg, padding=12)
         g.pack()
-        namen = {"typ": "TYP", "hersteller": "Hersteller:" if de else "Manufacturer:",
-                 "bestellnr": "Bestellnummer:" if de else "Order number:",
-                 "beschreibung": "Beschreibung:" if de else "Description:"}
+        namen = {"typ": "TYP", "hersteller": tr("txt.0228"),
+                 "bestellnr": tr("txt.0229"),
+                 "beschreibung": tr("txt.0230")}
         vars_ = {}
         for i, c in enumerate(self.SPALTEN):
             ttk.Label(g, text=namen[c]).grid(row=i, column=0, sticky=tk.W, pady=3)

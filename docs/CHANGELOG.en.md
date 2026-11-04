@@ -1,7 +1,8 @@
 # Changes
 
 ## 1.1.4
-- New: **Spanish user interface** (menu Language > Español), translated by AnabasaSoft (pull request #6) and adapted by us to the current state: the language is remembered, missing Spanish texts appear in English (instead of German), a test checks that keys and placeholders are identical in all three languages. A few messages and the date formats in reports are still German/English only
+- New: **Spanish user interface** (menu Language > Español), translated by AnabasaSoft (pull request #6) and adapted by us to the current state: the language is remembered, missing Spanish texts appear in English (instead of German), a test checks that keys and placeholders are identical in all three languages. The F1 overview is translated into Spanish as well, dates appear in Spanish as DD/MM/YYYY
+- Change: **all German/English messages that used to be hard-coded in the program** (status line, hints, prompts, viewport menus etc., about 300 texts) are now in the translation dictionary (keys `txt.NNNN`) and exist in German, English and Spanish; a test makes sure that no text is left in the code and that all placeholders match
 - Fix: **"Join walls" on existing angles / connected rooms:** if a wall continued in the extension of an angle (e.g. downwards at the corner of an L), it used to be merged back over the angle with its other end and the join failed or made no sense. Now all four end combinations are tried, joins that run back over the wall are rejected, and the wall is attached as a T junction onto the corner / centre line - without lines in between
 - Fix: **ESC while drawing a wall or room** discards the wall / room in progress and keeps the tool active - the next wall can be drawn at once; only a second ESC (nothing in progress) returns to selection. Before, ESC created the started wall and ended the tool
 - Change: program version 1.1.4 (About window, installer)
