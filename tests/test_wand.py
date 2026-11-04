@@ -277,4 +277,17 @@ _quer = [pl for pl, _c in _a.prims(schraffur=False)
          and min(pl[0][0], pl[1][0]) < 400 * _K < max(pl[0][0], pl[1][0]) and min(pl[0][0], pl[1][0]) < 350 * _K]
 check(not _quer, "Winkelwand: keine Linie quer durch die anschliessende Wand")
 
+# Wand beruehrt eine andere schon mit einem Ende (unten links), das andere Ende (oben rechts) ist noch frei:
+# "Verbinden" setzt das freie Ende an, nicht das schon angeschlossene
+_K2 = 240 / 16.0
+_S2 = lambda p: (p[0] * _K2, -p[1] * _K2)
+for _xr in (560, 900):
+    _a = core.Wand([_S2(p) for p in [(98, 440), (98, 99), (_xr, 99)]], dicke=240)
+    _b = core.Wand([_S2(p) for p in [(489, 117), (489, 365.5), (98, 365.5)]], dicke=240)
+    for _x, _y in ((_a, _b), (_b, _a)):
+        _r = core.wand_verbinden(_x, _y)
+        check(_r.get("modus") == "t" and _r["wand"] is _b and _r["index"] == 0
+              and abs(_r["punkt"][1] + 99 * _K2) < 1e-6 and abs(_r["punkt"][0] - 489 * _K2) < 1e-6,
+              f"freies Ende wird angeschlossen (Laenge {_xr})")
+
 print(f"test_wand - {ok} Checks bestanden")

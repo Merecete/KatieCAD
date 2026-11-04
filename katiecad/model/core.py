@@ -1947,6 +1947,7 @@ def _wand_t_anschluss(x, y):
     if x.geschlossen or len(x.punkte) < 2:
         return None
     best = None
+    schon = None
     for idx in (0, -1):
         e = x.punkte[idx]
         v = x.punkte[1] if idx == 0 else x.punkte[-2]
@@ -1970,8 +1971,14 @@ def _wand_t_anschluss(x, y):
             d = math.hypot(ip[0] - e[0], ip[1] - e[1])
             if d > max(x.dicke, y.dicke) * 6.0:
                 continue
+            if d < 0.5:                  # this end already lies on the wall: keep it as fallback
+                if schon is None:
+                    schon = (d, idx, ip)
+                continue
             if best is None or d < best[0]:
                 best = (d, idx, ip)
+    if best is None:
+        best = schon                     # nothing left to attach
     if best is None:
         return None
     return {"modus": "t", "wand": x, "index": best[1], "punkt": best[2]}
@@ -2021,9 +2028,11 @@ def wand_verbinden(a, b):
         return "zu_kurz"
     r = _wand_l_verbinden(a, b)
     ts = [t for t in (_wand_t_anschluss(a, b), _wand_t_anschluss(b, a)) if t]
-    t_best = (min(ts, key=lambda t: math.hypot(t["punkt"][0] - t["wand"].punkte[t["index"]][0],
-                                               t["punkt"][1] - t["wand"].punkte[t["index"]][1]))
-              if ts else None)
+    def _weg(t):
+        return math.hypot(t["punkt"][0] - t["wand"].punkte[t["index"]][0],
+                          t["punkt"][1] - t["wand"].punkte[t["index"]][1])
+    offen = [t for t in ts if _weg(t) >= 0.5]       # ends that do not touch the other wall yet
+    t_best = min(offen or ts, key=_weg) if ts else None
     l_ok = isinstance(r, dict) and max(r["da"], r["db"]) <= 3.0 * max(a.dicke, b.dicke)
     if l_ok:
         return r                                     # a real corner: merge
