@@ -33,7 +33,7 @@ oder `python -m katiecad`. Optional installierst du die Zusatzpakete mit
 `pip install -r requirements.txt` (nötig für DXF/DWG-Import und DXF-Export). Unter
 Linux brauchst du außerdem `python3-tk`.
 
-Die Sprache wechselst du im Menü **Sprache** (Deutsch / English). Sie wird
+Die Sprache wechselst du im Menü **Sprache** (Deutsch / English / Español). Sie wird
 gespeichert.
 
 ## 2. Das Fenster im Überblick

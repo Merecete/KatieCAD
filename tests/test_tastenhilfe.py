@@ -15,7 +15,7 @@ def check(c, m):
 fehlend = sorted({f for f in BEFEHLE.values() if f not in TH.BESCHREIBUNG})
 check(not fehlend, f"Befehle ohne Beschreibung: {fehlend}")
 check(not [f for f in TH.BESCHREIBUNG if f not in set(BEFEHLE.values())], "Beschreibung ohne Befehl")
-for sp in ("de", "en"):
+for sp in ("de", "en", "es"):
     I.SPRACHE["aktuell"] = sp
     ab = TH.abschnitte()
     check(len(ab) == 3 and all(z for _t, z in ab), f"3 Abschnitte {sp}")

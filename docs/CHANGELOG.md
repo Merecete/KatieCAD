@@ -1,6 +1,7 @@
 # Änderungen
 
 ## 1.1.4
+- Neu: **Spanische Oberfläche** (Menü Sprache › Español), übersetzt von AnabasaSoft (Pull Request #6), von uns an den aktuellen Stand angepasst: Sprache wird gespeichert, fehlende spanische Texte erscheinen auf Englisch (statt Deutsch), Test auf gleiche Schlüssel und Platzhalter in allen drei Sprachen. Einige Meldungen und die Datumsformate in Berichten sind weiterhin nur Deutsch/Englisch
 - Fix: **„Wände verbinden“ an bestehende Winkel / zusammenhängende Räume:** Läuft eine Wand in der Verlängerung eines Winkels weiter (z. B. nach unten an der Ecke eines L), wurde sie früher über den Winkel zurück mit dessen anderem Ende verschmolzen und die Verbindung scheiterte oder wurde unsinnig. Jetzt werden alle vier Endkombinationen geprüft, Verbindungen, die über die Wand zurücklaufen, werden verworfen, und die Wand wird als T-Anschluss auf die Ecke bzw. Mittellinie gesetzt – ohne Zwischenstriche
 - Fix: **ESC beim Zeichnen von Wand oder Raum** verwirft die angefangene Wand bzw. den angefangenen Raum und lässt das Werkzeug aktiv – man kann sofort die nächste Wand ziehen; erst ein zweites ESC (nichts in Arbeit) schaltet zurück auf Auswahl. Bisher wurde die angefangene Wand beim ESC angelegt und das Werkzeug beendet
 - Change: Programmversion 1.1.4 (Info-Fenster, Installer)
