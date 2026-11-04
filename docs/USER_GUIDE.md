@@ -182,6 +182,8 @@ line weight in the toolbar.
 
 **Stretch with a preselection:** if you selected objects beforehand with a crossing window (right-to-left), **Stretch** (`STR`) jumps straight to the base point - no second window needed. Only the selected objects are stretched. With another kind of preselection (e.g. single click) the selection is kept and you only drag the window.
 
+**Stretching walls:** walls stretch like polylines: drag a crossing window around the wall end (and the doors/windows that belong to it) - corner points inside the window move, doors and windows whose centre is inside the window go along. Walls that merely touch another wall (T junction) do not follow automatically: the window must also catch the adjoining wall, otherwise a gap appears.
+
 ## 5. Projects and sheets
 
 A **project** is a folder with a project file (`*.katieprj`), one file per sheet

@@ -8086,6 +8086,10 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             self._stretch_element(el, innen, dx, dy)
 
     def _stretch_element(self, el, innen, dx, dy):
+        if isinstance(el, Oeffnung):          # door / window moves along with its wall
+            if innen(el.x, el.y):
+                el.x += dx; el.y += dy
+            return
         if isinstance(el, BlockReferenz):
             if innen(el.x, el.y):
                 el.x += dx; el.y += dy

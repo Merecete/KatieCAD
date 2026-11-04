@@ -1,6 +1,7 @@
 # Änderungen
 
 ## 1.1.4
+- Fix/Neu: **Strecken bei Wänden:** Wände lassen sich mit „Strecken“ (`STR`, überkreuzendes Fenster) wie Polylinien strecken – Eckpunkte im Fenster wandern mit. Türen und Fenster, deren Mittelpunkt im Fenster liegt, werden jetzt mitgenommen (früher blieben sie stehen und hingen dann frei im Raum)
 - Neu: **Spanische Oberfläche** (Menü Sprache › Español), übersetzt von AnabasaSoft (Pull Request #6), von uns an den aktuellen Stand angepasst: Sprache wird gespeichert, fehlende spanische Texte erscheinen auf Englisch (statt Deutsch), Test auf gleiche Schlüssel und Platzhalter in allen drei Sprachen. Auch die F1-Übersicht ist ins Spanische übersetzt, Datumsangaben erscheinen spanisch als TT/MM/JJJJ
 - Change: **alle bisher fest im Programm stehenden deutschen/englischen Meldungen** (Statuszeile, Hinweise, Abfragen, Menüs der Ansichtsfenster usw., rund 300 Texte) stehen jetzt im Übersetzungswörterbuch (Schlüssel `txt.NNNN`) und sind in Deutsch, Englisch und Spanisch vorhanden; ein Test stellt sicher, dass kein Text mehr fest im Code steht und alle Platzhalter stimmen
 - Fix: **„Wände verbinden“, wenn eine Wand eine andere schon an einem Ende berührt** (z. B. Winkel, dessen eines Ende bereits an der Wand liegt): es wurde das bereits angeschlossene Ende „verbunden“ (ohne sichtbare Änderung) und das freie Ende blieb mit Lücke und Zwischenstrich stehen. Jetzt wird das noch freie Ende angesetzt

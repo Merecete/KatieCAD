@@ -290,4 +290,15 @@ for _xr in (560, 900):
               and abs(_r["punkt"][1] + 99 * _K2) < 1e-6 and abs(_r["punkt"][0] - 489 * _K2) < 1e-6,
               f"freies Ende wird angeschlossen (Laenge {_xr})")
 
+
+# Strecken: Wandende + Tuer im Fenster wandern mit
+import types
+from katiecad.ui.app import CadApp as _CA
+_w1 = core.Wand([(0, 0), (4000, 0)], dicke=240)
+_o = core.Oeffnung("tuer", 4000, 0, 0, dicke=240)
+_a = types.SimpleNamespace(_op=None, layers={}, _aktuelle_elemente_liste=lambda: [_w1, _o])
+_a._stretch_element = lambda el, i, dx, dy: _CA._stretch_element(_a, el, i, dx, dy)
+_CA._stretch_anwenden(_a, (3500, -500, 4500, 500), 1000, 0)
+check(_w1.punkte == [(0, 0), (5000, 0)] and _o.x == 5000, "Strecken: Wand + Tuer wandern mit")
+
 print(f"test_wand - {ok} Checks bestanden")

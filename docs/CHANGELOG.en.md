@@ -1,6 +1,7 @@
 # Changes
 
 ## 1.1.4
+- Fix/New: **Stretch for walls:** walls can be stretched with "Stretch" (`STR`, crossing window) like polylines - corner points inside the window move along. Doors and windows whose centre lies inside the window are now taken along (before, they stayed behind and hung in empty space)
 - New: **Spanish user interface** (menu Language > Español), translated by AnabasaSoft (pull request #6) and adapted by us to the current state: the language is remembered, missing Spanish texts appear in English (instead of German), a test checks that keys and placeholders are identical in all three languages. The F1 overview is translated into Spanish as well, dates appear in Spanish as DD/MM/YYYY
 - Change: **all German/English messages that used to be hard-coded in the program** (status line, hints, prompts, viewport menus etc., about 300 texts) are now in the translation dictionary (keys `txt.NNNN`) and exist in German, English and Spanish; a test makes sure that no text is left in the code and that all placeholders match
 - Fix: **"Join walls" when a wall already touches another one with one end** (e.g. an angle with one end already on the wall): the already attached end was "joined" (no visible change) and the free end stayed with a gap and a line in between. Now the still free end is attached

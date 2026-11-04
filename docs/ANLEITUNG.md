@@ -181,6 +181,8 @@ und Farbe, Linienart und Linienstärke in der Werkzeugleiste.
 
 **Strecken mit Vorauswahl:** Hast du Objekte vorher mit einem überkreuzenden Fenster (von rechts nach links) markiert, springt **Strecken** (`STR`) gleich zur Basispunkt-Abfrage – das Fenster muss nicht noch einmal aufgezogen werden. Gestreckt werden dann nur die markierten Objekte. Bei anderer Vorauswahl (z. B. Einzelklick) bleibt die Auswahl erhalten und du ziehst nur noch das Fenster auf.
 
+**Wände strecken:** Wände werden wie Polylinien gestreckt: überkreuzendes Fenster so aufziehen, dass es das Wandende (und ggf. die zugehörigen Türen/Fenster) umfasst – die Eckpunkte im Fenster wandern, Türen und Fenster mit Mittelpunkt im Fenster gehen mit. Wände, die nur an einer anderen Wand anliegen (T-Anschluss), bleiben dort nicht automatisch hängen: das Fenster muss auch die angrenzende Wand erfassen, sonst entsteht eine Lücke.
+
 ## 5. Projekte und Blätter
 
 Ein **Projekt** ist ein Ordner mit einer Projektdatei (`*.katieprj`), einer Datei
