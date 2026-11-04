@@ -1,5 +1,9 @@
 # Changes
 
+## 1.1.4
+- Fix: **ESC while drawing a wall or room** discards the wall / room in progress and keeps the tool active - the next wall can be drawn at once; only a second ESC (nothing in progress) returns to selection. Before, ESC created the started wall and ended the tool
+- Change: program version 1.1.4 (About window, installer)
+
 ## 1.1.3
 - New: **Project > "Evaluate single-pole representation too"** (tick, also in the "Create documentation" dialog): when set, single-pole symbols are evaluated like normal ones (lists, numbering, checks, net, PLC), so purely single-pole projects produce lists as well. Without the tick everything stays as before (never counted). The setting is saved per project.
 - New: **Make 3D parts larger/smaller with "Stretch"** (same command as in 2D: Edit > Stretch / `ST`): select 3D objects, click the base point on the side to move (e.g. top edge of the cabinet), click the target point or type the distance (e.g. `200` - towards the mouse, `-200` reverses). Large parts (carcass, door, side panels) become longer/shorter, small parts on that side move along, the rest stays. Not stretchable: bodies on work planes, spheres, merged bodies, bodies with cut-outs.

@@ -1,5 +1,9 @@
 # Änderungen
 
+## 1.1.4
+- Fix: **ESC beim Zeichnen von Wand oder Raum** verwirft die angefangene Wand bzw. den angefangenen Raum und lässt das Werkzeug aktiv – man kann sofort die nächste Wand ziehen; erst ein zweites ESC (nichts in Arbeit) schaltet zurück auf Auswahl. Bisher wurde die angefangene Wand beim ESC angelegt und das Werkzeug beendet
+- Change: Programmversion 1.1.4 (Info-Fenster, Installer)
+
 ## 1.1.3
 - Neu: **Projekt › „Einpolige Darstellung mit auswerten“** (Häkchen, auch im Dialog „Dokumentation erzeugen“): Ist es gesetzt, werden einpolige Symbole wie normale gezählt (Listen, Nummerierung, Prüfung, Netz, SPS), sodass auch reine Einpol-Projekte Listen liefern. Ohne Häkchen bleibt alles wie bisher (nie mitgezählt). Die Einstellung wird je Projekt gespeichert.
 - Neu: **3D-Teile mit „Strecken“ größer/kleiner machen** (derselbe Befehl wie in 2D: Menü Bearbeiten › Strecken / `ST`): 3D-Objekte wählen, Basispunkt an der zu verschiebenden Seite klicken (z. B. Oberkante des Schranks), Zielpunkt klicken oder Abstand tippen (z. B. `200` – Richtung der Maus, `-200` kehrt um). Große Teile (Korpus, Tür, Seitenwände) werden länger/kürzer, kleine Teile an dieser Seite wandern mit, der Rest bleibt. Nicht streckbar: Körper auf Arbeitsebenen, Kugeln, vereinigte Körper, Körper mit Ausschnitten.

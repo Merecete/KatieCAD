@@ -2678,6 +2678,19 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                             else "Block creation cancelled.")
             self.redraw()
             return
+        if wz_e in ("wand", "raum") and self.aktuelle_polylinie:
+            # a wall / room in progress is discarded; the tool stays active (a second ESC
+            # with nothing in progress goes back to the selection)
+            self.aktuelle_polylinie = []
+            self.letzter_punkt = None
+            self._pts = []
+            self._snap_marker_loeschen()
+            self._clear_temp()
+            self._eingabe_zuruecksetzen()
+            self._update_eingabe_hinweis()
+            self.redraw()
+            self.status.set(tr("msg.wand.klick" if wz_e == "wand" else "msg.raum.klick"))
+            return
         if self._griff_drag_el is not None:
             self._griff_drag_el = None
             self._griff_drag_id = None
