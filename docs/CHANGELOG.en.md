@@ -1,6 +1,7 @@
 # Changes
 
 ## 1.1.4
+- Fix: **"Join walls" on existing angles / connected rooms:** if a wall continued in the extension of an angle (e.g. downwards at the corner of an L), it used to be merged back over the angle with its other end and the join failed or made no sense. Now all four end combinations are tried, joins that run back over the wall are rejected, and the wall is attached as a T junction onto the corner / centre line - without lines in between
 - Fix: **ESC while drawing a wall or room** discards the wall / room in progress and keeps the tool active - the next wall can be drawn at once; only a second ESC (nothing in progress) returns to selection. Before, ESC created the started wall and ended the tool
 - Change: program version 1.1.4 (About window, installer)
 

@@ -253,4 +253,28 @@ for k in ("dlg.wand.modell", "dlg.wand.modell.einfach", "dlg.wand.modell.doppel"
           "dlg.wand.modell.rolltor", "dlg.wand.anteil", "dlg.wand.spiegeln_gross", "dlg.wand.titel_vorgabe_tuer",
           "dlg.wand.titel_vorgabe_fenster"):
     check(k in I.TEXTE["de"] and k in I.TEXTE["en"], k)
+# Anschluss einer Wand an die Ecke eines bestehenden Winkels (Wand laeuft in der Verlaengerung weiter,
+# Luecke ca. eine halbe Wandstaerke): T-Anschluss statt Verschmelzen ueber den Winkel zurueck
+_K = 240 / 107.0
+_S = lambda p: (p[0] * _K, -p[1] * _K)
+for _lw in ([(364.5, -50), (364.5, 111.5), (900, 111.5)], [(900, 111.5), (364.5, 111.5), (364.5, -50)]):
+    for _un in ([(364.5, 216), (364.5, 500)], [(364.5, 500), (364.5, 216)]):
+        _a = core.Wand([_S(p) for p in _lw], dicke=240)
+        _b = core.Wand([_S(p) for p in _un], dicke=240)
+        for _x, _y in ((_a, _b), (_b, _a)):
+            _r = core.wand_verbinden(_x, _y)
+            check(isinstance(_r, dict) and _r.get("modus") == "t" and _r["wand"] is _b
+                  and abs(_r["punkt"][0] - 364.5 * _K) < 1e-6 and abs(_r["punkt"][1] + 111.5 * _K) < 1e-6,
+                  "Anschluss an Winkelecke: T-Anschluss auf die Ecke")
+# nach dem Anschluss: keine Linie der Winkelwand quer durch die anschliessende Wand
+_a = core.Wand([_S(p) for p in [(364.5, -50), (364.5, 111.5), (900, 111.5)]], dicke=240)
+_b = core.Wand([_S(p) for p in [(364.5, 216), (364.5, 500)]], dicke=240)
+_r = core.wand_verbinden(_a, _b)
+_b.punkte[0] = _r["punkt"]
+core.wand_verknuepfen([_a, _b])
+_quer = [pl for pl, _c in _a.prims(schraffur=False)
+         if len(pl) == 2 and abs(pl[0][1] - pl[1][1]) < 1e-6 and abs(pl[0][1] + 165 * _K) < 1.0
+         and min(pl[0][0], pl[1][0]) < 400 * _K < max(pl[0][0], pl[1][0]) and min(pl[0][0], pl[1][0]) < 350 * _K]
+check(not _quer, "Winkelwand: keine Linie quer durch die anschliessende Wand")
+
 print(f"test_wand - {ok} Checks bestanden")

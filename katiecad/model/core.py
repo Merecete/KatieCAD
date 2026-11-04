@@ -2020,12 +2020,15 @@ def wand_verbinden(a, b):
     if len(a.punkte) < 2 or len(b.punkte) < 2:
         return "zu_kurz"
     r = _wand_l_verbinden(a, b)
-    if isinstance(r, dict) and max(r["da"], r["db"]) <= 3.0 * max(a.dicke, b.dicke):
-        return r                                     # a real corner: merge
     ts = [t for t in (_wand_t_anschluss(a, b), _wand_t_anschluss(b, a)) if t]
-    if ts:
-        return min(ts, key=lambda t: math.hypot(t["punkt"][0] - t["wand"].punkte[t["index"]][0],
-                                                t["punkt"][1] - t["wand"].punkte[t["index"]][1]))
+    t_best = (min(ts, key=lambda t: math.hypot(t["punkt"][0] - t["wand"].punkte[t["index"]][0],
+                                               t["punkt"][1] - t["wand"].punkte[t["index"]][1]))
+              if ts else None)
+    l_ok = isinstance(r, dict) and max(r["da"], r["db"]) <= 3.0 * max(a.dicke, b.dicke)
+    if l_ok:
+        return r                                     # a real corner: merge
+    if t_best is not None:
+        return t_best
     return r
 
 
@@ -2042,44 +2045,68 @@ def _wand_l_verbinden(a, b):
         return "zu_kurz"
     if a.geschlossen or b.geschlossen:
         return "geschlossen"
-    best = None
+    limit = max(a.dicke, b.dicke) * 6.0
+    tausch = {"links": "rechts", "rechts": "links", "mitte": "mitte"}
+
+    def versuch(ea, eb):
+        """Join at the ends ea of a and eb of b -> dict or error key."""
+        pa = list(a.punkte)
+        pb = list(b.punkte)
+        rev_a = ea == 0                  # a must end at the joint
+        rev_b = eb == -1                 # b must start at the joint
+        if rev_a:
+            pa.reverse()
+        if rev_b:
+            pb.reverse()
+        x = _gerade_schnitt(pa[-2], pa[-1], pb[0], pb[1])
+        if x is None:                    # parallel: only a short straight bridge is allowed
+            br = (pb[0][0] - pa[-1][0], pb[0][1] - pa[-1][1])
+            d = math.hypot(*br)
+            if d > limit:
+                return "parallel"
+            if d > 1e-6:
+                # the bridge must continue in the direction of both walls, otherwise the
+                # new wall would double back over itself
+                ua = (pa[-1][0] - pa[-2][0], pa[-1][1] - pa[-2][1])
+                ub = (pb[1][0] - pb[0][0], pb[1][1] - pb[0][1])
+                if (br[0] * ua[0] + br[1] * ua[1] <= 0 or br[0] * ub[0] + br[1] * ub[1] <= 0):
+                    return "parallel"
+            punkte = pa + pb
+            da = db = d
+        else:
+            if (math.hypot(x[0] - pa[-1][0], x[1] - pa[-1][1]) > limit
+                    or math.hypot(x[0] - pb[0][0], x[1] - pb[0][1]) > limit):
+                return "zu_weit"
+            punkte = pa[:-1] + [x] + pb[1:]
+            da = math.hypot(x[0] - pa[-1][0], x[1] - pa[-1][1])
+            db = math.hypot(x[0] - pb[0][0], x[1] - pb[0][1])
+        sauber = [punkte[0]]
+        for q in punkte[1:]:
+            if math.hypot(q[0] - sauber[-1][0], q[1] - sauber[-1][1]) > 1e-6:
+                sauber.append(q)
+        return {"punkte": sauber, "rev_a": rev_a, "rev_b": rev_b, "dicke": a.dicke,
+                "ausrichtung": tausch[a.ausrichtung] if rev_a else a.ausrichtung,
+                "da": da, "db": db}
+
+    # all four end combinations are tried; the cheapest valid one wins (the nearest
+    # pair of ends can be the wrong one, e.g. when a wall runs on past the joint)
+    gut = None
+    fehler = None
+    nah = None
     for ea in (0, -1):
         for eb in (0, -1):
-            pa, pb = a.punkte[ea], b.punkte[eb]
-            dist = math.hypot(pa[0] - pb[0], pa[1] - pb[1])
-            if best is None or dist < best[0]:
-                best = (dist, ea, eb)
-    _d, ea, eb = best
-    pa = list(a.punkte)
-    pb = list(b.punkte)
-    rev_a = ea == 0                  # a must end at the joint
-    rev_b = eb == -1                 # b must start at the joint
-    if rev_a:
-        pa.reverse()
-    if rev_b:
-        pb.reverse()
-    limit = max(a.dicke, b.dicke) * 6.0
-    x = _gerade_schnitt(pa[-2], pa[-1], pb[0], pb[1])
-    if x is None:                    # parallel: only a short straight bridge is allowed
-        if math.hypot(pa[-1][0] - pb[0][0], pa[-1][1] - pb[0][1]) > limit:
-            return "parallel"
-        punkte = pa + pb
-        da = db = math.hypot(pa[-1][0] - pb[0][0], pa[-1][1] - pb[0][1])
-    else:
-        if (math.hypot(x[0] - pa[-1][0], x[1] - pa[-1][1]) > limit
-                or math.hypot(x[0] - pb[0][0], x[1] - pb[0][1]) > limit):
-            return "zu_weit"
-        punkte = pa[:-1] + [x] + pb[1:]
-        da = math.hypot(x[0] - pa[-1][0], x[1] - pa[-1][1])
-        db = math.hypot(x[0] - pb[0][0], x[1] - pb[0][1])
-    sauber = [punkte[0]]
-    for p in punkte[1:]:
-        if math.hypot(p[0] - sauber[-1][0], p[1] - sauber[-1][1]) > 1e-6:
-            sauber.append(p)
-    tausch = {"links": "rechts", "rechts": "links", "mitte": "mitte"}
-    return {"punkte": sauber, "rev_a": rev_a, "rev_b": rev_b, "dicke": a.dicke,
-            "ausrichtung": tausch[a.ausrichtung] if rev_a else a.ausrichtung,
-            "da": da, "db": db}
+            pa_, pb_ = a.punkte[ea], b.punkte[eb]
+            dist = math.hypot(pa_[0] - pb_[0], pa_[1] - pb_[1])
+            r = versuch(ea, eb)
+            if nah is None or dist < nah[0]:
+                nah = (dist, r)
+            if isinstance(r, dict):
+                kosten = r["da"] + r["db"]
+                if gut is None or kosten < gut[0]:
+                    gut = (kosten, r)
+    if gut is not None:
+        return gut[1]
+    return nah[1]
 
 
 def wand_in_linien(elemente):
