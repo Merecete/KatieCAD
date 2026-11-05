@@ -178,6 +178,8 @@ line weight in the toolbar.
 
 **Purge layers:** in the layer window ("Layers...") **Purge** deletes all layers no object uses - in a project across all sheets (also layouts and blocks). Layer 0 and the active layer stay. KatieCAD asks first with the list. Ctrl+Z undoes it only for the open sheet; the other sheets are saved immediately.
 
+**Import layers and template:** layer colours belong to the drawing - a block only carries the layer name. So you do not have to set everything up again in each new drawing, the layer window has three buttons: **Import from file...** copies the layers (with colour and weight) from another drawing or project into the current one; existing layers stay, if the colour/weight differs you are asked once whether to overwrite. **Save as template** remembers all layers of the current drawing for **new** drawings (File > New, new project); opened or existing files are never changed. **Reset template** restores the default layers.
+
 **Hatching like AutoCAD:** with nothing selected, choose Insert > Hatch, set pattern, spacing and angle, then click straight into an enclosed area. KatieCAD finds the smallest region around the click point (lines may cross; circles, rectangles and polylines count too) and hatches it. Click several areas one after another; ESC or right-click ends. If a closed boundary is already selected, that one is hatched as before.
 
 **Stretch with a preselection:** if you selected objects beforehand with a crossing window (right-to-left), **Stretch** (`STR`) jumps straight to the base point - no second window needed. Only the selected objects are stretched. With another kind of preselection (e.g. single click) the selection is kept and you only drag the window.

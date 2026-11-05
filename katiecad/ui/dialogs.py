@@ -1002,7 +1002,7 @@ class LayerDialog(tk.Toplevel):
         super().__init__(parent)
         self.app = app
         self.title(tr("dlg.layer.titel"))
-        self.geometry("650x420")
+        self.geometry("700x470")
         self.transient(parent)
         self.configure(bg=FARBEN["bg_mittel"])
         ttk.Label(self, text=tr("dlg.layer.titel"), style="Title.TLabel").pack(pady=6)
@@ -1028,7 +1028,27 @@ class LayerDialog(tk.Toplevel):
                    command=self.bereinigen).pack(side=tk.LEFT, padx=2)
         ttk.Button(bf, text=tr("dlg.schliessen"),
                    command=self.destroy).pack(side=tk.RIGHT, padx=2)
+        bf2 = ttk.Frame(self)
+        bf2.pack(fill=tk.X, padx=8, pady=(0, 8))
+        ttk.Button(bf2, text=tr("dlg.layer.aus_datei"),
+                   command=self.aus_datei).pack(side=tk.LEFT, padx=2)
+        ttk.Button(bf2, text=tr("dlg.layer.vorlage_speichern"),
+                   command=self.vorlage_speichern).pack(side=tk.LEFT, padx=2)
+        ttk.Button(bf2, text=tr("dlg.layer.vorlage_zurueck"),
+                   command=self.vorlage_zurueck).pack(side=tk.LEFT, padx=2)
         self.wait_window(self)
+
+    def aus_datei(self):
+        self.app.layer_aus_datei_uebernehmen()
+        self._aktualisiere()
+
+    def vorlage_speichern(self):
+        if messagebox.askyesno("Layer", tr("msg.layer.vorlage_frage"), parent=self):
+            self.app.layer_vorlage_speichern()
+
+    def vorlage_zurueck(self):
+        if messagebox.askyesno("Layer", tr("msg.layer.vorlage_zurueck_frage"), parent=self):
+            self.app.layer_vorlage_zuruecksetzen()
 
     def bereinigen(self):
         """Deletes all layers no object uses (layer 0 and the active layer

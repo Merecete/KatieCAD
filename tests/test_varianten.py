@@ -1,5 +1,5 @@
 """Block variants (like EPLAN): definition, instance, save/load, switching."""
-import sys, os, tempfile
+import sys, os, tempfile, types
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import stub  # noqa: F401
@@ -70,4 +70,30 @@ neu.variante_hinzufuegen("B", var((0, 8))); neu.variante_hinzufuegen("C", var((-
 check(inst.varianten_abgleichen(neu) and inst.variantennamen() == ["A", "B", "C"], "Abgleich: C uebernommen")
 check(inst.variante == 1 and not inst.varianten_abgleichen(neu), "aktive Variante bleibt, kein zweiter Abgleich")
 check(inst.setze_variante(2) and textpos(inst) == (-8, 0), "neue Variante nutzbar")
+# Layer-Vorlage + Layer uebernehmen
+_cfg = {}
+A.lade_konfiguration = lambda: dict(_cfg)
+a._config_setzen = lambda k, v: _cfg.__setitem__(k, v)
+a.status = types.SimpleNamespace(set=lambda t: None); a.root = None
+a.layers = a._standard_layers()
+a.layers["E-DEVICES"] = core.Layer("E-DEVICES", "#ff0000", 0.5)
+a.layer_vorlage_speichern()
+neu_l = a._standard_layers(vorlage=True)
+check(neu_l["E-DEVICES"].farbe == "#ff0000", "Vorlage: neue Zeichnung startet mit rotem E-DEVICES")
+check("E-DEVICES" not in a._standard_layers(), "ohne vorlage=True keine Vorlagen-Layer (offene Dateien)")
+a.layer_vorlage_zuruecksetzen()
+check("E-DEVICES" not in a._standard_layers(vorlage=True), "Vorlage zurueckgesetzt")
+
+a.layers = a._standard_layers()
+a.layer_cb = types.SimpleNamespace(config=lambda **k: None)
+a._snapshot = lambda: None; a.redraw = lambda: None
+A.messagebox.askyesno = lambda *x, **k: False
+n = a._layer_uebernehmen([{"name": "E-DEVICES", "farbe": "#ff0000", "staerke": 0.5},
+                          {"name": "0", "farbe": "#00ff00", "staerke": 0.35}])
+check(n == 1 and a.layers["E-DEVICES"].farbe == "#ff0000" and a.layers["0"].farbe == "#c29bff",
+      "Uebernehmen: neu ergaenzt, vorhandenes bleibt bei Nein")
+A.messagebox.askyesno = lambda *x, **k: True
+a._layer_uebernehmen([{"name": "0", "farbe": "#00ff00", "staerke": 0.35}])
+check(a.layers["0"].farbe == "#00ff00", "Uebernehmen: Ja ueberschreibt")
+
 print(f"test_varianten - OK ({ok} Pruefungen)")

@@ -287,7 +287,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
 
         _style_setup(root)
 
-        self.layers = self._standard_layers()
+        self.layers = self._standard_layers(vorlage=True)
         self.aktiver_layer = tk.StringVar(value="0")
 
         self.elemente = []
@@ -8805,14 +8805,85 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
     # NEW: drawing <-> dict/file (used by save/open
     #      and by project management)
     # ========================================================
-    def _standard_layers(self):
-        return {
+    def _standard_layers(self, vorlage=False):
+        """Built-in layers. With vorlage=True the user's layer template (Layer dialog >
+        "Save as template") is laid over them - only for NEW drawings, never for files
+        that are opened."""
+        layers = {
             "0": Layer("0", "#c29bff", 0.35),
             "Konstruktion": Layer("Konstruktion", "#b886fb", 0.25),
             "Bemaßung": Layer("Bemaßung", "#ff2d95", 0.25),
             "Schrift": Layer("Schrift", "#d8d0e8", 0.35),
             "Verdeckt": Layer("Verdeckt", "#8b7ea8", 0.25),
         }
+        if vorlage:
+            try:
+                for ld in lade_konfiguration().get("layer_vorlage") or []:
+                    layers[ld["name"]] = Layer(ld["name"], ld.get("farbe", "#c29bff"),
+                                               ld.get("staerke", 0.35),
+                                               ld.get("sichtbar", True))
+            except Exception as ex:
+                print(f"[KatieCAD] Layer-Vorlage: {ex}")
+        return layers
+
+    def layer_vorlage_speichern(self):
+        """Stores the layers of the current drawing as the template for new drawings."""
+        self._config_setzen("layer_vorlage", [l.to_dict() for l in self.layers.values()])
+        self.status.set(tr("msg.layer.vorlage_gespeichert", n=len(self.layers)))
+
+    def layer_vorlage_zuruecksetzen(self):
+        self._config_setzen("layer_vorlage", [])
+        self.status.set(tr("msg.layer.vorlage_zurueck"))
+
+    def layer_aus_datei_uebernehmen(self):
+        """Copies the layers (colour, weight) of another drawing / project into this one.
+        Existing layers keep their settings unless the user chooses to overwrite them."""
+        pfad = filedialog.askopenfilename(
+            parent=self.root, title=tr("dlg.layer.aus_datei.titel"),
+            filetypes=[(tr("msg.layer.dateityp"), "*.cadjson *" + PROJEKT_ENDUNG),
+                       (tr("txt.0198"), "*.*")])
+        if not pfad:
+            return None
+        try:
+            if pfad.lower().endswith(PROJEKT_ENDUNG):
+                prj = Projekt.laden(pfad)
+                quellen = [prj.blatt_pfad(i) for i in range(len(prj.blaetter))]
+            else:
+                quellen = [pfad]
+            gefunden = {}
+            for q in quellen:
+                with open(q, "r", encoding="utf-8") as f:
+                    for ld in json.load(f).get("layers", []):
+                        gefunden.setdefault(ld["name"], ld)
+        except Exception as ex:
+            messagebox.showerror(tr("msg.oeffnen_fehlgeschlagen"), str(ex), parent=self.root)
+            return None
+        return self._layer_uebernehmen(list(gefunden.values()))
+
+    def _layer_uebernehmen(self, layer_dicts):
+        """Adds new layers; for existing ones that differ asks once whether to overwrite."""
+        neu = [d for d in layer_dicts if d["name"] not in self.layers]
+        abw = [d for d in layer_dicts if d["name"] in self.layers and (
+            self.layers[d["name"]].farbe != d.get("farbe", "#c29bff")
+            or self.layers[d["name"]].staerke != d.get("staerke", 0.35))]
+        ueber = False
+        if abw:
+            ueber = messagebox.askyesno(
+                tr("dlg.layer.aus_datei.titel"),
+                tr("msg.layer.aus_datei.abweichend", n=len(abw),
+                   namen=", ".join(d["name"] for d in abw)), parent=self.root)
+        if not neu and not (abw and ueber):
+            self.status.set(tr("msg.layer.aus_datei.nichts"))
+            return 0
+        self._snapshot()
+        for d in neu + (abw if ueber else []):
+            self.layers[d["name"]] = Layer(d["name"], d.get("farbe", "#c29bff"),
+                                           d.get("staerke", 0.35), d.get("sichtbar", True))
+        self.layer_cb.config(values=list(self.layers.keys()))
+        self.redraw()
+        n = len(neu) + (len(abw) if ueber else 0)
+        self.status.set(tr("msg.layer.aus_datei.fertig", n=n))
+        return n
 
     def _zeichnung_daten(self):
         return {
@@ -8845,7 +8916,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             layers = [l.to_dict() for l in self.layers.values()]
         else:
             fmt, bg_l = Layout.STANDARD_FORMAT, Layout.STANDARD_BG
-            layers = [l.to_dict() for l in self._standard_layers().values()]
+            layers = [l.to_dict() for l in self._standard_layers(vorlage=True).values()]
         return {
             "einheit": self.einheit.get(),
             "massstab": self.massstab.get(),
