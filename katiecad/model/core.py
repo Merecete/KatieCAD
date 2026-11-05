@@ -2888,6 +2888,24 @@ class BlockReferenz(Element):
         for ad in self.attribut_definitionen():
             self.attribute.setdefault(ad.tag, ad.wert)
 
+    def varianten_abgleichen(self, definition):
+        """Takes over variants that were added to the block definition after this instance
+        was placed (only if the definition has all variant names of the instance, plus new
+        ones). The active variant and everything else of the instance stay unchanged.
+        Returns True if something changed."""
+        neu = getattr(definition, "varianten", None) or []
+        if not neu:
+            return False
+        alt_namen = self.variantennamen() or ["A"]
+        neu_namen = [n for n, _e in neu]
+        if len(neu_namen) <= len(alt_namen) or not set(alt_namen) <= set(neu_namen):
+            return False
+        aktiv = alt_namen[self.variante] if self.varianten else alt_namen[0]
+        self.varianten = [(n, [deepcopy(e) for e in els]) for n, els in neu]
+        self.variante = neu_namen.index(aktiv) if aktiv in neu_namen else 0
+        self._cache = None
+        return True
+
     def variantennamen(self):
         return [n for n, _e in self.varianten]
 

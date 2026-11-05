@@ -9577,6 +9577,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
     def _attribute_abfragen(self, ref):
         """Prompts for the attribute values on insertion (if any).
         Cancelling keeps the default values."""
+        self._varianten_abgleichen(ref)
         aus = self._attr_ausschluss(ref)
         if not [ad for ad in ref.attribut_definitionen() if ad.tag not in aus] \
                 and not ref.varianten:
@@ -9599,6 +9600,12 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                     ref.sp_dx = ref.sp_dy = 0.0
                 m.spiegel = dlg.spiegel
 
+    def _varianten_abgleichen(self, ref):
+        """Variants added to the block later also appear in already placed devices."""
+        d = self.block_bibliothek.get(ref.block_name)
+        if d is not None:
+            ref.varianten_abgleichen(d)
+
     def attribute_bearbeiten(self, ref=None):
         """ATTEDIT: edit the attribute values of a selected block."""
         if ref is None:
@@ -9612,6 +9619,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                 self.status.set(tr("msg.attedit.keine_attribute"))
                 return
             ref = mit[0]
+        self._varianten_abgleichen(ref)
         dlg = BlockAttributeDialog(self.root, ref,
                                    ausschliessen=self._attr_ausschluss(ref))
         if dlg.result is None:

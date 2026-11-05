@@ -59,4 +59,15 @@ check(abs(t.winkel) < 1e-6 or abs(t.winkel - 360) < 1e-6, "Drehung 180: Text nic
 # Block ohne Varianten bleibt wie bisher
 r0 = core.BlockReferenz(0, 0, "K", [core.Kreis(0, 0, 5)])
 check("varianten" not in r0.to_dict() and not r0.setze_variante(1), "ohne Varianten unveraendert")
+
+# nachtraeglich hinzugefuegte Variante erscheint auch in schon platzierten Geraeten
+alt = core.BlockDefinition("S", (0, 0), var((8, 0)))
+alt.variante_hinzufuegen("B", var((0, 8)))
+inst = core.BlockReferenz(0, 0, "S", alt.elemente, varianten=alt.varianten)
+inst.setze_variante(1)
+neu = core.BlockDefinition("S", (0, 0), var((8, 0)))
+neu.variante_hinzufuegen("B", var((0, 8))); neu.variante_hinzufuegen("C", var((-8, 0)))
+check(inst.varianten_abgleichen(neu) and inst.variantennamen() == ["A", "B", "C"], "Abgleich: C uebernommen")
+check(inst.variante == 1 and not inst.varianten_abgleichen(neu), "aktive Variante bleibt, kein zweiter Abgleich")
+check(inst.setze_variante(2) and textpos(inst) == (-8, 0), "neue Variante nutzbar")
 print(f"test_varianten - OK ({ok} Pruefungen)")
