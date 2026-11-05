@@ -3108,10 +3108,11 @@ class BlockSpeichernDialog(tk.Toplevel):
     result: {'name': str, 'ordner': str|None} (ordner None = only in the
     drawing) or None on cancel."""
 
-    def __init__(self, parent, geom, name, ordner, dateiname_fn):
+    def __init__(self, parent, geom, name, ordner, dateiname_fn, ueberschreiben=False):
         super().__init__(parent)
         self.result = None
         self._fn = dateiname_fn
+        self._ueberschreiben = bool(ueberschreiben)     # variants: existing file is updated
         self.title(tr("dlg.bs.titel"))
         self.transient(parent)
         _modal(self)
@@ -3122,7 +3123,10 @@ class BlockSpeichernDialog(tk.Toplevel):
         links.grid(row=0, column=0, sticky="nw", padx=(0, 12))
         ttk.Label(links, text=tr("dlg.bs.name")).pack(anchor=tk.W)
         self.v_name = tk.StringVar(value=name)
-        ttk.Entry(links, textvariable=self.v_name, width=40).pack(fill=tk.X, pady=(2, 8))
+        e_name = ttk.Entry(links, textvariable=self.v_name, width=40)
+        e_name.pack(fill=tk.X, pady=(2, 8))
+        if self._ueberschreiben:
+            e_name.state(["disabled"])
         self.v_datei = tk.BooleanVar(value=True)
         ttk.Checkbutton(links, text=tr("dlg.bs.datei"), variable=self.v_datei,
                         command=self._pruefen).pack(anchor=tk.W)
@@ -3168,7 +3172,10 @@ class BlockSpeichernDialog(tk.Toplevel):
             return
         datei = self._fn(name)
         pfad = os.path.join(self.v_ordner.get().strip(), datei)
-        if os.path.exists(pfad):
+        if os.path.exists(pfad) and self._ueberschreiben:
+            self.hinweis.config(text=tr("dlg.bs.aktualisieren", datei=datei), foreground=FARBEN["gruen"])
+            self.btn_ok.state(["!disabled"])
+        elif os.path.exists(pfad):
             self.hinweis.config(text=tr("dlg.bs.existiert", datei=datei), foreground=FARBEN["rot"])
             self.btn_ok.state(["disabled"])
         else:

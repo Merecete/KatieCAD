@@ -11036,7 +11036,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         except Exception:
             geom = None
         erg = BlockSpeichernDialog(self.root, geom, name, self._block_speicherordner(),
-                                   vorschlag_dateiname).result
+                                   vorschlag_dateiname, ueberschreiben=True).result
         if erg and erg.get("ordner"):
             pfad = os.path.join(erg["ordner"], vorschlag_dateiname(name))
             try:
