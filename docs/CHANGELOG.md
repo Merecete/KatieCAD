@@ -1,6 +1,7 @@
 # Änderungen
 
 ## 1.1.4
+- Neu: **Windows-Installer auch auf Spanisch** (zusätzlich zu Deutsch und Englisch; Sprachwahl beim Start des Installers)
 - Fix: **Schriftkopf-Tags für den Titel englisch benannt:** Die drei Titelteile heißen jetzt auch in der Dokumentation `TITLE1`, `TITLE2`, `TITLE3` (die deutschen Namen `TITEL1`..`3` funktionieren weiterhin als Alias). Die Beschreibung der Berichtsseiten liest nun auch `TITLE1`..`3` (vorher nur `TITEL1`..`3`)
 - Fix: **Block einfügen legt fehlende Layer an:** Verwendet ein Block (oder die Ebene, auf der er landet) einen Layer, den die Zeichnung nicht hat, wird er beim Einfügen angelegt und erscheint in der Layerverwaltung – Farbe/Stärke aus der Layer-Vorlage, sonst aus dem Block. Vorhandene Layer bleiben unverändert
 - Neu: **Layer übernehmen und Layer-Vorlage:** Im Layer-Dialog gibt es „Aus Datei übernehmen…“ (Layer samt Farbe/Stärke aus einer anderen Zeichnung oder einem Projekt in die aktuelle Zeichnung kopieren; vorhandene Layer bleiben, bei abweichender Farbe wird einmal gefragt), „Als Vorlage speichern“ (alle Layer der aktuellen Zeichnung gelten künftig für neue Zeichnungen) und „Vorlage zurücksetzen“. Bestehende und geöffnete Dateien werden nie verändert. (Hintergrund: Layerfarben gehören zur Zeichnung, ein Block bringt nur den Layernamen mit)

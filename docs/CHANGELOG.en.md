@@ -1,6 +1,7 @@
 # Changes
 
 ## 1.1.4
+- New: **Windows installer also in Spanish** (in addition to German and English; language choice when the installer starts)
 - Fix: **Title block tags for the title named in English:** the three title parts are now called `TITLE1`, `TITLE2`, `TITLE3` in the documentation as well (the German names `TITEL1`..`3` keep working as aliases). The description of report pages now also reads `TITLE1`..`3` (before: only `TITEL1`..`3`)
 - Fix: **Inserting a block creates missing layers:** if a block (or the layer it lands on) uses a layer the drawing does not have, it is created on insertion and shows up in the layer manager - colour/weight from the layer template, else from the block. Existing layers stay unchanged
 - New: **Import layers and layer template:** the Layer dialog now has "Import from file..." (copy layers incl. colour/weight from another drawing or project into the current drawing; existing layers stay, one question if the colour differs), "Save as template" (all layers of the current drawing apply to new drawings from now on) and "Reset template". Existing and opened files are never changed. (Background: layer colours belong to the drawing, a block only carries the layer name)
