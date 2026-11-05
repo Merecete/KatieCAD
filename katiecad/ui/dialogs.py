@@ -1896,6 +1896,19 @@ class BlockAttributeDialog(tk.Toplevel):
         self._entries = []
         gesehen = set()
         zeile = 0
+        # Variants of the device (like EPLAN): the symbol variant is chosen here
+        self.variante = None
+        self._v_variante = None
+        if getattr(ref, "varianten", None):
+            namen = ref.variantennamen()
+            self._v_variante = tk.StringVar(value=namen[ref.variante])
+            ttk.Label(f, text=tr("dlg.attedit.variante")).grid(
+                row=zeile, column=0, sticky=tk.W, pady=(3, 8), padx=(0, 10))
+            self._cb_variante = ttk.Combobox(f, textvariable=self._v_variante, values=namen,
+                                             state="readonly", width=30)
+            self._cb_variante.grid(row=zeile, column=1, columnspan=2, sticky=tk.W, pady=(3, 8))
+            self._variantennamen = namen
+            zeile += 1
         for ad in ref.attribut_definitionen():
             if ad.tag in gesehen or ad.tag in self._ausschluss:
                 continue
@@ -1989,6 +2002,11 @@ class BlockAttributeDialog(tk.Toplevel):
         self.wait_window(self)
 
     def _ok(self):
+        if self._v_variante is not None:
+            try:
+                self.variante = self._variantennamen.index(self._v_variante.get())
+            except ValueError:
+                self.variante = None
         if self._v_rolle is not None:
             self.rolle = self._v_rolle.get()
         if self._v_spiegel is not None:

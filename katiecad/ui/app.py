@@ -72,7 +72,7 @@ from katiecad.model.core import (
     BEFEHLE, PdfSeite, ist_dunkel,
     E_DEVICES, E_LINES, E_CABLE, E_CLAMPS, E_PIN, ELEKTRO_LAYER, FTEXT_LAYER,
     Layer, Layout, Element, Linie, Kreis, Bogen, Rechteck, Polylinie, Text,
-    Ellipse, Spline, Wand, Oeffnung, Raum, RAUM_LAYER, RAUM_LAYER_FARBE, WAND_LAYER, WAND_LAYER_FARBE,
+    Ellipse, Spline, Wand, _variantenname, Oeffnung, Raum, RAUM_LAYER, RAUM_LAYER_FARBE, WAND_LAYER, WAND_LAYER_FARBE,
     wand_verknuepfen, wand_in_linien, wand_verbinden, wand_schliessen,
     Bemassung, Viewport, Schraffur, Bild, konturen_aus_elementen, bereich_an_punkt,
     AttributDefinition, Leitung, Verbindungspunkt, Querverweis,
@@ -1389,6 +1389,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                               accelerator=tr("txt.0255"))
         m_bloecke.add_command(label=tr("menu.einfuegen.block_erzeugen"),
                               command=self.block_erzeugen)
+        m_bloecke.add_command(label=tr("menu.bloecke.variante"),
+                              command=self.variante_hinzufuegen)
         m_bloecke.add_separator()
         m_bloecke.add_command(label=tr("menu.bloecke.attdef"),
                               command=self.attdef_erstellen)
@@ -3692,7 +3694,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         d = self.block_bibliothek.get(self._block_einfuege_name)
         if d is None:
             return
-        ref = BlockReferenz(pt[0], pt[1], d.name, d.elemente,
+        ref = BlockReferenz(pt[0], pt[1], d.name, d.elemente, varianten=d.varianten,
                             layer=self._block_layer(d.elemente),
                             farbe=self.zeichenfarbe,
                             linientyp=self.linientyp.get(),
@@ -6177,7 +6179,13 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                     kind = self._dict_zu_element(kd)
                     if kind is not None:
                         kinder.append(kind)
-                return BlockReferenz(elemente=kinder, **d)
+                var = []
+                for vd in d.pop("varianten", None) or []:
+                    ve = [k for k in (self._dict_zu_element(x)
+                                      for x in vd.get("elemente", [])) if k is not None]
+                    if ve:
+                        var.append((vd.get("name", ""), ve))
+                return BlockReferenz(elemente=kinder, varianten=var, **d)
         except Exception as e:
             print(f"Fehler beim Laden: {e} - {d}")
         return None
@@ -9570,10 +9578,13 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         """Prompts for the attribute values on insertion (if any).
         Cancelling keeps the default values."""
         aus = self._attr_ausschluss(ref)
-        if not [ad for ad in ref.attribut_definitionen() if ad.tag not in aus]:
+        if not [ad for ad in ref.attribut_definitionen() if ad.tag not in aus] \
+                and not ref.varianten:
             return
         dlg = BlockAttributeDialog(self.root, ref, ausschliessen=aus)
         if dlg.result:
+            if dlg.variante is not None:
+                ref.setze_variante(dlg.variante)
             ref.setze_attribute(dlg.result)
             ref.setze_ausgeblendet(dlg.ausgeblendet)
             m = ref.geraet_maske()
@@ -9596,7 +9607,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             if not kandidaten:
                 self.status.set(tr("msg.attedit.keine_auswahl"))
                 return
-            mit = [e for e in kandidaten if e.attribut_definitionen()]
+            mit = [e for e in kandidaten if e.attribut_definitionen() or e.varianten]
             if not mit:
                 self.status.set(tr("msg.attedit.keine_attribute"))
                 return
@@ -9606,6 +9617,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         if dlg.result is None:
             return
         self._snapshot()
+        if dlg.variante is not None:
+            ref.setze_variante(dlg.variante)
         ref.setze_attribute(dlg.result)
         ref.setze_ausgeblendet(dlg.ausgeblendet)
         m = ref.geraet_maske()
@@ -9640,7 +9653,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             d = self.block_bibliothek.get(refs[0].block_name)
             if d is None:
                 d = BlockDefinition(refs[0].block_name, (0.0, 0.0),
-                                    refs[0].elemente)
+                                    refs[0].elemente, refs[0].varianten)
         elif len(self.block_bibliothek) > 0:
             name = _BlockAuswahlDialog(
                 self.root, self.block_bibliothek,
@@ -10848,7 +10861,17 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
     # --------------------------------------------------------
     # Block commands
     # --------------------------------------------------------
+    def variante_hinzufuegen(self):
+        """Adds the selected drawing as a further variant to an existing block."""
+        if len(self.block_bibliothek) == 0:
+            self.status.set(tr("msg.variante.keine_bibliothek"))
+            return
+        self.block_erzeugen()
+        if self._block_erzeuge_auswahl is not None:
+            self._variante_modus = True
+
     def block_erzeugen(self, geraet=False):
+        self._variante_modus = False
         self._geraet_modus = bool(geraet)
         if self._ist_layout():
             self.status.set((tr("txt.0095")))
@@ -10896,6 +10919,11 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         if not relativ:
             self.status.set((tr("txt.0131")))
             self._update_eingabe_hinweis()
+            return
+
+        if getattr(self, "_variante_modus", False):
+            self._variante_modus = False
+            self._variante_anlegen(relativ)
             return
 
         vorschlag = self._naechster_block_name()
@@ -10955,7 +10983,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             for k in relativ:
                 if isinstance(k, Verbindungspunkt):
                     k.layer = E_DEVICES
-        ref = BlockReferenz(bx, by, name, definition.elemente,
+        ref = BlockReferenz(bx, by, name, definition.elemente, varianten=definition.varianten,
                             layer=(self._elektro_layer(E_DEVICES) if ist_geraet
                                    else self.aktiver_layer.get()),
                             farbe=self.zeichenfarbe,
@@ -10972,6 +11000,53 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         else:
             self.status.set(tr("msg.block.erzeugt", name=name,
                                n=len(definition.elemente)))
+
+    def _variante_anlegen(self, relativ):
+        """Second step of "Add variant": choose the block and the variant name, store."""
+        name = _BlockAuswahlDialog(
+            self.root, self.block_bibliothek,
+            titel=tr("dlg.variante.block.titel"),
+            knopf=tr("dlg.variante.block.knopf"),
+            hinweis=tr("dlg.variante.block.hinweis")).result
+        if not name:
+            self.status.set(tr("txt.0072"))
+            self._update_eingabe_hinweis()
+            return
+        d = self.block_bibliothek.get(name)
+        if d is None:
+            self._update_eingabe_hinweis()
+            return
+        vorschlag_name = _variantenname(len(d.variante_liste()))
+        vname = simpledialog.askstring(
+            tr("dlg.variante.name.titel"), tr("dlg.variante.name.frage"),
+            initialvalue=vorschlag_name, parent=self.root)
+        if vname is None:
+            self.status.set(tr("txt.0072"))
+            self._update_eingabe_hinweis()
+            return
+        vp_tags_eindeutig(relativ)
+        vname = d.variante_hinzufuegen(vname, relativ)
+        self.block_bibliothek.setze(d)
+        self.status.set(tr("msg.variante.fertig", name=name, variante=vname,
+                           n=len(d.variante_liste())))
+        self._update_eingabe_hinweis()
+        # the block file is updated as well (same dialog as when creating)
+        try:
+            geom = vorschau_geometrie(d)
+        except Exception:
+            geom = None
+        erg = BlockSpeichernDialog(self.root, geom, name, self._block_speicherordner(),
+                                   vorschlag_dateiname).result
+        if erg and erg.get("ordner"):
+            pfad = os.path.join(erg["ordner"], vorschlag_dateiname(name))
+            try:
+                block_speichern(pfad, d)
+                self._config_setzen("block_ordner", erg["ordner"])
+                self.status.set(tr("msg.bs.gespeichert", name=name, pfad=pfad))
+            except BlockDateiFehler as ex:
+                messagebox.showerror(tr("msg.blockdatei.titel"),
+                                     tr("msg.blockdatei.fehler", pfad=pfad, fehler=ex),
+                                     parent=self.root)
 
     def _config_setzen(self, schluessel, wert):
         try:
@@ -11113,7 +11188,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             self._update_eingabe_hinweis()
             return
         self._snapshot()
-        ref = BlockReferenz(x, y, d.name, d.elemente,
+        ref = BlockReferenz(x, y, d.name, d.elemente, varianten=d.varianten,
                             layer=self._block_layer(d.elemente),
                             farbe=self.zeichenfarbe,
                             linientyp=self.linientyp.get(),
