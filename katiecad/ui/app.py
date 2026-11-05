@@ -10863,9 +10863,6 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
     # --------------------------------------------------------
     def variante_hinzufuegen(self):
         """Adds the selected drawing as a further variant to an existing block."""
-        if len(self.block_bibliothek) == 0:
-            self.status.set(tr("msg.variante.keine_bibliothek"))
-            return
         self.block_erzeugen()
         if self._block_erzeuge_auswahl is not None:
             self._variante_modus = True
@@ -11002,51 +10999,46 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                                n=len(definition.elemente)))
 
     def _variante_anlegen(self, relativ):
-        """Second step of "Add variant": choose the block and the variant name, store."""
-        name = _BlockAuswahlDialog(
-            self.root, self.block_bibliothek,
-            titel=tr("dlg.variante.block.titel"),
-            knopf=tr("dlg.variante.block.knopf"),
-            hinweis=tr("dlg.variante.block.hinweis")).result
-        if not name:
+        """Second step of "Add variant": choose the block FILE, add the variant to it and
+        save it again (the file is the source; the library entry is refreshed)."""
+        pfad = filedialog.askopenfilename(
+            parent=self.root, title=tr("dlg.variante.datei.titel"),
+            initialdir=self._block_speicherordner(),
+            filetypes=[(tr("msg.blockdatei.dateityp"), "*" + BLOCK_ENDUNG)])
+        if not pfad:
             self.status.set(tr("txt.0072"))
             self._update_eingabe_hinweis()
             return
-        d = self.block_bibliothek.get(name)
-        if d is None:
+        try:
+            d = block_laden(pfad, self._dict_zu_element)
+        except BlockDateiFehler as ex:
+            messagebox.showerror(tr("msg.blockdatei.titel"),
+                                 tr("msg.blockdatei.fehler", pfad=pfad, fehler=ex),
+                                 parent=self.root)
             self._update_eingabe_hinweis()
             return
-        vorschlag_name = _variantenname(len(d.variante_liste()))
         vname = simpledialog.askstring(
             tr("dlg.variante.name.titel"), tr("dlg.variante.name.frage"),
-            initialvalue=vorschlag_name, parent=self.root)
+            initialvalue=_variantenname(len(d.variante_liste())), parent=self.root)
         if vname is None:
             self.status.set(tr("txt.0072"))
             self._update_eingabe_hinweis()
             return
         vp_tags_eindeutig(relativ)
         vname = d.variante_hinzufuegen(vname, relativ)
+        try:
+            block_speichern(pfad, d)
+        except BlockDateiFehler as ex:
+            messagebox.showerror(tr("msg.blockdatei.titel"),
+                                 tr("msg.blockdatei.fehler", pfad=pfad, fehler=ex),
+                                 parent=self.root)
+            self._update_eingabe_hinweis()
+            return
         self.block_bibliothek.setze(d)
-        self.status.set(tr("msg.variante.fertig", name=name, variante=vname,
+        self._config_setzen("block_ordner", os.path.dirname(pfad))
+        self.status.set(tr("msg.variante.fertig", name=d.name, variante=vname,
                            n=len(d.variante_liste())))
         self._update_eingabe_hinweis()
-        # the block file is updated as well (same dialog as when creating)
-        try:
-            geom = vorschau_geometrie(d)
-        except Exception:
-            geom = None
-        erg = BlockSpeichernDialog(self.root, geom, name, self._block_speicherordner(),
-                                   vorschlag_dateiname, ueberschreiben=True).result
-        if erg and erg.get("ordner"):
-            pfad = os.path.join(erg["ordner"], vorschlag_dateiname(name))
-            try:
-                block_speichern(pfad, d)
-                self._config_setzen("block_ordner", erg["ordner"])
-                self.status.set(tr("msg.bs.gespeichert", name=name, pfad=pfad))
-            except BlockDateiFehler as ex:
-                messagebox.showerror(tr("msg.blockdatei.titel"),
-                                     tr("msg.blockdatei.fehler", pfad=pfad, fehler=ex),
-                                     parent=self.root)
 
     def _config_setzen(self, schluessel, wert):
         try:
