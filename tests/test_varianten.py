@@ -96,4 +96,14 @@ A.messagebox.askyesno = lambda *x, **k: True
 a._layer_uebernehmen([{"name": "0", "farbe": "#00ff00", "staerke": 0.35}])
 check(a.layers["0"].farbe == "#00ff00", "Uebernehmen: Ja ueberschreibt")
 
+# Block einfuegen legt fehlende Layer an
+a.layers = a._standard_layers()
+_dd = core.BlockDefinition("L", (0, 0), [core.Kreis(0, 0, 5, layer="F-Pieces", farbe="#ff0000", staerke=0.35)])
+_cfg["layer_vorlage"] = [{"name": "E-DEVICES", "farbe": "#ff0000", "staerke": 0.5}]
+a._block_layer_sicherstellen("E-DEVICES", _dd)
+check(a.layers["E-DEVICES"].farbe == "#ff0000" and a.layers["F-Pieces"].farbe == "#ff0000",
+      "Block-Layer werden angelegt (Vorlage bzw. Block)")
+a.layers["F-Pieces"].farbe = "#00ff00"; a._block_layer_sicherstellen("E-DEVICES", _dd)
+check(a.layers["F-Pieces"].farbe == "#00ff00", "vorhandene Layer bleiben unveraendert")
+
 print(f"test_varianten - OK ({ok} Pruefungen)")

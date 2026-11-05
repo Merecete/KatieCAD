@@ -6878,6 +6878,38 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             if getattr(el, "layer", None) in ELEKTRO_LAYER:
                 self._elektro_layer(el.layer)
 
+    def _block_layer_sicherstellen(self, ref_layer, d):
+        """Layers a block uses (its own layer and those of its elements) that do not exist in
+        the drawing are created: colour/weight from the layer template, else from the
+        block's elements, else standard."""
+        fehlend = {}
+        for _n, els in d.variante_liste():
+            for el in els:
+                ln = getattr(el, "layer", None)
+                if ln and ln not in self.layers and ln not in fehlend and not el.eig_farbe:
+                    fehlend[ln] = (el.farbe, el.staerke if el.staerke else 0.35)
+        if ref_layer and ref_layer not in self.layers and ref_layer not in fehlend:
+            fehlend[ref_layer] = None
+        if not fehlend:
+            return
+        try:
+            vorlage = {ld["name"]: ld for ld in lade_konfiguration().get("layer_vorlage") or []}
+        except Exception:
+            vorlage = {}
+        for name, wert in fehlend.items():
+            if name in vorlage:
+                ld = vorlage[name]
+                self.layers[name] = Layer(name, ld.get("farbe", "#c29bff"),
+                                          ld.get("staerke", 0.35), ld.get("sichtbar", True))
+            elif wert:
+                self.layers[name] = Layer(name, wert[0], wert[1])
+            else:
+                self.layers[name] = Layer(name, "#c29bff", 0.35)
+        try:
+            self.layer_cb.config(values=list(self.layers.keys()))
+        except Exception:
+            pass
+
     def _block_layer(self, elemente):
         """Device blocks (with an electrical mask) go onto E_DEVICES."""
         if any(isinstance(k, ElektroMaske) for k in elemente):
@@ -11259,8 +11291,10 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             self._update_eingabe_hinweis()
             return
         self._snapshot()
+        blk_layer = self._block_layer(d.elemente)
+        self._block_layer_sicherstellen(blk_layer, d)
         ref = BlockReferenz(x, y, d.name, d.elemente, varianten=d.varianten,
-                            layer=self._block_layer(d.elemente),
+                            layer=blk_layer,
                             farbe=self.zeichenfarbe,
                             linientyp=self.linientyp.get(),
                             eig_farbe=self.eigene_farbe.get(),
