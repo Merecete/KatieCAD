@@ -26,7 +26,7 @@ Rules for a template drawing
         REV1_STAND/AENDERUNG/NAME/DATUM ... REV4_*   (English: INDEX, CHANGE,
         NAME, DATE)
         TITLE / TITEL = customer - project - sheet name; the parts alone are
-        TITEL1 / TITEL2 / TITEL3 (TITLE1..3)
+        TITLE1 / TITLE2 / TITLE3 (German alias: TITEL1 / TITEL2 / TITEL3)
 """
 
 import json
@@ -65,7 +65,7 @@ REV_FIELDS = (("stand", ("STAND", "INDEX")),   # project key -> tag suffixes
               ("datum", ("DATUM", "DATE")))
 FORMAT_TAGS = ("FORMAT", "SIZE", "BLATTFORMAT", "PAPIERFORMAT", "PAPER")
 TITLE_TAGS = ("TITLE", "TITEL")                # kunde - project - sheet
-TITLE_PARTS = (("TITEL1", "TITLE1"), ("TITEL2", "TITLE2"), ("TITEL3", "TITLE3"))
+TITLE_PARTS = (("TITEL1", "TITLE1"), ("TITEL2", "TITLE2"), ("TITEL3", "TITLE3"))   # (German alias, English)
 TITLE_SEPARATOR = " - "
 
 

@@ -492,14 +492,23 @@ def berichte_erzeugen(blaetter, projektname, daten, aktiv, vorlage, sprache,
     return vorne, hinten
 
 
+def _first_tag(attribute, *namen):
+    for n in namen:
+        v = str(attribute.get(n, "")).strip()
+        if v:
+            return v
+    return ""
+
+
 def beschreibung_aus_layouts(layouts):
-    """Title from the title block (TITEL1..3 or TITLE) of the first layout with a
+    """Title from the title block (TITLE1..3 / TITEL1..3 or TITLE) of the first layout with a
     title block, e.g. 'Main circuit - drive'."""
     for lay in layouts:
         for e in lay.elemente:
             if TB.is_title_block(e):
-                teile = [str(e.attribute.get(t, "")).strip()
-                         for t in ("TITEL1", "TITEL2", "TITEL3", "TITLE")]
+                teile = [_first_tag(e.attribute, *t) for t in
+                         (("TITLE1", "TITEL1"), ("TITLE2", "TITEL2"),
+                          ("TITLE3", "TITEL3"), ("TITLE", "TITEL"))]
                 teile = [t for t in teile if t]
                 if teile:
                     return " - ".join(teile[:2])
