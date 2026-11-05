@@ -1,6 +1,7 @@
 # Changes
 
 ## 1.1.4
+- New: **Texts and attributes in blocks are never upside down:** if a block (e.g. an installation symbol in a building plan) is rotated so that a text would end up upside down (text angle between 90 and 270 degrees), the text is turned by 180 degrees and its anchor mirrored - it stays readable and on the same side of the symbol. Vertical texts (90 / 270 degrees) remain allowed. Applies to free texts and attributes in the block; device masks (IND/TYP/PER ...) have always stayed horizontal. No new setting needed
 - Fix/New: **Stretch for walls:** walls can be stretched with "Stretch" (`STR`, crossing window) like polylines - corner points inside the window move along. Doors and windows whose centre lies inside the window are now taken along (before, they stayed behind and hung in empty space)
 - New: **Spanish user interface** (menu Language > Español), translated by AnabasaSoft (pull request #6) and adapted by us to the current state: the language is remembered, missing Spanish texts appear in English (instead of German), a test checks that keys and placeholders are identical in all three languages. The F1 overview is translated into Spanish as well, dates appear in Spanish as DD/MM/YYYY
 - Change: **all German/English messages that used to be hard-coded in the program** (status line, hints, prompts, viewport menus etc., about 300 texts) are now in the translation dictionary (keys `txt.NNNN`) and exist in German, English and Spanish; a test makes sure that no text is left in the code and that all placeholders match

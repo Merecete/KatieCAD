@@ -241,6 +241,7 @@ Symbol). Menü **Blöcke**:
   eingefügtem Block verschieden ist. Markiere es zusammen mit der Symbolgeometrie
   und erzeuge den Block. Beim Einfügen fragt KatieCAD die Werte ab.
   **Attribute bearbeiten (ATTEDIT)** ändert sie später. Bei Geräten mit sehr vielen Anschlüssen (z. B. SPS-Baugruppen mit 16 Kanälen) wird die Liste im Fenster **scrollbar** (Mausrad oder Leiste rechts), OK und Abbrechen bleiben immer sichtbar.
+- **Lesbare Texte beim Drehen:** Texte und Attribute im Block stehen nie auf dem Kopf. Wird der Block so gedreht (z. B. 180°), dass ein Text umgekehrt stünde, dreht KatieCAD den Text um 180° zurück und spiegelt seinen Ankerpunkt – er bleibt lesbar und auf derselben Seite des Symbols. Senkrechte Texte (90° / 270°) bleiben möglich. Dafür ist keine Einstellung nötig; so lassen sich Symbole für Gebäudepläne beliebig drehen, ohne dass Funktionstexte (z. B. das „E“ im Quadrat) unleserlich werden.
 
 ## 8. Elektro: einen Schaltplan zeichnen
 

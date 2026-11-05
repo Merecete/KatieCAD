@@ -240,6 +240,7 @@ A **block** is a reusable group of objects (for example a symbol). **Blocks** me
   per inserted block. Select it together with the symbol geometry and create the
   block. KatieCAD asks for the values on insertion. **Edit attributes (ATTEDIT)**
   changes them later. For devices with very many pins (e.g. 16-channel PLC modules) the list in the window is **scrollable** (mouse wheel or bar on the right); OK and Cancel always stay visible.
+- **Readable texts when rotating:** texts and attributes in a block are never upside down. If the block is rotated (e.g. 180 degrees) so that a text would be reversed, KatieCAD turns the text back by 180 degrees and mirrors its anchor - it stays readable and on the same side of the symbol. Vertical texts (90 / 270 degrees) remain possible. No setting needed; symbols for building plans can be rotated freely without function texts (e.g. the "E" in the square) becoming unreadable.
 
 ## 8. Electrical: drawing a schematic
 

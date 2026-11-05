@@ -2904,6 +2904,15 @@ class BlockReferenz(Element):
             el.x, el.y = self._welt_pts(el.x, el.y)
             el.hoehe *= self.skalierung
             el.winkel = (el.winkel + self.winkel) % 360.0
+            if (self.winkel % 360.0 and not isinstance(el, Verbindungspunkt)
+                    and 90.0 + 1e-6 < el.winkel < 270.0 - 1e-6):
+                # never upside down: turn the text by 180 deg and mirror its anchor, so it
+                # stays on the same side of its insertion point
+                el.winkel = (el.winkel + 180.0) % 360.0
+                v, h = el.einfuegepunkt.split("_")
+                v = {"unten": "oben", "oben": "unten"}.get(v, v)
+                h = {"links": "rechts", "rechts": "links"}.get(h, h)
+                el.einfuegepunkt = v + "_" + h
             if isinstance(el, Verbindungspunkt):
                 el.radius *= self.skalierung
                 if el.richtungen is not None:

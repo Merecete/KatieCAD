@@ -301,4 +301,16 @@ _a._stretch_element = lambda el, i, dx, dy: _CA._stretch_element(_a, el, i, dx, 
 _CA._stretch_anwenden(_a, (3500, -500, 4500, 500), 1000, 0)
 check(_w1.punkte == [(0, 0), (5000, 0)] and _o.x == 5000, "Strecken: Wand + Tuer wandern mit")
 
+
+# Bloecke: Text/Attribut wird bei Drehung nie auf den Kopf gestellt (90/270 bleiben erlaubt)
+for _w, _erw in ((0, 0), (90, 90), (180, 0), (270, 270), (45, 45), (135, 315)):
+    _blk = core.BlockReferenz(0, 0, "T", [core.Linie(0, 0, 5, 0), core.Text(10, 0, "E", 3.5),
+                                          core.AttributDefinition(20, 0, tag="IND", wert="K1")], winkel=_w)
+    for _t in _blk.aufgeloest():
+        if isinstance(_t, core.Text):
+            check(abs(_t.winkel - _erw) < 1e-6, f"Text bei Blockdrehung {_w}: {_t.winkel}")
+_blk = core.BlockReferenz(0, 0, "T", [core.Text(10, 0, "E", 3.5)], winkel=180)
+_t = [e for e in _blk.aufgeloest() if isinstance(e, core.Text)][0]
+check(_t.einfuegepunkt == "oben_rechts" and abs(_t.x + 10) < 1e-6, "180 Grad: Anker gespiegelt, Position gedreht")
+
 print(f"test_wand - {ok} Checks bestanden")
