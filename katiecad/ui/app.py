@@ -1374,11 +1374,6 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         m_ansicht.add_command(label=tr("menu.ansicht.zoom_grenzen"),
                               command=self.zoom_grenzen)
         m_ansicht.add_separator()
-        m_ansicht.add_command(label=tr("menu.ansicht.bg_modell"),
-                              command=lambda: self.bg_waehlen("modell"))
-        m_ansicht.add_command(label=tr("menu.ansicht.bg_layout"),
-                              command=lambda: self.bg_waehlen("layout"))
-        m_ansicht.add_separator()
         m_ansicht.add_command(label=tr("menu.ansicht.reset"),
                               command=self._reset_view)
         menubar.add_cascade(label=tr("menu.ansicht"), menu=m_ansicht)
@@ -1493,6 +1488,10 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                 label=("\u25cf " if _n == FARBSCHEMA["aktuell"] else "    ") + tr("menu.farbschema." + _n),
                 command=lambda n=_n: self.farbschema_wechseln(n))
         m_einst.add_cascade(label=tr("menu.ansicht.farbschema"), menu=m_farbe)
+        m_einst.add_command(label=tr("menu.ansicht.bg_modell"),
+                            command=lambda: self.bg_waehlen("modell"))
+        m_einst.add_command(label=tr("menu.ansicht.bg_layout"),
+                            command=lambda: self.bg_waehlen("layout"))
         m_einst.add_separator()
         m_einst.add_command(label=tr("menu.ansicht.schriften"),
                             command=self.schriften_verwalten)

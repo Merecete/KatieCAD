@@ -103,6 +103,8 @@ line weight in the toolbar.
 
 **Colour scheme (Settings > Colour scheme):** menus, toolbars, side bars and dialogs come in three colour schemes: **Violet** (default), **Black** and **Light**. The change takes effect at once and is remembered for the next start. The drawing background is not touched (set it with *Background*, so choose a light one there). **The background (model and layout) is purely a program setting:** it is stored on your computer and no longer in the drawing or project file; a file saved by someone with a white background opens with your own background (old files are read the same way, their stored background is ignored); drawing content, layers and printed/PDF output do not change. Dialogs that are already open take the new scheme the next time they are opened.
 
+**Drawing background (Settings > Model background... / Layout background...):** sets the background colour of the model or the layout view (remembered in the program, applies to all drawings).
+
 **Toolbar:** the tools are icons (drawing purple, electrical red). Rest the mouse on an icon to see its name. The active tool has a lighter background.
 
 **Offset (Edit > Offset, commands `OFFSET` / `O`):** enter the distance, click an object, then click the side where the copy is to be created. Works with lines, circles, arcs, rectangles and polylines (corners are mitred). If the distance is too large (inwards), KatieCAD says "not possible".
