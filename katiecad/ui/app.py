@@ -1189,57 +1189,33 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                           bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
                           activebackground=FARBEN["cyan"],
                           activeforeground=FARBEN["bg_dunkel"])
+        def _sub(titel_key):
+            m = tk.Menu(m_bearb, tearoff=0,
+                        bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
+                        activebackground=FARBEN["cyan"],
+                        activeforeground=FARBEN["bg_dunkel"])
+            m_bearb.add_cascade(label=tr(titel_key), menu=m)
+            return m
+
+        # 1. Undo / redo
         m_bearb.add_command(label=tr("menu.bearbeiten.undo"), command=self.undo)
         m_bearb.add_command(label=tr("menu.bearbeiten.redo"), command=self.redo)
         m_bearb.add_separator()
-        m_bearb.add_command(label=tr("menu.bearbeiten.kopieren"), command=self.kopieren)
-        m_bearb.add_command(label=tr("menu.bearbeiten.kopieren_basis"),
-                            command=self.kopieren_mit_basispunkt)
+        # 2. Clipboard
+        m_kop = _sub("menu.bearbeiten.kopieren_menue")
+        m_kop.add_command(label=tr("menu.bearbeiten.kopieren"), command=self.kopieren)
+        m_kop.add_command(label=tr("menu.bearbeiten.kopieren_basis"),
+                          command=self.kopieren_mit_basispunkt)
+        m_kop.add_command(label=tr("menu.bearbeiten.kopieren_praezise"),
+                          command=lambda: self._op_start("copy"))
         m_bearb.add_command(label=tr("menu.bearbeiten.ausschneiden"), command=self.ausschneiden)
         m_bearb.add_command(label=tr("menu.bearbeiten.einfuegen"), command=self.einfuegen)
         m_bearb.add_command(label=tr("menu.bearbeiten.duplizieren"), command=self.duplizieren)
-        m_bearb.add_command(label=tr("menu.bearbeiten.eigenschaften"),
-                            command=self.eigenschaften_fenster)
-        m_bearb.add_command(label=tr("menu.bearbeiten.suchen"),
-                            command=self.suchen_ersetzen)
-        m_bearb.add_command(label=tr("menu.bearbeiten.eig_uebertragen"),
-                            command=self.eigenschaften_uebertragen_start)
-        m_bearb.add_command(label=tr("menu.bearbeiten.messen"),
-                            command=self.messen_start)
-        m_bearb.add_command(label=tr("menu.bearbeiten.schnellauswahl"),
-                            command=self.schnellauswahl)
-        m_bearb.add_command(label=tr("menu.bearbeiten.versatz"),
-                            command=self.versatz_start)
-        m_bearb.add_command(label=tr("menu.bearbeiten.laenge"),
-                            command=self.laenge_start)
-        m_bearb.add_command(label=tr("menu.bearbeiten.manip"),
-                            command=self.manipulator_umschalten)
-        m_bearb.add_command(label=tr("menu.bearbeiten.manip_pivot"),
-                            command=self.manipulator_versetzen)
-        m_bearb.add_command(label=tr("menu.bearbeiten.manip_zentrum"),
-                            command=self.manipulator_zentrieren)
-        m_ausr = tk.Menu(m_bearb, tearoff=0,
-                         bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
-                         activebackground=FARBEN["cyan"],
-                         activeforeground=FARBEN["bg_dunkel"])
-        m_ausr.add_command(label=tr("menu.ausrichten.zwei_punkte"),
-                           command=lambda: self._befehl("ausrichten2p"))
-        m_ausr.add_separator()
-        for k in ("links", "rechts", "oben", "unten", "mitte_h", "mitte_v"):
-            m_ausr.add_command(label=tr("menu.ausrichten." + k),
-                               command=lambda k=k: self.ausrichten(k))
-        m_bearb.add_cascade(label=tr("menu.bearbeiten.ausrichten"), menu=m_ausr)
-        m_bearb.add_command(label=tr("menu.bearbeiten.abrunden"),
-                            command=lambda: self.ecke_start("abrunden"))
-        m_bearb.add_command(label=tr("menu.bearbeiten.fase"),
-                            command=lambda: self.ecke_start("fase"))
         m_bearb.add_separator()
+        # 3. Modify: move / rotate / scale / mirror / stretch / array, then offset, length,
+        #    trim, break, fillet, chamfer, align
         m_bearb.add_command(label=tr("menu.bearbeiten.verschieben"),
                             command=lambda: self._op_start("move"))
-        m_bearb.add_command(label=tr("menu.bearbeiten.kopieren_praezise"),
-                            command=lambda: self._op_start("copy"))
-        m_bearb.add_command(label=tr("menu.bearbeiten.reihe"),
-                            command=lambda: self._op_start("array"))
         m_bearb.add_command(label=tr("menu.bearbeiten.drehen"),
                             command=lambda: self._op_start("rotate"))
         m_bearb.add_command(label=tr("menu.bearbeiten.skalieren"),
@@ -1248,17 +1224,55 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                             command=lambda: self._op_start("mirror"))
         m_bearb.add_command(label=tr("menu.bearbeiten.strecken"),
                             command=lambda: self._op_start("stretch"))
+        m_bearb.add_command(label=tr("menu.bearbeiten.reihe"),
+                            command=lambda: self._op_start("array"))
+        m_bearb.add_separator()
+        m_bearb.add_command(label=tr("menu.bearbeiten.versatz"),
+                            command=self.versatz_start)
+        m_bearb.add_command(label=tr("menu.bearbeiten.laenge"),
+                            command=self.laenge_start)
         m_bearb.add_command(label=tr("tb.wz.stutzen"),
                             command=lambda: self._werkzeug_aus_menue("stutzen"))
         m_bearb.add_command(label=tr("tb.wz.brechen"),
                             command=lambda: self._werkzeug_aus_menue("brechen"))
+        m_bearb.add_command(label=tr("menu.bearbeiten.abrunden"),
+                            command=lambda: self.ecke_start("abrunden"))
+        m_bearb.add_command(label=tr("menu.bearbeiten.fase"),
+                            command=lambda: self.ecke_start("fase"))
+        m_ausr = _sub("menu.bearbeiten.ausrichten")
+        m_ausr.add_command(label=tr("menu.ausrichten.zwei_punkte"),
+                           command=lambda: self._befehl("ausrichten2p"))
+        m_ausr.add_separator()
+        for k in ("links", "rechts", "oben", "unten", "mitte_h", "mitte_v"):
+            m_ausr.add_command(label=tr("menu.ausrichten." + k),
+                               command=lambda k=k: self.ausrichten(k))
+        m_man = _sub("menu.bearbeiten.manipulator")
+        m_man.add_command(label=tr("menu.bearbeiten.manip"),
+                          command=self.manipulator_umschalten)
+        m_man.add_command(label=tr("menu.bearbeiten.manip_pivot"),
+                          command=self.manipulator_versetzen)
+        m_man.add_command(label=tr("menu.bearbeiten.manip_zentrum"),
+                          command=self.manipulator_zentrieren)
         m_bearb.add_separator()
-        m_bearb.add_command(label=tr("menu.bearbeiten.alles_loeschen"), command=self.neu)
+        # 4. Properties / inspect / select
+        m_bearb.add_command(label=tr("menu.bearbeiten.eigenschaften"),
+                            command=self.eigenschaften_fenster)
+        m_bearb.add_command(label=tr("menu.bearbeiten.eig_uebertragen"),
+                            command=self.eigenschaften_uebertragen_start)
+        m_bearb.add_command(label=tr("menu.bearbeiten.suchen"),
+                            command=self.suchen_ersetzen)
+        m_bearb.add_command(label=tr("menu.bearbeiten.messen"),
+                            command=self.messen_start)
         m_bearb.add_separator()
-        m_bearb.add_command(label=tr("menu.bearbeiten.auswahl_loeschen"),
-                            command=self.auswahl_loeschen)
+        m_bearb.add_command(label=tr("menu.bearbeiten.schnellauswahl"),
+                            command=self.schnellauswahl)
         m_bearb.add_command(label=tr("menu.bearbeiten.alles_markieren"),
                             command=self.alle_markieren)
+        m_bearb.add_separator()
+        # 5. Delete
+        m_bearb.add_command(label=tr("menu.bearbeiten.auswahl_loeschen"),
+                            command=self.auswahl_loeschen)
+        m_bearb.add_command(label=tr("menu.bearbeiten.alles_loeschen"), command=self.neu)
         menubar.add_cascade(label=tr("menu.bearbeiten"), menu=m_bearb)
 
         # Insert
