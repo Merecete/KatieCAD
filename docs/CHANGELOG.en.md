@@ -1,7 +1,7 @@
 # Changes
 
 ## 1.1.5
-- Change: **Background presets in the colour dialog:** the choice of background presets (Default, White, Black, Dark grey, Light grey, Blue, Beige) is now part of the dialog *Settings > Model background... / Layout background...* (field "Preset", with the free colour choice next to it). The "Background" field with colour patch and drop-down list in the upper toolbar is removed
+- Change: **Background presets in the colour dialog:** the choice of background presets (Default, White, Black, Dark grey, Light grey, Blue, Beige) is now also available in the dialog *Settings > Model background... / Layout background...* (field "Preset", with the free colour choice next to it). The "Background" field in the upper toolbar stays unchanged
 - Change: **Model background... / Layout background...** moved from "View" to "Settings"
 - Change: **"Insert" menu:** all dimensions (linear, radius, diameter, chain, angle) are now in the **Dimension** submenu
 - Change: the menu item **Project > Evaluate single-pole representation too** is removed - the option stays in the "Create / update documentation..." dialog (as before)
