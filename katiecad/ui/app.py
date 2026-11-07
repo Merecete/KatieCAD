@@ -1165,10 +1165,6 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         m_projekt.add_command(label=tr("menu.datei.export_projekt_dxf"),
                               command=self.projekt_dxf_exportieren)
         m_projekt.add_separator()
-        self._v_einpolig_mit = tk.BooleanVar(value=False)
-        m_projekt.add_checkbutton(label=tr("menu.projekt.einpolig_mit"),
-                                  variable=self._v_einpolig_mit,
-                                  command=self.einpolig_auswerten_umschalten)
         m_projekt.add_command(label=tr("menu.projekt.nummerieren"),
                               command=self.geraete_nummerieren)
         m_projekt.add_command(label=tr("menu.projekt.bauteile"),
@@ -1311,18 +1307,23 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         m_einf.add_separator()
         m_einf.add_command(label=tr("menu.einfuegen.text"),
                            command=lambda: self._werkzeug_aus_menue("text"))
-        m_einf.add_command(label=tr("menu.einfuegen.bemassung"),
-                           command=lambda: self._werkzeug_aus_menue("bemassung"))
-        m_einf.add_command(label=tr("menu.einfuegen.radius"),
-                           command=lambda: self._bem_art_starten("radius"))
-        m_einf.add_command(label=tr("menu.einfuegen.durchmesser"),
-                           command=lambda: self._bem_art_starten("durchmesser"))
-        m_einf.add_command(label=tr("menu.einfuegen.kette"),
-                           command=lambda: self._bem_art_starten("kette"))
-        m_einf.add_command(label=tr("menu.einfuegen.winkel"),
-                           command=lambda: self._bem_art_starten("winkel"))
-        m_einf.add_command(label=tr("menu.einfuegen.winkel_linien"),
-                           command=lambda: self._bem_art_starten("winkel_linien"))
+        m_bem = tk.Menu(m_einf, tearoff=0,
+                        bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
+                        activebackground=FARBEN["cyan"],
+                        activeforeground=FARBEN["bg_dunkel"])
+        m_bem.add_command(label=tr("menu.einfuegen.bemassung_linear"),
+                          command=lambda: self._werkzeug_aus_menue("bemassung"))
+        m_bem.add_command(label=tr("menu.einfuegen.radius"),
+                          command=lambda: self._bem_art_starten("radius"))
+        m_bem.add_command(label=tr("menu.einfuegen.durchmesser"),
+                          command=lambda: self._bem_art_starten("durchmesser"))
+        m_bem.add_command(label=tr("menu.einfuegen.kette"),
+                          command=lambda: self._bem_art_starten("kette"))
+        m_bem.add_command(label=tr("menu.einfuegen.winkel"),
+                          command=lambda: self._bem_art_starten("winkel"))
+        m_bem.add_command(label=tr("menu.einfuegen.winkel_linien"),
+                          command=lambda: self._bem_art_starten("winkel_linien"))
+        m_einf.add_cascade(label=tr("menu.einfuegen.bemassung"), menu=m_bem)
         m_einf.add_separator()
         m_einf.add_command(label=tr("menu.einfuegen.viewport"),
                            command=self.viewport_modus_starten)
@@ -10686,28 +10687,6 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         the evaluation switch (off without project)."""
         an = bool(self.projekt is not None and self.projekt.doku.get("einpolig_auswerten"))
         core.EINPOLIG_MIT[0] = an
-        v = getattr(self, "_v_einpolig_mit", None)
-        if v is not None:
-            v.set(an)
-
-    def einpolig_auswerten_umschalten(self):
-        """Menu check mark Project > 'Evaluate single-pole representation too'."""
-        p = self.projekt
-        if p is None:
-            self.status.set(tr("msg.projekt.kein_projekt"))
-            self._v_einpolig_mit.set(False)
-            return
-        p.doku = {**p.doku, "einpolig_auswerten": bool(self._v_einpolig_mit.get())}
-        self._einpolig_sync()
-        try:
-            p.speichern()
-        except Exception as e:
-            messagebox.showerror(tr("msg.projekt.titel"),
-                                 tr("msg.projekt.fehler", fehler=e), parent=self.root)
-        self.redraw()
-        self._mark_dirty()
-        self.status.set(tr("msg.einpolig.mit_an" if core.EINPOLIG_MIT[0]
-                           else "msg.einpolig.mit_aus"))
 
     def geraete_nummerieren(self):
         """Gives devices with an incomplete designation ('-K', 'K?') the next

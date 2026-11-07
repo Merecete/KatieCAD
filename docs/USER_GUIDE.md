@@ -160,7 +160,7 @@ line weight in the toolbar.
 
 **Quick select (Edit > Quick select, command `QS`):** selects all objects of one object type, layer, colour or line type. Several criteria apply together (AND). Optionally select everything except the matches or add to the current selection.
 
-**Chain dimension (Insert > Chain dimension, command `KETTE`):** two measurement points and the position of the dimension line as with the normal dimension; after that one click per further point is enough, and every new dimension starts at the last point on the same dimension line. ESC or right-click ends.
+**Chain dimension (Insert > Dimension > Chain dimension, command `KETTE`):** two measurement points and the position of the dimension line as with the normal dimension; after that one click per further point is enough, and every new dimension starts at the last point on the same dimension line. ESC or right-click ends.
 
 **Measure (Edit > Measure, commands `MEASURE` / `DI`):** click two points (object snap works). KatieCAD shows distance, dX, dY and angle in the status bar and draws the measured segment. Further clicks start a new measurement, ESC or right-click ends. Values use the current unit.
 
@@ -174,7 +174,7 @@ line weight in the toolbar.
 
 **Cancel a wall or room (since 1.1.4):** **ESC** discards the wall / room in progress and keeps the tool active; a second ESC returns to selection.
 
-**Angle dimension (Insert > Angle dimension (3 points) / (2 lines), commands `ANGULAR`, `WINKELLINIEN`):** *3 points:* vertex, point on the first leg, point on the second leg, then click the position of the dimension arc. *2 lines:* click both lines (the vertex is their intersection, the clicked side selects the leg), then place the arc. The angle sector is the one that contains the dimension arc, so angles above 180° can be dimensioned too. Grips for vertex, both legs, arc and text; text height, arrow and decimals work like the other dimensions.
+**Angle dimension (Insert > Dimension > Angle dimension (3 points) / (2 lines), commands `ANGULAR`, `WINKELLINIEN`):** *3 points:* vertex, point on the first leg, point on the second leg, then click the position of the dimension arc. *2 lines:* click both lines (the vertex is their intersection, the clicked side selects the leg), then place the arc. The angle sector is the one that contains the dimension arc, so angles above 180° can be dimensioned too. Grips for vertex, both legs, arc and text; text height, arrow and decimals work like the other dimensions.
 
 **Purge layers:** in the layer window ("Layers...") **Purge** deletes all layers no object uses - in a project across all sheets (also layouts and blocks). Layer 0 and the active layer stay. KatieCAD asks first with the list. Ctrl+Z undoes it only for the open sheet; the other sheets are saved immediately.
 
@@ -300,7 +300,7 @@ the net (connection and terminal lists), not in cross references/REF, not in the
 project check ("main device duplicate") and not in automatic numbering. Give the
 single-pole symbol the same identifier (IND) as the multi-pole one so they can be
 matched. Note: a device drawn **only** single-pole appears in no list - count it with a
-multi-pole symbol - or tick **Project > Evaluate single-pole representation too** (also in the "Create documentation" dialog). Then single-pole symbols are counted, numbered, checked and used in the net like normal symbols, so projects drawn **purely with single-pole symbols** can be evaluated as well. If you draw the same device multi-pole **and** single-pole, leave the tick off, otherwise it shows up twice. The setting is per project and saved with it. If you change the identifier of the multi-pole
+multi-pole symbol - or tick **Evaluate single-pole representation too** in the **Project > Create / update documentation...** dialog. Then single-pole symbols are counted, numbered, checked and used in the net like normal symbols, so projects drawn **purely with single-pole symbols** can be evaluated as well. If you draw the same device multi-pole **and** single-pole, leave the tick off, otherwise it shows up twice. The setting is per project and saved with it. If you change the identifier of the multi-pole
 symbol, change it in the single-pole one by hand.
 
 **Number of poles:** for your own devices enter it in the same dialog in the field
@@ -448,7 +448,7 @@ Help › About shows the logo, version and license. **License** opens the licens
 ## Installation location (sheet properties)
 Press **F2**, double-click a sheet or right-click > *Sheet properties…* to set the sheet name and its **installation location** (e.g. "Panel UV1"). It applies to every object on the sheet automatically and is not copied into the objects: change it and the title block and lists follow at once. In the title block an attribute with the tag `PLACE` (German `EINBAUORT`) shows it. The device, terminal and cable lists get a *Location* column (only if at least one sheet has a location); the same equipment identifier at different locations counts as different devices. Report sheets have no location.
 
-Dimensions: **Insert > Radius dimension (DR)** and **Diameter dimension (DD)** - click a circle or arc, then the text position.
+Dimensions: **Insert > Dimension > Radius dimension (DR)** and **Diameter dimension (DD)** - click a circle or arc, then the text position.
 
 ## Terminal diagram: bridges
 Column order: terminal strip, location, type, **connection top, terminal (NUM), bridge, connection bottom**, sheet/column/row. Terminals of the same strip that you wire together on the top or bottom side count as a bridge: the *Bridge* column shows a line with dots at the connected terminals (overlapping bridges use separate lanes). The target then appears only on the first terminal of the bridge; the other cells stay empty. The column only appears if at least one bridge exists.

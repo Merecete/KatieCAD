@@ -1,6 +1,8 @@
 # Changes
 
 ## 1.1.5
+- Change: **"Insert" menu:** all dimensions (linear, radius, diameter, chain, angle) are now in the **Dimension** submenu
+- Change: the menu item **Project > Evaluate single-pole representation too** is removed - the option stays in the "Create / update documentation..." dialog (as before)
 - Change: **"Edit" menu more compact:** new submenus **Copy** (copy, copy with base point, precise copy) and **Manipulator** (on/off, move, centre) next to the existing **Align**; the entries are grouped logically: Undo/Redo > clipboard (Cut, Paste, Duplicate) > modify (Move, Rotate, Scale, Mirror, Stretch, Array) > Offset, Length, Trim, Break, Fillet, Chamfer, Align, Manipulator > Properties, Match, Find, Measure > Quick select, Select all > Delete
 
 - Change: **"Settings" menu** instead of "Language": it now contains **Language** (Deutsch / English / Español), **Colour scheme** and **Manage fonts...** (before under "View", although they concern the user interface and not the drawing). "View" now only contains things that concern how the drawing is displayed

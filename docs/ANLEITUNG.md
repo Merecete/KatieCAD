@@ -159,7 +159,7 @@ und Farbe, Linienart und Linienstärke in der Werkzeugleiste.
 
 **Schnellauswahl (Bearbeiten › Schnellauswahl, Befehl `QS`):** wählt alle Objekte mit einer Objektart, einem Layer, einer Farbe oder einem Linientyp. Mehrere Kriterien gelten gemeinsam (UND). Optional: alles außer den Treffern auswählen oder zur bestehenden Auswahl hinzufügen.
 
-**Kettenbemaßung (Einfügen › Kettenbemaßung, Befehl `KETTE`):** zwei Messpunkte und die Lage der Maßlinie wie bei der normalen Bemaßung; danach reicht je ein Klick pro weiterem Punkt, und jede neue Maßzahl setzt am letzten Punkt auf derselben Maßlinie an. ESC oder Rechtsklick beendet.
+**Kettenbemaßung (Einfügen › Bemaßung › Kettenbemaßung, Befehl `KETTE`):** zwei Messpunkte und die Lage der Maßlinie wie bei der normalen Bemaßung; danach reicht je ein Klick pro weiterem Punkt, und jede neue Maßzahl setzt am letzten Punkt auf derselben Maßlinie an. ESC oder Rechtsklick beendet.
 
 **Messen (Bearbeiten › Messen, Befehle `MESS` / `DI`):** Zwei Punkte anklicken (mit Objektfang). KatieCAD zeigt Abstand, dX, dY und Winkel in der Statuszeile und zeichnet die Messstrecke ein. Mit weiteren Klicks messen Sie weiter, ESC oder Rechtsklick beendet. Die Werte erscheinen in der aktuellen Einheit.
 
@@ -173,7 +173,7 @@ und Farbe, Linienart und Linienstärke in der Werkzeugleiste.
 
 **Wand oder Raum abbrechen (ab 1.1.4):** **ESC** verwirft die angefangene Wand bzw. den angefangenen Raum, das Werkzeug bleibt aktiv; ein zweites ESC schaltet zurück auf Auswahl.
 
-**Winkelbemaßung (Einfügen › Winkelbemaßung (3 Punkte) / (2 Linien), Befehle `WINKEL`, `WINKELLINIEN`):** *3 Punkte:* Scheitelpunkt, Punkt auf dem ersten Schenkel, Punkt auf dem zweiten Schenkel, danach die Lage des Maßbogens klicken. *2 Linien:* beide Linien anklicken (der Scheitel ist ihr Schnittpunkt, die angeklickte Seite bestimmt den Schenkel), dann den Maßbogen platzieren. Der Winkelsektor ist der, in dem der Maßbogen liegt – so lassen sich auch Winkel über 180° bemaßen. Griffe für Scheitel, beide Schenkel, Bogen und Text; Schrifthöhe, Pfeil und Nachkommastellen wie bei den anderen Bemaßungen.
+**Winkelbemaßung (Einfügen › Bemaßung › Winkelbemaßung (3 Punkte) / (2 Linien), Befehle `WINKEL`, `WINKELLINIEN`):** *3 Punkte:* Scheitelpunkt, Punkt auf dem ersten Schenkel, Punkt auf dem zweiten Schenkel, danach die Lage des Maßbogens klicken. *2 Linien:* beide Linien anklicken (der Scheitel ist ihr Schnittpunkt, die angeklickte Seite bestimmt den Schenkel), dann den Maßbogen platzieren. Der Winkelsektor ist der, in dem der Maßbogen liegt – so lassen sich auch Winkel über 180° bemaßen. Griffe für Scheitel, beide Schenkel, Bogen und Text; Schrifthöhe, Pfeil und Nachkommastellen wie bei den anderen Bemaßungen.
 
 **Layer bereinigen:** Im Layerfenster („Layer…“) löscht **Bereinigen** alle Layer, die kein Objekt benutzt – im Projekt über alle Blätter (auch Layout und Blöcke). Layer 0 und der aktive Layer bleiben. Vorher fragt KatieCAD mit der Liste nach. Strg+Z macht es nur für das offene Blatt rückgängig; die anderen Blätter werden sofort gespeichert.
 
@@ -302,7 +302,7 @@ in Geräteliste, Stückliste, Klemmenplan, Kabel- und SPS-Liste, nicht im Netz
 Projektprüfung („Hauptgerät doppelt“) und nicht in der automatischen Nummerierung.
 Gib dem einpoligen Symbol dieselbe Kennzeichnung (IND) wie dem mehrpoligen, damit man
 sie zuordnen kann. Wichtig: Ein Gerät, das **nur** einpolig gezeichnet ist, taucht in
-keiner Liste auf – außer du setzt im Menü **Projekt › Einpolige Darstellung mit auswerten** das Häkchen (auch im Dialog „Dokumentation erzeugen“). Dann werden einpolige Symbole wie normale Symbole gezählt, nummeriert, geprüft und im Netz berücksichtigt – so lassen sich auch Projekte **rein mit einpoligen Symbolen** auswerten. Zeichnest du dasselbe Gerät mehrpolig **und** einpolig, lass das Häkchen aus, sonst erscheint es doppelt. Die Einstellung gilt je Projekt und wird im Projekt gespeichert.
+keiner Liste auf – außer du setzt im Dialog **Projekt › Dokumentation erzeugen / aktualisieren…** das Häkchen **Einpolige Darstellung mit auswerten**. Dann werden einpolige Symbole wie normale Symbole gezählt, nummeriert, geprüft und im Netz berücksichtigt – so lassen sich auch Projekte **rein mit einpoligen Symbolen** auswerten. Zeichnest du dasselbe Gerät mehrpolig **und** einpolig, lass das Häkchen aus, sonst erscheint es doppelt. Die Einstellung gilt je Projekt und wird im Projekt gespeichert.
 Ändert sich die Kennzeichnung im mehrpoligen Symbol, ändere sie im einpoligen von Hand mit.
 
 **Polzahl:** Bei eigenen Geräten trägst du sie im selben Dialog im Feld **Polzahl** ein

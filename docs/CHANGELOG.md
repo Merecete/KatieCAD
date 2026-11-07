@@ -1,6 +1,8 @@
 # Änderungen
 
 ## 1.1.5
+- Change: **Menü „Einfügen“:** alle Bemaßungen (Längen-, Radius-, Durchmesser-, Ketten-, Winkelbemaßung) stehen jetzt im Untermenü **Bemaßung**
+- Change: Der Menüpunkt **Projekt › Einpolige Darstellung mit auswerten** entfällt – die Option steht (wie bisher) im Dialog „Dokumentation erzeugen / aktualisieren…"
 - Change: **Menü „Bearbeiten“ übersichtlicher:** neue Untermenüs **Kopieren** (Kopieren, Kopieren mit Basispunkt, Kopieren präzise) und **Manipulator** (ein/aus, versetzen, zentrieren) neben dem bestehenden **Ausrichten**; die Einträge sind logisch gruppiert: Rückgängig/Wiederholen › Zwischenablage (Ausschneiden, Einfügen, Duplizieren) › Ändern (Verschieben, Drehen, Skalieren, Spiegeln, Strecken, Reihe) › Versatz, Länge, Stutzen, Brechen, Abrunden, Fase, Ausrichten, Manipulator › Eigenschaften, Übertragen, Suchen, Messen › Schnellauswahl, Alles markieren › Löschen
 
 - Change: **Menü „Einstellungen“** statt „Sprache": enthält jetzt **Sprache** (Deutsch / English / Español), **Farbschema** und **Schriften verwalten…** (vorher unter „Ansicht“, obwohl sie die Oberfläche und nicht die Zeichnung betreffen). „Ansicht“ enthält nur noch Dinge, die die Darstellung der Zeichnung betreffen
