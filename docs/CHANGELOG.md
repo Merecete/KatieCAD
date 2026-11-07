@@ -1,6 +1,7 @@
 # Änderungen
 
 ## 1.1.5
+- Change: **Hintergrund-Vorgaben im Farbdialog:** Die Auswahl der Hintergrundvorgaben (Standard, Weiß, Schwarz, Dunkelgrau, Hellgrau, Blau, Beige) steckt jetzt im Dialog *Einstellungen › Hintergrund Modell… / Hintergrund Layout…* (Feld „Vorgabe“, mit eigener Farbwahl darunter). Das Feld „Hintergrund“ mit Farbfläche und Auswahlliste in der oberen Werkzeugleiste entfällt
 - Change: **Hintergrund Modell… / Hintergrund Layout…** wandern von „Ansicht“ nach „Einstellungen“
 - Change: **Menü „Einfügen“:** alle Bemaßungen (Längen-, Radius-, Durchmesser-, Ketten-, Winkelbemaßung) stehen jetzt im Untermenü **Bemaßung**
 - Change: Der Menüpunkt **Projekt › Einpolige Darstellung mit auswerten** entfällt – die Option steht (wie bisher) im Dialog „Dokumentation erzeugen / aktualisieren…"

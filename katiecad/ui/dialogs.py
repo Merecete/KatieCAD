@@ -3956,8 +3956,9 @@ class FarbDialog(tk.Toplevel):
 
     ZELLE = 24
 
-    def __init__(self, parent, farbe="#c29bff", titel=None, von_layer=False):
+    def __init__(self, parent, farbe="#c29bff", titel=None, von_layer=False, presets=None):
         super().__init__(parent)
+        self._presets = presets
         from katiecad.model import ral as RAL
         self.RAL = RAL
         from katiecad.model import aci as _aci
@@ -4054,6 +4055,16 @@ class FarbDialog(tk.Toplevel):
         self._info.grid(row=10, column=0, columnspan=2, sticky=tk.W, pady=(8, 0))
         ttk.Button(rechts, text=tr("dlg.farbe.system"), command=self._system).grid(
             row=11, column=0, columnspan=2, sticky=tk.EW, pady=(10, 0))
+        if presets:
+            # ready-made colours (e.g. drawing backgrounds); names are translated by position
+            self._preset_namen = {tr("dlg.farbe.preset_%d" % i): hexf
+                                  for i, hexf in enumerate(presets.values())}
+            ttk.Label(rechts, text=tr("dlg.farbe.vorgabe")).grid(
+                row=12, column=0, sticky=tk.W, pady=(10, 0))
+            self._preset_cb = ttk.Combobox(rechts, values=list(self._preset_namen), width=22,
+                                           state="readonly")
+            self._preset_cb.grid(row=13, column=0, columnspan=2, sticky=tk.EW, pady=2)
+            self._preset_cb.bind("<<ComboboxSelected>>", self._preset_gewaehlt)
 
         bt = ttk.Frame(f)
         bt.grid(row=1, column=0, columnspan=2, pady=(12, 0))
@@ -4076,6 +4087,11 @@ class FarbDialog(tk.Toplevel):
     def _gueltig(h):
         h = str(h or "").strip()
         return len(h) == 7 and h[0] == "#" and all(c in "0123456789abcdefABCDEF" for c in h[1:])
+
+    def _preset_gewaehlt(self, event=None):
+        hexf = self._preset_namen.get(self._preset_cb.get())
+        if hexf:
+            self._setze(hexf, "")
 
     def _setze(self, farbe, quelle=""):
         self._farbe = farbe.lower()
@@ -4364,10 +4380,10 @@ class FarbDialog(tk.Toplevel):
         self.destroy()
 
 
-def farbe_waehlen(parent, farbe="#c29bff", titel=None, von_layer=False):
+def farbe_waehlen(parent, farbe="#c29bff", titel=None, von_layer=False, presets=None):
     """Opens the KatieCAD colour dialog -> '#rrggbb', VON_LAYER (only with von_layer=True,
     button "By layer") or None."""
-    dlg = FarbDialog(parent, farbe, titel, von_layer)
+    dlg = FarbDialog(parent, farbe, titel, von_layer, presets)
     parent.wait_window(dlg)
     return dlg.result
 

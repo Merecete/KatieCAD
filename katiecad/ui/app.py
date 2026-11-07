@@ -1753,19 +1753,6 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self._befehl_knopf(tb3, "reset", FARBEN["cyan"],
                            self._reset_view, "tb.reset")
 
-        ttk.Separator(tb3, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=8)
-        ttk.Label(tb3, text=tr("tb.hintergrund"), style="Title.TLabel").pack(side=tk.LEFT)
-        bg_aktuell = self.bg_layout if self._ist_layout() else self.bg_modell
-        self.bg_btn = self._farb_swatch(
-            tb3, bg_aktuell,
-            lambda: self.bg_waehlen("layout" if self._ist_layout() else "modell"))
-        self.bg_btn.pack(side=tk.LEFT, padx=4)
-        self.bg_preset_cb = ttk.Combobox(tb3, values=list(BG_PRESETS.keys()),
-                                         width=18, state="readonly")
-        self.bg_preset_cb.pack(side=tk.LEFT, padx=2)
-        self.bg_preset_cb.bind("<<ComboboxSelected>>",
-                               self._bg_preset_angewendet)
-
     def _build_eingabeleiste(self):
         self.frame_eingabe = ttk.Frame(self.root, padding=(6, 4))
         self.frame_eingabe.pack(side=tk.BOTTOM, fill=tk.X)
@@ -2441,7 +2428,6 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self._update_kontext_widgets()
         bg = self.bg_modell if not self._ist_layout() else self.bg_layout
         self.canvas.config(bg=bg)
-        self.bg_btn.config(bg=bg)
         self._zeichne_raster()
         self.redraw()
         self._viewport_modus_anzeige_aktualisieren()
@@ -2457,7 +2443,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
 
     def bg_waehlen(self, bereich):
         aktuell = self.bg_modell if bereich == "modell" else self.bg_layout
-        hexc = farbe_waehlen(self.root, aktuell, tr("tb.hintergrund"))
+        hexc = farbe_waehlen(self.root, aktuell, tr("tb.hintergrund"), presets=BG_PRESETS)
         if not hexc:
             return
         self._bg_setzen(bereich, hexc)
@@ -2474,16 +2460,9 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         if (bereich == "modell" and not aktuell_layout) or \
            (bereich == "layout" and aktuell_layout):
             self.canvas.config(bg=hexc)
-            self.bg_btn.config(bg=hexc)
             self.redraw()
             self._zeichne_raster()
         self._mark_dirty()
-
-    def _bg_preset_angewendet(self, event=None):
-        auswahl = self.bg_preset_cb.get()
-        if auswahl in BG_PRESETS:
-            self._bg_setzen("layout" if self._ist_layout() else "modell",
-                            BG_PRESETS[auswahl])
 
     def _layer_gewechselt(self, event=None):
         self._layer_info_aktualisieren()
@@ -6084,7 +6063,6 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self._update_kontext_widgets()
         bg = self.bg_modell
         self.canvas.config(bg=bg)
-        self.bg_btn.config(bg=bg)
         self._mark_clean()
         if self.projekt is not None:
             self._mark_dirty()   # Sheet file must be rewritten
@@ -8807,7 +8785,6 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             self.werkzeuge_fuer_3d()
         bg = self.bg_modell if not self._ist_layout() else self.bg_layout
         self.canvas.config(bg=bg)
-        self.bg_btn.config(bg=bg)
         self._layout_switcher_neu_aufbauen()
         self._update_kontext_widgets()
         self._mark_clean()
