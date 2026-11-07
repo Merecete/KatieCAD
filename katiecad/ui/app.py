@@ -1366,17 +1366,6 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         m_ansicht.add_separator()
         m_ansicht.add_command(label=tr("menu.ansicht.reset"),
                               command=self._reset_view)
-        m_ansicht.add_separator()
-        m_ansicht.add_command(label=tr("menu.ansicht.schriften"),
-                              command=self.schriften_verwalten)
-        m_farbe = tk.Menu(m_ansicht, tearoff=0, bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
-                          activebackground=FARBEN["cyan"],
-                          activeforeground=FARBEN["bg_dunkel"])
-        for _n in FARBSCHEMEN:
-            m_farbe.add_command(
-                label=("\u25cf " if _n == FARBSCHEMA["aktuell"] else "    ") + tr("menu.farbschema." + _n),
-                command=lambda n=_n: self.farbschema_wechseln(n))
-        m_ansicht.add_cascade(label=tr("menu.ansicht.farbschema"), menu=m_farbe)
         menubar.add_cascade(label=tr("menu.ansicht"), menu=m_ansicht)
 
         # Blocks
@@ -1467,21 +1456,32 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                          command=lambda: self.ansicht3d_befehl("verschmelzen"))
         menubar.add_cascade(label=tr("menu.3d"), menu=m_3d)
 
-        # Language
-        m_sprache = tk.Menu(menubar, tearoff=0,
+        # Settings (language, colour scheme, fonts)
+        m_einst = tk.Menu(menubar, tearoff=0,
+                          bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
+                          activebackground=FARBEN["cyan"],
+                          activeforeground=FARBEN["bg_dunkel"])
+        m_sprache = tk.Menu(m_einst, tearoff=0,
                             bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
                             activebackground=FARBEN["cyan"],
                             activeforeground=FARBEN["bg_dunkel"])
-        m_sprache.add_radiobutton(label=tr("menu.sprache.de"), value="de",
-                                  variable=self.sprache_var,
-                                  command=lambda: self.sprache_wechseln("de"))
-        m_sprache.add_radiobutton(label=tr("menu.sprache.en"), value="en",
-                                  variable=self.sprache_var,
-                                  command=lambda: self.sprache_wechseln("en"))
-        m_sprache.add_radiobutton(label=tr("menu.sprache.es"), value="es",
-                                  variable=self.sprache_var,
-                                  command=lambda: self.sprache_wechseln("es"))
-        menubar.add_cascade(label=tr("menu.sprache"), menu=m_sprache)
+        for _sp in ("de", "en", "es"):
+            m_sprache.add_radiobutton(label=tr("menu.sprache." + _sp), value=_sp,
+                                      variable=self.sprache_var,
+                                      command=lambda sp=_sp: self.sprache_wechseln(sp))
+        m_einst.add_cascade(label=tr("menu.sprache"), menu=m_sprache)
+        m_farbe = tk.Menu(m_einst, tearoff=0, bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
+                          activebackground=FARBEN["cyan"],
+                          activeforeground=FARBEN["bg_dunkel"])
+        for _n in FARBSCHEMEN:
+            m_farbe.add_command(
+                label=("\u25cf " if _n == FARBSCHEMA["aktuell"] else "    ") + tr("menu.farbschema." + _n),
+                command=lambda n=_n: self.farbschema_wechseln(n))
+        m_einst.add_cascade(label=tr("menu.ansicht.farbschema"), menu=m_farbe)
+        m_einst.add_separator()
+        m_einst.add_command(label=tr("menu.ansicht.schriften"),
+                            command=self.schriften_verwalten)
+        menubar.add_cascade(label=tr("menu.einstellungen"), menu=m_einst)
 
         # Help
         m_hilfe = tk.Menu(menubar, tearoff=0,

@@ -33,13 +33,13 @@ or `python -m katiecad`. Optionally install the extra packages with
 `pip install -r requirements.txt` (needed for DXF/DWG import and DXF export). On Linux
 you also need `python3-tk`.
 
-Change the language in the **Language** menu (Deutsch / English / Español). It is remembered.
+Change the language in the **Settings > Language** menu (Deutsch / English / Español). It is remembered.
 
 ## 2. The window at a glance
 
 | Area | What it does |
 |---|---|
-| **Menu bar** | File, Project, Edit, Insert, View, Blocks, Electrical, Language, Help |
+| **Menu bar** | File, Project, Edit, Insert, View, Blocks, Electrical, Settings, Help |
 | **Toolbars** (one each for tools, electrical and 3D, freely placeable) | Drawing tools (Select, Line, Polyline, Circle, Arc, Rectangle, Text, Dimension, Trim, Break) and the electrical tools (Pin, Junction, Cross-ref, Mask, Terminal, Cable, …). Also layer, line type, line weight, colour, unit, scale and zoom. |
 | **Side bar** (left, F4 shows/hides it) | Undo / Redo and the sheet list of the project |
 | **Drawing area** | This is where you draw. The model is the drawing at 1:1, the layout is the paper sheet. |
@@ -99,9 +99,9 @@ line weight in the toolbar.
 
 **Match properties (Edit > Match properties, command `MA`):** click the source object first, then the target objects one after another. Layer, colour, line type and line weight are copied; for texts also height and font, for hatches angle and spacing. ESC or right-click ends.
 
-**Own fonts (View > Manage fonts...):** choose any font installed on this computer (TrueType/OpenType); it then appears next to the seven standard fonts in the font list of the toolbar, the text dialog and the properties. The choice is saved; to **remove** a font deselect it in the same window ("Selected only" shows just the active ones, "Deselect all" clears the list). Text width is calculated with the real character widths of the font, and the **PDF embeds the fonts** (readable on computers without the font). Fonts marked "(screen only)" (e.g. OTF with CFF outlines) or with an embedding restriction appear in Helvetica in the PDF. If you open a drawing that uses a font installed here but not chosen, it is switched on for the session automatically; if it is missing completely, KatieCAD shows a substitute font. The stroke font of 3D texts is not affected.
+**Own fonts (Settings > Manage fonts...):** choose any font installed on this computer (TrueType/OpenType); it then appears next to the seven standard fonts in the font list of the toolbar, the text dialog and the properties. The choice is saved; to **remove** a font deselect it in the same window ("Selected only" shows just the active ones, "Deselect all" clears the list). Text width is calculated with the real character widths of the font, and the **PDF embeds the fonts** (readable on computers without the font). Fonts marked "(screen only)" (e.g. OTF with CFF outlines) or with an embedding restriction appear in Helvetica in the PDF. If you open a drawing that uses a font installed here but not chosen, it is switched on for the session automatically; if it is missing completely, KatieCAD shows a substitute font. The stroke font of 3D texts is not affected.
 
-**Colour scheme (View > Colour scheme):** menus, toolbars, side bars and dialogs come in three colour schemes: **Violet** (default), **Black** and **Light**. The change takes effect at once and is remembered for the next start. The drawing background is not touched (set it with *Background*, so choose a light one there). **The background (model and layout) is purely a program setting:** it is stored on your computer and no longer in the drawing or project file; a file saved by someone with a white background opens with your own background (old files are read the same way, their stored background is ignored); drawing content, layers and printed/PDF output do not change. Dialogs that are already open take the new scheme the next time they are opened.
+**Colour scheme (Settings > Colour scheme):** menus, toolbars, side bars and dialogs come in three colour schemes: **Violet** (default), **Black** and **Light**. The change takes effect at once and is remembered for the next start. The drawing background is not touched (set it with *Background*, so choose a light one there). **The background (model and layout) is purely a program setting:** it is stored on your computer and no longer in the drawing or project file; a file saved by someone with a white background opens with your own background (old files are read the same way, their stored background is ignored); drawing content, layers and printed/PDF output do not change. Dialogs that are already open take the new scheme the next time they are opened.
 
 **Toolbar:** the tools are icons (drawing purple, electrical red). Rest the mouse on an icon to see its name. The active tool has a lighter background.
 

@@ -1,5 +1,10 @@
 # Changes
 
+## 1.1.5
+
+- Change: **"Settings" menu** instead of "Language": it now contains **Language** (Deutsch / English / Español), **Colour scheme** and **Manage fonts...** (before under "View", although they concern the user interface and not the drawing). "View" now only contains things that concern how the drawing is displayed
+- Change: program version 1.1.5 (About window, installer)
+
 ## 1.1.4
 - New: **Windows installer also in Spanish** (in addition to German and English; language choice when the installer starts)
 - Fix: **Title block tags for the title named in English:** the three title parts are now called `TITLE1`, `TITLE2`, `TITLE3` in the documentation as well (the German names `TITEL1`..`3` keep working as aliases). The description of report pages now also reads `TITLE1`..`3` (before: only `TITEL1`..`3`)

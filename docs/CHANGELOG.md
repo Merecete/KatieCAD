@@ -1,5 +1,10 @@
 # Änderungen
 
+## 1.1.5
+
+- Change: **Menü „Einstellungen“** statt „Sprache": enthält jetzt **Sprache** (Deutsch / English / Español), **Farbschema** und **Schriften verwalten…** (vorher unter „Ansicht“, obwohl sie die Oberfläche und nicht die Zeichnung betreffen). „Ansicht“ enthält nur noch Dinge, die die Darstellung der Zeichnung betreffen
+- Change: Programmversion 1.1.5 (Info-Fenster, Installer)
+
 ## 1.1.4
 - Neu: **Windows-Installer auch auf Spanisch** (zusätzlich zu Deutsch und Englisch; Sprachwahl beim Start des Installers)
 - Fix: **Schriftkopf-Tags für den Titel englisch benannt:** Die drei Titelteile heißen jetzt auch in der Dokumentation `TITLE1`, `TITLE2`, `TITLE3` (die deutschen Namen `TITEL1`..`3` funktionieren weiterhin als Alias). Die Beschreibung der Berichtsseiten liest nun auch `TITLE1`..`3` (vorher nur `TITEL1`..`3`)
