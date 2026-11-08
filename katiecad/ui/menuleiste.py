@@ -14,6 +14,7 @@ model: this class only reads their entries (label, accelerator, state,
 check marks) and calls `menu.invoke(index)`.
 """
 
+import sys
 import tkinter as tk
 import tkinter.font as tkfont
 
@@ -24,6 +25,18 @@ class _Pop:
 
     def __init__(self, pop, ebene):
         self.pop, self.zeilen, self.aktiv, self.ebene = pop, [], None, ebene
+
+
+def menue_position(x, y, br, ho, bereich, links_von=None):
+    """Position of a pop-up of size (br, ho) wanted at (x, y), kept inside the monitor area
+    (left, top, right, bottom); a sub menu goes to the left of its parent (links_von) when
+    there is no room on the right."""
+    l, t, r, b = bereich
+    if links_von is not None and x + br > r:
+        x = links_von - br
+    x = max(l, min(x, r - br))
+    y = max(t, min(y, b - ho))
+    return x, y
 
 
 class MenuLeiste(tk.Frame):
@@ -126,14 +139,43 @@ class MenuLeiste(tk.Frame):
         """Shows window p at (x, y); stays on the screen. links_von = x where the window
         goes to the left of its parent if there is no room on the right."""
         br, ho = p.pop.winfo_reqwidth(), p.pop.winfo_reqheight()
-        sb, sh = self.winfo_screenwidth(), self.winfo_screenheight()
-        if links_von is not None and x + br > sb:
-            x = links_von - br
-        x = max(0, min(x, sb - br))
-        y = max(0, min(y, sh - ho))
+        x, y = menue_position(x, y, br, ho, self._monitor_rechteck(x, y), links_von)
         p.pop.geometry("+%d+%d" % (x, y))
         p.pop.deiconify()
         p.pop.lift()
+
+    def _monitor_rechteck(self, x, y):
+        """Work area (left, top, right, bottom) of the monitor that contains the point (x, y).
+        Windows: the real monitor (so the menu stays on the monitor of the window when
+        there are several); elsewhere the whole virtual screen."""
+        if sys.platform.startswith("win"):
+            try:
+                import ctypes
+                from ctypes import wintypes
+
+                class _MI(ctypes.Structure):
+                    _fields_ = [("cbSize", wintypes.DWORD), ("rcMonitor", wintypes.RECT),
+                                ("rcWork", wintypes.RECT), ("dwFlags", wintypes.DWORD)]
+                u32 = ctypes.windll.user32
+                u32.MonitorFromPoint.restype = wintypes.HANDLE
+                u32.MonitorFromPoint.argtypes = [wintypes.POINT, wintypes.DWORD]
+                u32.GetMonitorInfoW.argtypes = [wintypes.HANDLE, ctypes.POINTER(_MI)]
+                hm = u32.MonitorFromPoint(wintypes.POINT(int(x), int(y)), 2)   # NEAREST
+                mi = _MI()
+                mi.cbSize = ctypes.sizeof(_MI)
+                if hm and u32.GetMonitorInfoW(hm, ctypes.byref(mi)):
+                    r = mi.rcWork
+                    return (r.left, r.top, r.right, r.bottom)
+            except Exception:
+                pass
+        try:
+            vx, vy = self.winfo_vrootx(), self.winfo_vrooty()
+            vw, vh = self.winfo_vrootwidth(), self.winfo_vrootheight()
+            if vw > 0 and vh > 0:
+                return (vx, vy, vx + vw, vy + vh)
+        except tk.TclError:
+            pass
+        return (0, 0, self.winfo_screenwidth(), self.winfo_screenheight())
 
     def _pop_bauen(self, menu, ebene):
         pop = tk.Toplevel(self)

@@ -1,6 +1,7 @@
 # Änderungen
 
 ## 1.1.5
+- Fix: **Mehrere Monitore (Windows):** Die Menüs der oberen Menüleiste öffnen sich jetzt auf dem Monitor, auf dem das Programmfenster liegt (vorher erschienen sie auf dem Hauptbildschirm, sobald das Fenster auf einem zweiten Monitor stand). Dasselbe gilt für das automatische Ausweichen des Dialogs „Schriftkopf-Vorlage“
 - Change: **Hintergrund-Vorgaben im Farbdialog:** Die Auswahl der Hintergrundvorgaben (Standard, Weiß, Schwarz, Dunkelgrau, Hellgrau, Blau, Beige) gibt es jetzt zusätzlich im Dialog *Einstellungen › Hintergrund Modell… / Hintergrund Layout…* (Feld „Vorgabe“, mit eigener Farbwahl darunter). Das Feld „Hintergrund“ in der oberen Werkzeugleiste bleibt unverändert erhalten
 - Change: **Hintergrund Modell… / Hintergrund Layout…** wandern von „Ansicht“ nach „Einstellungen“
 - Change: **Menü „Einfügen“:** alle Bemaßungen (Längen-, Radius-, Durchmesser-, Ketten-, Winkelbemaßung) stehen jetzt im Untermenü **Bemaßung**

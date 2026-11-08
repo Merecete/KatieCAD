@@ -106,4 +106,15 @@ check(a.layers["E-DEVICES"].farbe == "#ff0000" and a.layers["F-Pieces"].farbe ==
 a.layers["F-Pieces"].farbe = "#00ff00"; a._block_layer_sicherstellen("E-DEVICES", _dd)
 check(a.layers["F-Pieces"].farbe == "#00ff00", "vorhandene Layer bleiben unveraendert")
 
+# Menue auf dem zweiten Monitor bleibt auf diesem Monitor (nicht auf dem Hauptbildschirm)
+from katiecad.ui.menuleiste import menue_position
+hs = (0, 0, 1920, 1080)
+m2r = (1920, 0, 3840, 1080)           # zweiter Monitor rechts
+m2l = (-1920, 0, 0, 1080)             # zweiter Monitor links
+check(menue_position(2000, 30, 200, 600, m2r) == (2000, 30), "Monitor rechts: Position bleibt")
+check(menue_position(3800, 30, 200, 600, m2r) == (3640, 30), "Monitor rechts: am Rand begrenzt")
+check(menue_position(-1900, 30, 200, 600, m2l) == (-1900, 30), "Monitor links: negative Koordinaten")
+check(menue_position(1800, 900, 200, 600, hs) == (1720, 480), "Hauptmonitor wie bisher")
+check(menue_position(1850, 100, 200, 300, hs, links_von=1800) == (1600, 100), "Untermenue links vom Elternmenue")
+
 print(f"test_varianten - OK ({ok} Pruefungen)")

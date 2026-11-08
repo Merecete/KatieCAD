@@ -3660,8 +3660,9 @@ class SuchenErsetzenDialog(tk.Toplevel):
             x0, y0 = self.winfo_rootx(), self.winfo_rooty()
             w, h = self.winfo_width(), self.winfo_height()
             if x0 - 60 <= sx <= x0 + w + 60 and y0 - 60 <= sy <= y0 + h + 60:
-                sw = self.winfo_screenwidth()
-                x = 10 if sx > sw / 2 else max(10, sw - w - 10)
+                # relative to the main window (not the primary screen: works on 2nd monitors)
+                rl, rb = app.root.winfo_rootx(), app.root.winfo_width()
+                x = rl + 10 if sx > rl + rb / 2 else max(rl + 10, rl + rb - w - 10)
                 self.geometry("+%d+%d" % (x, y0))
         except tk.TclError:
             pass
