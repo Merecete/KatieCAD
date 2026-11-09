@@ -3422,6 +3422,16 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                     nx, ny = naechster_punkt_segment(mx, my, x1, y1, x2, y2)
                     sammle(nx, ny, "naechster", 5)
 
+        gl = getattr(self, "_griff_drag_el", None)
+        if isinstance(gl, Linie) and self._griff_drag_id in ("p1", "p2"):
+            # the line being dragged: ray from its fixed end through the mouse, so that
+            # intersections with other lines can be snapped (e.g. shorten to a crossing)
+            fx, fy = (gl.x2, gl.y2) if self._griff_drag_id == "p1" else (gl.x1, gl.y1)
+            dx, dy = mx - fx, my - fy
+            L = math.hypot(dx, dy)
+            if L > 1e-9:
+                ext = 3.0 * tol / L
+                segs.append((fx, fy, mx + dx * ext, my + dy * ext))
         if modi["schnittpunkt"].get():
             nah = [s for s in segs
                    if abstand_punkt_segment(mx, my, *s) <= tol][:60]

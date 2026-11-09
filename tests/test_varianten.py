@@ -132,4 +132,22 @@ check(_ad[1].tag == "LEER", "leeres Attribut geht nicht verloren")
 _neu = core.BlockReferenz(0, 0, "Neu", _sp)
 check(set(_neu.attribute) == {"IND", "LEER"}, "gesprengte Elemente koennen wieder Block werden")
 
+# Grip drag of a line end: intersection snap with a crossing line
+class _V:
+    def __init__(s, v): s.v = v
+    def get(s): return s.v
+_modi = {k: _V(k in ("endpunkt", "schnittpunkt")) for k in
+         ("endpunkt", "mittelpunkt", "zentrum", "quadrant", "schnittpunkt", "naechster", "lot")}
+_a = types.SimpleNamespace(osnap_modi=_modi, layers={})
+for _n in dir(A.CadApp):
+    if _n.startswith("_") and not _n.startswith("__") and callable(getattr(A.CadApp, _n)):
+        setattr(_a, _n, types.MethodType(getattr(A.CadApp, _n), _a))
+_l1, _l2 = core.Linie(0, 0, 100, 100), core.Linie(0, 100, 100, 0)
+_a._snap_ausschluss = _l1; _a._griff_drag_el = _l1; _a._griff_drag_id = "p2"
+_r = _a._finde_snap_in_liste([_l1, _l2], 52, 51, 5, None)
+check(_r is not None and _r[2] == "schnittpunkt" and abs(_r[0] + _r[1] - 100) < 1e-6,
+      "Griff-Ziehen: Schnittpunktfang mit kreuzender Linie")
+_a._griff_drag_el = None
+check(_a._finde_snap_in_liste([_l1, _l2], 52, 51, 5, None) is None, "ohne Griff-Ziehen kein Fang der eigenen Linie")
+
 print(f"test_varianten - OK ({ok} Pruefungen)")

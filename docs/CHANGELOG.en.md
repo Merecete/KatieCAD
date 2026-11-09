@@ -2,7 +2,7 @@
 
 ## 1.1.5
 - Fix: **Exploding a block keeps attributes:** attributes stay attribute definitions (tag, prompt, size, position); the current value becomes the default. So an exploded block can be changed and made into a block again (before, the attributes became normal texts)
-- Fix: **Grips on lines:** when dragging a line end point at its grip, Ortho (relative to the other end) and object snap including the snap marker now work (before, Ortho and the display of the snap point were missing)
+- Fix: **Grips on lines:** when dragging a line end point at its grip, Ortho (relative to the other end) and object snap including the snap marker, also **intersection snap with crossing lines** (a line can be shortened/extended exactly onto another line) now work (before, Ortho and the display of the snap point were missing)
 - Fix: **Several monitors (Windows):** the menus of the top menu bar now open on the monitor the program window is on (before, they appeared on the main screen as soon as the window was on a second monitor). The same applies to the automatic dodging of the "Title block template" dialog
 - Change: **Background presets in the colour dialog:** the choice of background presets (Default, White, Black, Dark grey, Light grey, Blue, Beige) is now also available in the dialog *Settings > Model background... / Layout background...* (field "Preset", with the free colour choice next to it). The "Background" field in the upper toolbar stays unchanged
 - Change: **Model background... / Layout background...** moved from "View" to "Settings"
