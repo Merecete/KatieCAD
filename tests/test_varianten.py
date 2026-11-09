@@ -117,4 +117,19 @@ check(menue_position(-1900, 30, 200, 600, m2l) == (-1900, 30), "Monitor links: n
 check(menue_position(1800, 900, 200, 600, hs) == (1720, 480), "Hauptmonitor wie bisher")
 check(menue_position(1850, 100, 200, 300, hs, links_von=1800) == (1600, 100), "Untermenue links vom Elternmenue")
 
+# Sprengen: Attribute bleiben Attribute
+_bd = core.BlockDefinition("Sp", (0, 0), [core.Kreis(0, 0, 5),
+        core.AttributDefinition(10, 0, tag="IND", wert="X", hoehe=2.5),
+        core.AttributDefinition(10, 5, tag="LEER", wert="")])
+_br = core.BlockReferenz(100, 50, "Sp", _bd.elemente, winkel=90)
+_br.setze_attribute({"IND": "-XD1"})
+_sp = _br.sprengen()
+_ad = [e for e in _sp if isinstance(e, core.AttributDefinition)]
+check(len(_sp) == 3 and len(_ad) == 2, "Sprengen: Kreis + zwei Attributdefinitionen")
+check(_ad[0].tag == "IND" and _ad[0].wert == "-XD1" and abs(_ad[0].hoehe - 2.5) < 1e-9, "Attribut: Tag, aktueller Wert als Vorgabe, Hoehe")
+check(abs(_ad[0].x - 100) < 1e-6 and abs(_ad[0].y - 60) < 1e-6, "Attribut: Position gedreht + verschoben")
+check(_ad[1].tag == "LEER", "leeres Attribut geht nicht verloren")
+_neu = core.BlockReferenz(0, 0, "Neu", _sp)
+check(set(_neu.attribute) == {"IND", "LEER"}, "gesprengte Elemente koennen wieder Block werden")
+
 print(f"test_varianten - OK ({ok} Pruefungen)")

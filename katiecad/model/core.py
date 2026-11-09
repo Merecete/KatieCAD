@@ -3132,6 +3132,36 @@ class BlockReferenz(Element):
         self._cache = (sig, out)
         return out
 
+    def sprengen(self):
+        """Elements for EXPLODE: like aufgeloest(), but attribute definitions stay attribute
+        definitions (tag, prompt, size, position) - their current value becomes the default
+        value - so the exploded block can be changed and made into a block again."""
+        res = self.aufgeloest()
+        out, i = [], 0
+        for el in self.elemente:
+            if isinstance(el, AttributDefinition):
+                wert = self.attribute.get(el.tag, el.wert)
+                gesendet = (el.tag not in self.ausgeblendet
+                            and el.als_text(wert) is not None)
+                k = deepcopy(el)
+                if self.gespiegelt:
+                    k.spiegeln(0.0, 0.0, 0.0, 1.0)
+                self._transformiere(k)
+                k.wert = "" if wert is None else str(wert)
+                if el.tag in self.ausgeblendet:
+                    k.sichtbar = False
+                v = self.text_versatz.get("A:" + el.tag)
+                if v:
+                    k.x += v[0]
+                    k.y += v[1]
+                if gesendet:
+                    i += 1
+                out.append(k)
+            elif i < len(res):
+                out.append(deepcopy(res[i]))
+                i += 1
+        return out
+
     def _maske_welt(self):
         for e in self.aufgeloest():
             if isinstance(e, ElektroMaske) and e._spiegel_aktiv():

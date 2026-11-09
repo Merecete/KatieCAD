@@ -1,6 +1,8 @@
 # Änderungen
 
 ## 1.1.5
+- Fix: **Block auflösen (Sprengen) behält Attribute:** Attribute bleiben Attributdefinitionen (Tag, Beschriftung, Größe, Lage); der aktuelle Wert wird zur Vorgabe. So lässt sich ein aufgelöster Block ändern und wieder zum Block machen (vorher wurden die Attribute zu normalen Texten)
+- Fix: **Griffe an Linien:** Beim Ziehen eines Linien-Endpunkts am Griff funktionieren jetzt Ortho (relativ zum anderen Ende) und der Objektfang inkl. Fangmarker (vorher fehlten Ortho und die Anzeige des Fangpunkts)
 - Fix: **Mehrere Monitore (Windows):** Die Menüs der oberen Menüleiste öffnen sich jetzt auf dem Monitor, auf dem das Programmfenster liegt (vorher erschienen sie auf dem Hauptbildschirm, sobald das Fenster auf einem zweiten Monitor stand). Dasselbe gilt für das automatische Ausweichen des Dialogs „Schriftkopf-Vorlage“
 - Change: **Hintergrund-Vorgaben im Farbdialog:** Die Auswahl der Hintergrundvorgaben (Standard, Weiß, Schwarz, Dunkelgrau, Hellgrau, Blau, Beige) gibt es jetzt zusätzlich im Dialog *Einstellungen › Hintergrund Modell… / Hintergrund Layout…* (Feld „Vorgabe“, mit eigener Farbwahl darunter). Das Feld „Hintergrund“ in der oberen Werkzeugleiste bleibt unverändert erhalten
 - Change: **Hintergrund Modell… / Hintergrund Layout…** wandern von „Ansicht“ nach „Einstellungen“

@@ -7690,13 +7690,20 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         ref = None
         el = self._griff_drag_el
         gid = str(self._griff_drag_id)
-        if self.ortho.get() and hasattr(el, "punkte") and gid[:1] == "p" and gid[1:].isdigit():
-            i, n = int(gid[1:]), len(el.punkte)
-            if n >= 2:                                    # Ortho relative to the neighbouring vertex
-                ref = el.punkte[i - 1] if (i > 0 or getattr(el, "geschlossen", False)) else el.punkte[1]
-        pt = self._eingabepunkt(event, ref)
+        if self.ortho.get():
+            if hasattr(el, "punkte") and gid[:1] == "p" and gid[1:].isdigit():
+                i, n = int(gid[1:]), len(el.punkte)
+                if n >= 2:                                # Ortho relative to the neighbouring vertex
+                    ref = el.punkte[i - 1] if (i > 0 or getattr(el, "geschlossen", False)) else el.punkte[1]
+            elif isinstance(el, Linie) and gid in ("p1", "p2"):
+                ref = (el.x2, el.y2) if gid == "p1" else (el.x1, el.y1)   # Ortho to the other end
+        pt = self._eingabepunkt(event, ref, marker=False)
         self._griff_drag_el.griff_bewegen(self._griff_drag_id, pt[0], pt[1])
-        self.redraw()
+        self.redraw()                                      # redraw wipes the snap marker ...
+        x, y = self._px_zu_ctx(event.x, event.y)
+        snap = self._snap_ctx(x, y, ref)
+        if snap:                                           # ... so it is drawn again afterwards
+            self._zeichne_snap_marker(snap[0], snap[1], snap[2])
 
     def _vp_start_move(self, vp, x_mm, y_mm):
         base = (x_mm, y_mm)
@@ -11343,7 +11350,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             if ref not in liste:
                 continue
             idx = liste.index(ref)
-            kinder = [deepcopy(k) for k in ref.aufgeloest()]
+            kinder = ref.sprengen()                   # attributes stay attributes
             liste.pop(idx)
             for k in kinder:
                 liste.insert(idx, k)

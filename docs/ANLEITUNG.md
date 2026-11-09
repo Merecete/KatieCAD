@@ -73,7 +73,7 @@ Nächstes erwartet. **ESC** bricht den aktuellen Vorgang ab.
 zum Beispiel `L` (Linie), `K` (Kreis), `REC` (Rechteck), `T` (Text),
 `M` (Verschieben), `KO` (Kopieren), `RO` (Drehen), `AR` (Reihe), `STR` (Strecken),
 `TR` (Stutzen), `BR` (Brechen), `ZG` (Zoom Grenzen), `U` (Rückgängig),
-`B` (Block erzeugen), `I` (Block/Gerät einfügen), `X` (Block auflösen).
+`B` (Block erzeugen), `I` (Block/Gerät einfügen), `X` (Block auflösen; Attribute bleiben dabei Attribute, der aktuelle Wert wird zur Vorgabe). Beim Ziehen eines Linien-Endpunkts am Griff funktionieren Objektfang und Ortho.
 Die Befehle gibt es auch auf Englisch.
 
 ## 4. Zeichnen und Bearbeiten
