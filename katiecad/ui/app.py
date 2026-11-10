@@ -243,6 +243,14 @@ def geraete_aus_blattdaten_liste(app, j):
 MIN_FENSTER = (1010, 600)         # smallest window size in pixels (width, height)
 
 
+# Culling of large drawings (only above KULL_AB elements): elements outside the visible area
+# (plus KULL_RAND_PX margin) and sub-pixel elements are not drawn.
+KULL_AB = 800
+KULL_RAND_PX = 150
+_KULL_TYPEN = (Linie, Kreis, Bogen, Polylinie, Schraffur, Text)
+_KULL_WINZIG = (Linie, Kreis, Bogen, Polylinie)
+
+
 class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
     def __init__(self, root):
         self.root = root
@@ -433,6 +441,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self._bem_end_anzeige = tk.StringVar(value=tr("dlg.eig.end.pfeil"))
         self.bem_dez = tk.IntVar(value=2)
         self.dezimalkomma = tk.BooleanVar(value=(SPRACHE["aktuell"] != "en"))
+        self.leistung_var = tk.BooleanVar(value=False)       # shows redraw times (not saved)
         self.dxf_iso_var = tk.StringVar(
             value="linien" if lade_konfiguration().get("dxf_iso") == "linien" else "text")
         self._pts = []
@@ -1512,6 +1521,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             m_dxfiso.add_radiobutton(label=tr("menu.einst.dxfiso." + _w), value=_w,
                                      variable=self.dxf_iso_var, command=self._dxf_iso_gesetzt)
         m_einst.add_cascade(label=tr("menu.einst.dxfiso"), menu=m_dxfiso)
+        m_einst.add_checkbutton(label=tr("menu.einst.leistung"), variable=self.leistung_var,
+                                command=self.redraw)
         menubar.add_cascade(label=tr("menu.einstellungen"), menu=m_einst)
 
         # Help
@@ -5400,6 +5411,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             self.auswahl = [e for e in self.auswahl if id(e) not in ids]
 
     def redraw(self):
+        _t0 = time.perf_counter()
         c = self.canvas
         self._vp_fang_cache = None            # snap points of the 3D model are recomputed
         if self._ansicht3d is not None:
@@ -5430,6 +5442,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             self._titelfelder_aktualisieren()
         except Exception as ex:
             print(f"[KatieCAD] Schriftkopf: {ex}")
+        _t1 = time.perf_counter()
+        _t_raster = 0.0
         for tag in ("element", "blatt", "layout", "auswahl_highlight",
                     "vp_griffe", "griffe"):
             c.delete(tag)
@@ -5439,13 +5453,18 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             # release font objects, otherwise they grow with every zoom level.
             self._font_cache.clear()
         if not self._ist_layout():
+            kull = self._kull_fenster() if len(self.elemente) > KULL_AB else None
             for el in self.elemente:
                 l = self.layers.get(el.layer)
                 if l and not l.sichtbar:
                     continue
+                if kull is not None and self._ausserhalb(el, kull):
+                    continue
                 self._zeichne_element(el)
             self._zeichne_auswahl_highlights()
+            _tr = time.perf_counter()
             self._zeichne_raster()
+            _t_raster = time.perf_counter() - _tr
             self._eig_palette_nachziehen()
         else:
             self._zeichne_blatt()
@@ -5460,6 +5479,48 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             c.tag_lower("blatt")
         self._vorschau_neu()
         c.tag_raise("snapmarker")
+        if getattr(self, "leistung_var", None) is not None and self.leistung_var.get():
+            self._leistung_melden(_t1 - _t0, time.perf_counter() - _t1 - _t_raster, _t_raster)
+
+    def _kull_fenster(self):
+        """Visible area in mm (plus a margin) for the culling of large drawings."""
+        v = self.view
+        cw = self.canvas.winfo_width() or 1200
+        ch = self.canvas.winfo_height() or 700
+        m = KULL_RAND_PX
+        x0, y1 = self.px_to_mm(-m, -m)
+        x1, y0 = self.px_to_mm(cw + m, ch + m)
+        return (min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1), v["zoom"])
+
+    @staticmethod
+    def _ausserhalb(el, fenster):
+        """True if a simple element (line, circle, arc, polyline, hatch, text) lies completely
+        outside the visible area or is smaller than a pixel - it is then not drawn at all.
+        Other element types (walls, devices, dimensions ...) are always drawn."""
+        if type(el) not in _KULL_TYPEN:
+            return False
+        try:
+            b = el.bbox()
+            x0, y0, x1, y1, z = fenster
+            if b[2] < x0 or b[0] > x1 or b[3] < y0 or b[1] > y1:
+                return True
+            if type(el) in _KULL_WINZIG and (b[2] - b[0]) * z < 0.5 and (b[3] - b[1]) * z < 0.5:
+                return True
+        except Exception:
+            return False
+        return False
+
+    def _leistung_melden(self, t_modell, t_zeichnen, t_raster):
+        """Performance measurement (Settings > Show drawing speed): times of the last redraw."""
+        try:
+            n_el = len(self.elemente if not self._ist_layout() else self.layout_elemente)
+            n_obj = len(self.canvas.find_all())
+            txt = tr("msg.leistung", modell=int(t_modell * 1000), zeichnen=int(t_zeichnen * 1000),
+                     raster=int(t_raster * 1000), el=n_el, obj=n_obj)
+            self.status.set(txt)
+            print("[KatieCAD] " + txt)
+        except Exception as ex:
+            print(f"[KatieCAD] Leistungsmessung: {ex}")
 
     def _zeichne_viewport_griffe(self, vp):
         c = self.canvas

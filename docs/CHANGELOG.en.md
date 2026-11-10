@@ -1,6 +1,8 @@
 # Changes
 
 ## 1.1.6
+- Change: **Faster drawing of large drawings:** from 800 elements on, simple elements (lines, circles, arcs, polylines, hatches, texts) that lie completely outside the visible area, and lines, circles, arcs and polylines smaller than half a pixel, are no longer drawn. Walls, cable ducts, devices, dimensions etc. are always drawn. On the test project (12,539 elements) drawing used to get slower when zooming in because all elements were processed
+- New: **Show drawing speed** (Settings > Show drawing speed): after every redraw the status bar (and the console) shows how long model calculation, elements and grid took, plus the number of elements and canvas objects. Meant for finding bottlenecks in large drawings; not saved
 - Fix: **DXF import:** importing a DXF file showed the error "cannot access local variable '_r2007'" (bug in the new R2007 note, DXF only)
 - Change: **Info centre text** shortened and extended by DWG export
 - Change: **Menu item "Print project…":** renamed (formerly "Print sheets / export PDF…"), matching *File > Print*; the "PDF" suffix suggested that only PDFs could be printed
