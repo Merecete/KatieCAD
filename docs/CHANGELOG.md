@@ -1,6 +1,7 @@
 # Änderungen
 
 ## 1.1.6
+- Änderung: **Export DXF / DWG nach Ansicht:** Befindest du dich in einer Layout-Ansicht, wird das aktive Layout als Blatt exportiert (wie beim Projekt-DXF), im Modellbereich wie bisher der Modellbereich. Die Statuszeile nennt den exportierten Bereich
 - Neu: **DWG-Export ohne Zusatzprogramm:** Der Export DWG nutzt jetzt den eingebauten Schreiber von `ezdwg` (MIT) und braucht den ODA File Converter nicht mehr. Nicht darstellbare Elemente werden als Linien/Bögen übernommen oder ausgelassen und nach dem Export gemeldet. Neue Einstellung *DWG-Konverter* (Automatisch / Nur eingebaut / Nur ODA); Testskript `tools/dwg_test.py`; `ezdwg` mindestens 0.19.2 (requirements.txt). **Noch nicht in echten CAD-Programmen geprüft – bitte mit eigenen Dateien testen**
 - Fix: **Rasterfarbe:** Das Farbfeld neben „Raster:“ zeigte nach einer Änderung nicht die neue Farbe (Namenskonflikt mit dem Raster-Schalter der Statusleiste, dessen Farbe dabei verändert wurde)
 - Fix: **Leere Auswahlfelder:** Die Listen neben „Hintergrund“ und „Raster“ blieben leer, solange man keine Vorgabe gewählt hatte. Sie zeigen jetzt immer einen Text: den Namen der passenden Vorgabe, sonst „Eigene Farbe“ (auch nach Wechsel zwischen Modell und Layout)

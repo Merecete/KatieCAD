@@ -1,6 +1,7 @@
 # Changes
 
 ## 1.1.6
+- Change: **Export DXF / DWG follows the view:** in a layout view the active layout is exported as a sheet (like the project DXF), in the model area the model area as before. The status bar names the exported area
 - New: **DWG export without an extra program:** Export DWG now uses the built-in writer of `ezdwg` (MIT) and no longer needs the ODA File Converter. Elements that cannot be represented are written as lines/arcs or left out and reported after the export. New setting *DWG converter* (Automatic / Built-in only / ODA only); test script `tools/dwg_test.py`; `ezdwg` at least 0.19.2 (requirements.txt). **Not yet checked in real CAD programs - please test with your own files**
 - Fix: **Grid colour:** the colour field next to "Grid:" did not show the new colour after a change (name clash with the grid switch of the status bar, whose colour was changed instead)
 - Fix: **Empty selection fields:** the lists next to "Background" and "Grid" stayed empty as long as no preset had been chosen. They now always show a text: the name of the matching preset, otherwise "Custom colour" (also after switching between model and layout)

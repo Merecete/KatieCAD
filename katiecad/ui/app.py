@@ -6475,6 +6475,19 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             self._element_zu_dxf(msp, el)
         return doc
 
+    def _dxf_dokument_layout(self):
+        """ezdxf document of the ACTIVE LAYOUT (sheet in mm, like the project DXF export)."""
+        from katiecad.fileio import dxf_projekt as _dp
+        lay = self.layouts[self.aktives_layout]
+        seiten, _ = _dp.seiten_sammeln([(lay.name, self)], False)
+        if not seiten:
+            raise ValueError(tr("msg.druckp.keine_seiten")
+                             + ("\n\n" + _dp.FEHLER[0] if _dp.FEHLER else ""))
+        doc = ezdxf.new(dxfversion="R2010")
+        _dp.ISO_MODUS = self._dxf_iso_modus()
+        _dp.dxf_projekt_schreiben(doc, seiten, spalten=1)
+        return doc
+
     def export_dxf(self):
         self._export_cad("dxf")
 
@@ -6495,14 +6508,18 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             return
         try:
             self._export_ziel = pfad            # images are written next to it
-            doc = self._dxf_dokument()
+            im_layout = self._ist_layout()            # layout view -> the sheet, model view -> the model
+            doc = self._dxf_dokument_layout() if im_layout else self._dxf_dokument()
             if art == "dwg":
                 from katiecad.fileio.cad_import import dxf_doc_als_dwg_speichern
                 bericht = dxf_doc_als_dwg_speichern(doc, pfad)
             else:
                 doc.saveas(pfad)
                 bericht = ""
-            self.status.set((tr("txt.0102", p0=titel, p1=pfad)) + (" - " + bericht if bericht else ""))
+            self.status.set((tr("txt.0102", p0=titel, p1=pfad))
+                            + " [" + (tr("msg.export.bereich_layout", name=self.layouts[self.aktives_layout].name)
+                                      if im_layout else tr("msg.export.bereich_modell")) + "]"
+                            + (" - " + bericht if bericht else ""))
             if bericht and any(w in bericht for w in ("nicht übernommen", "als Linien")):
                 messagebox.showinfo(titel, tr("msg.dwg.bericht", bericht=bericht, pfad=pfad))
         except Exception as e:
