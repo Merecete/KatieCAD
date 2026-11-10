@@ -12,8 +12,8 @@ In addition: layer colours (ACI/RGB), layers off/frozen, line types,
 line weights, units ($INSUNITS -> mm), OCS (extrusion -Z),
 damaged files via ezdxf.recover.
 
-DWG: converted to DXF via the ODA File Converter (via ezdxf.addons.odafc) or
-LibreDWG (dwg2dxf), ezdwg. ODA and LibreDWG are OPTIONAL external programs that the user may
+DWG: converted to DXF by the built-in ezdwg; LibreDWG (dwg2dxf) as a fallback and the ODA File
+Converter (via ezdxf.addons.odafc, only when chosen in the settings). LibreDWG and ODA are OPTIONAL external programs that the user may
 install separately (KatieCAD only starts them, nothing is bundled);
 ezdwg is a pip dependency and the built-in fallback.
 """
@@ -528,44 +528,37 @@ def oda_verfuegbar():
         return False
 
 
-# DWG engine: "auto" = built-in ezdwg first (no extra program), the ODA File Converter only as a
-# fallback; "ezdwg" = only the built-in one; "oda" = only the ODA File Converter (optional,
-# not free for commercial use). Set from the program settings.
+# DWG engine. "auto" = the built-in ezdwg (MIT, no extra program); LibreDWG (dwg2dxf) only as a
+# fallback when the user has installed it. "oda" = the ODA File Converter, ONLY when the user
+# chooses it in the settings (it is an optional external program, free for non-commercial use
+# only - KatieCAD never starts it by itself).
 DWG_MOTOR = "auto"
-DWG_MOTOREN = ("auto", "ezdwg", "oda")
+DWG_MOTOREN = ("auto", "oda")
 
 
 def dxf_doc_als_dwg_speichern(doc, pfad, version="R2018"):
     """Writes an ezdxf document as DWG. Returns a short report text (what was written / left out),
-    raises RuntimeError with a readable text if no engine can do it."""
-    fehler = []
-    if DWG_MOTOR in ("auto", "ezdwg"):
-        try:
-            from katiecad.fileio import dwg_schreiben
-            bericht = dwg_schreiben.dxf_doc_zu_dwg(doc, pfad, version)
-            return "ezdwg: " + bericht.text()
-        except Exception as ex:
-            fehler.append(str(ex))
-            if DWG_MOTOR == "ezdwg":
-                raise RuntimeError(fehler[-1])
-    if oda_verfuegbar():
+    raises RuntimeError with a readable text if the chosen engine cannot do it."""
+    if DWG_MOTOR == "oda":
+        if not oda_verfuegbar():
+            raise RuntimeError("Der ODA File Converter ist nicht installiert. In den Einstellungen "
+                               "(DWG-Konverter) wieder auf 'Automatisch' stellen oder als DXF exportieren.")
         from ezdxf.addons import odafc
         odafc.export_dwg(doc, pfad, version=version, replace=True)
         return "ODA File Converter"
-    raise RuntimeError(
-        (fehler[0] + "\n\n" if fehler else "") +
-        "Als Ausweg den DWG-Export mit dem optionalen 'ODA File Converter' nutzen "
-        "(opendesign.com/guestfiles/oda_file_converter) oder als DXF exportieren.")
+    from katiecad.fileio import dwg_schreiben
+    try:
+        return "ezdwg: " + dwg_schreiben.dxf_doc_zu_dwg(doc, pfad, version).text()
+    except Exception as ex:
+        raise RuntimeError(str(ex) + "\n\nAlternativ als DXF exportieren.")
 
 
 def dwg_zu_dxf_doc(pfad):
     """Converts DWG -> ezdxf document.
-    Order: ODA File Converter (optional, most accurate), LibreDWG (optional),
-    ezdwg (always available).
-    Returns: (doc, source) or raises RuntimeError with help text."""
+    Order: built-in ezdwg, then LibreDWG (only if installed); with the setting "ODA" the ODA File
+    Converter comes first. Returns: (doc, source) or raises RuntimeError with help text."""
     fehler = []
-    # 1) ODA File Converter (skipped when the built-in engine is chosen)
-    if DWG_MOTOR != "ezdwg":
+    if DWG_MOTOR == "oda":
         try:
             from ezdxf.addons import odafc
             _oda_pfad_setzen()
@@ -574,7 +567,12 @@ def dwg_zu_dxf_doc(pfad):
             fehler.append("ODA File Converter nicht gefunden")
         except Exception as ex:
             fehler.append(f"ODA: {ex}")
-    # 2) LibreDWG
+    # built-in ezdwg: ships with KatieCAD (pip package); DWG -> temporary DXF -> normal DXF import
+    try:
+        return _ezdwg_zu_dxf_doc(pfad), "ezdwg"
+    except Exception as ex:
+        fehler.append(f"ezdwg: {ex}")
+    # LibreDWG as a fallback (optional, only if the user installed it)
     exe = shutil.which("dwg2dxf")
     if exe:
         try:
@@ -585,14 +583,6 @@ def dwg_zu_dxf_doc(pfad):
                 return dxf_lesen(ziel)[0], "LibreDWG"
         except Exception as ex:
             fehler.append(f"LibreDWG: {ex}")
-    else:
-        fehler.append("LibreDWG (dwg2dxf) nicht gefunden")
-    # 3) ezdwg: ships with KatieCAD (pip package), so DWG import works out of
-    #    the box; DWG -> temporary DXF -> normal DXF import
-    try:
-        return _ezdwg_zu_dxf_doc(pfad), "ezdwg"
-    except Exception as ex:
-        fehler.append(f"ezdwg: {ex}")
     raise RuntimeError("; ".join(fehler))
 
 
@@ -648,15 +638,10 @@ def importiere_datei(pfad, layers):
         except RuntimeError as konv_fehler:
             raise RuntimeError(
                 "Die DWG-Datei konnte nicht gelesen werden.\n\n"
-                "Tipp: Mit dem kostenlosen 'ODA File Converter' "
-                "(opendesign.com/guestfiles/oda_file_converter, optional) "
-                "werden schwierige DWG-Dateien genauer gelesen.\n"
-                "Alternativ: Datei in AutoCAD/LibreCAD/DraftSight als DXF "
-                "speichern und den DXF-Import verwenden.\n\n"
+                "Tipp: Datei in AutoCAD/LibreCAD/DraftSight als DXF oder als "
+                "neueres DWG (R2013/R2018) speichern und erneut importieren.\n\n"
                 "Details: " + str(konv_fehler))
-        if erg.quelle == "ezdwg" and dwg_version(pfad) == "AC1021":
-            from katiecad.common.i18n import tr
-            erg.hinweise.append(tr("msg.dwg.r2007_hinweis"))
+        _r2007 = erg.quelle == "ezdwg" and dwg_version(pfad) == "AC1021"
     else:
         if not EZDXF_OK:
             raise RuntimeError("ezdxf ist nicht installiert (pip install ezdxf).")
@@ -671,4 +656,7 @@ def importiere_datei(pfad, layers):
     erg.fehler = imp.fehler
     erg.neue_layer = imp.neue_layer
     erg.faktor = imp.faktor
+    if _r2007 and (erg.fehler or erg.uebersprungen):
+        from katiecad.common.i18n import tr
+        erg.hinweise.append(tr("msg.dwg.r2007_hinweis"))
     return erg

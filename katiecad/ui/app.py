@@ -436,7 +436,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self.dxf_iso_var = tk.StringVar(
             value="linien" if lade_konfiguration().get("dxf_iso") == "linien" else "text")
         _motor = lade_konfiguration().get("dwg_motor")
-        self.dwg_motor_var = tk.StringVar(value=_motor if _motor in ("auto", "ezdwg", "oda") else "auto")
+        self.dwg_motor_var = tk.StringVar(value=_motor if _motor in ("auto", "oda") else "auto")
         self._dwg_motor_gesetzt(speichern=False)
         self._pts = []
         self._bem_kreis = None
@@ -1521,7 +1521,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         m_einst.add_cascade(label=tr("menu.einst.dxfiso"), menu=m_dxfiso)
         m_dwgm = tk.Menu(m_einst, tearoff=0, bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
                          activebackground=FARBEN["cyan"], activeforeground=FARBEN["bg_dunkel"])
-        for _w in ("auto", "ezdwg", "oda"):
+        for _w in ("auto", "oda"):
             m_dwgm.add_radiobutton(label=tr("menu.einst.dwgmotor." + _w), value=_w,
                                    variable=self.dwg_motor_var, command=self._dwg_motor_gesetzt)
         m_einst.add_cascade(label=tr("menu.einst.dwgmotor"), menu=m_dwgm)

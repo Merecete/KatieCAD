@@ -52,7 +52,7 @@ def main():
         return
     pfad = sys.argv[1]
     ausgabe = sys.argv[2] if len(sys.argv) > 2 else None
-    for motor in ("oda", "ezdwg"):
+    for motor in ("oda", "auto"):
         cad_import.DWG_MOTOR = motor
         try:
             doc, quelle = cad_import.dwg_zu_dxf_doc(pfad)

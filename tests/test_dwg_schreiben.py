@@ -98,14 +98,14 @@ check(b.version == "AC1015", "Rueckfall auf AC1015")
 neu.fail_32 = False
 
 # engine choice in cad_import
-cad_import.DWG_MOTOR = "ezdwg"
+cad_import.DWG_MOTOR = "auto"
 txt = cad_import.dxf_doc_als_dwg_speichern(Doc(ents[:1]), "z.dwg")
 check(txt.startswith("ezdwg:") and "1 Elemente" in txt, "cad_import nutzt ezdwg")
 cad_import.DWG_MOTOR = "auto"
-check(cad_import.DWG_MOTOREN == ("auto", "ezdwg", "oda"), "Motoren")
+check(cad_import.DWG_MOTOREN == ("auto", "oda"), "Motoren")
 from katiecad.common import i18n
 for lang in ("de", "en", "es"):
-    check(all(k in i18n.TEXTE[lang] for k in ("menu.einst.dwgmotor", "menu.einst.dwgmotor.auto", "menu.einst.dwgmotor.ezdwg", "menu.einst.dwgmotor.oda", "msg.dwg.bericht")), "i18n DWG " + lang)
+    check(all(k in i18n.TEXTE[lang] for k in ("menu.einst.dwgmotor", "menu.einst.dwgmotor.auto", "menu.einst.dwgmotor.oda", "msg.dwg.bericht")), "i18n DWG " + lang)
 import tempfile
 with tempfile.TemporaryDirectory() as td:
     for kopf, erwartet in ((b"AC1021", "AC1021"), (b"AC1032", "AC1032"), (b"XXXXXX", "")):

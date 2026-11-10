@@ -1,6 +1,8 @@
 # Changes
 
 ## 1.1.6
+- Change: **ODA File Converter only on request:** DWG import and export now run only through the built-in `ezdwg` (MIT) by default; the ODA converter (not free for commercial use) is never integrated automatically any more, only when you choose "Use ODA File Converter" under *Settings > DWG converter*. The "Built-in only" choice is gone (it is now "Automatic"), a previously saved "ezdwg" becomes "Automatic". Error texts no longer recommend ODA
+- Change: **R2007 note** now appears only when elements were faulty or skipped during import, and recommends saving as DXF / newer DWG instead of ODA
 - New: **Note for DWG files in R2007 format:** when such a file is imported with the built-in reader (ezdwg), KatieCAD points out that this format is read only to a limited extent (ODA or saving as DXF / newer DWG is more accurate). New diagnosis script `tools/dwg_diagnose.py`
 - Change: **Export DXF / DWG follows the view:** in a layout view the active layout is exported as a sheet (like the project DXF), in the model area the model area as before. The status bar names the exported area
 - New: **DWG export without an extra program:** Export DWG now uses the built-in writer of `ezdwg` (MIT) and no longer needs the ODA File Converter. Elements that cannot be represented are written as lines/arcs or left out and reported after the export. New setting *DWG converter* (Automatic / Built-in only / ODA only); test script `tools/dwg_test.py`; `ezdwg` at least 0.19.2 (requirements.txt). **Not yet checked in real CAD programs - please test with your own files**
