@@ -685,6 +685,8 @@ BEFEHLE = {
     "WANDVERBINDEN": "wand:verbinden", "WALLJOIN": "wand:verbinden", "VERBINDEN": "wand:verbinden",
     "WANDSCHRAFFUR": "wand:schraffur", "WALLHATCH": "wand:schraffur",
     "RAUM": "tool:raum", "ROOM": "tool:raum",
+    "KANAL": "tool:kanal", "KABELKANAL": "tool:kanal", "DUCT": "tool:kanal",
+    "KANALVERBINDEN": "tool:kanalverb", "DUCTJOIN": "tool:kanalverb",
     "RECHTECK": "tool:rechteck", "REC": "tool:rechteck", "RECTANG": "tool:rechteck",
     "TEXT": "tool:text", "T": "tool:text",
     "BEMASSUNG": "tool:bemassung", "BEM": "tool:bemassung", "DIM": "tool:bemassung",
@@ -1371,6 +1373,8 @@ class Spline(Polylinie):
 
 WAND_LAYER = "Wände"
 WAND_LAYER_FARBE = ("#c29bff", 0.5)          # colour, line weight of the automatic wall layer
+KANAL_LAYER = "CD"                           # cable ducts (own layer, red)
+KANAL_LAYER_FARBE = ("#ff3030", 0.35)
 WAND_AUSRICHTUNGEN = ("mitte", "links", "rechts")
 WAND_SCHRAFFUREN = ("", "schraeg", "kreuz", "voll")   # none / diagonal / cross-hatch / solid fill
 TUER_MODELLE = ("einfach", "doppel", "doppel_ungleich", "rolltor")   # single / double / double uneven / roller shutter
@@ -1872,6 +1876,194 @@ class Oeffnung(Element):
             self.breite = max(100.0, 2.0 * s)
 
 
+# ============================================================
+# Cable ducts (2D drawing and 3D bodies share the same geometry)
+# ============================================================
+KANAL_ARTEN = ("gerade", "verbinder", "winkel", "t")
+
+
+def _kn_einheit(dx, dy):
+    d = math.hypot(dx, dy)
+    return (dx / d, dy / d) if d > 1e-12 else (1.0, 0.0)
+
+
+def kanal_rechteck(p1, p2, breite):
+    """Outline of a straight duct from p1 to p2: [left p1, left p2, right p2, right p1]."""
+    ux, uy = _kn_einheit(p2[0] - p1[0], p2[1] - p1[1])
+    nx, ny = -uy * breite / 2.0, ux * breite / 2.0
+    return [(p1[0] + nx, p1[1] + ny), (p2[0] + nx, p2[1] + ny),
+            (p2[0] - nx, p2[1] - ny), (p1[0] - nx, p1[1] - ny)]
+
+
+def _kn_schnitt(p, d, q, e):
+    """Intersection of the lines p + t*d and q + s*e, or None (parallel)."""
+    det = d[0] * e[1] - d[1] * e[0]
+    if abs(det) < 1e-9:
+        return None
+    t = ((q[0] - p[0]) * e[1] - (q[1] - p[1]) * e[0]) / det
+    return (p[0] + t * d[0], p[1] + t * d[1])
+
+
+def kanal_formstueck(a, b):
+    """Fitting between two straight ducts a = (p1, p2, width) and b (same plane coordinates).
+    -> {"art": "verbinder" | "winkel" | "t", "punkte": polygon, "breite": width} or None.
+    End to end in line = coupler; end to end at an angle = elbow (parallelogram where both ducts
+    cross); end of one duct at the side of the other = tee (main duct section + stub)."""
+    (a1, a2, wa), (b1, b2, wb) = a, b
+    w = max(wa, wb)
+    thr = max(2.0 * w, 30.0)
+    dist = lambda p, q: math.hypot(p[0] - q[0], p[1] - q[1])
+    best = None
+    for ae, af in ((a1, a2), (a2, a1)):               # joint end, far end
+        for be, bf in ((b1, b2), (b2, b1)):
+            d = dist(ae, be)
+            if best is None or d < best[0]:
+                best = (d, ae, af, be, bf)
+    if best[0] <= thr:
+        d, ae, af, be, bf = best
+        ua = _kn_einheit(ae[0] - af[0], ae[1] - af[1])      # both point towards the joint
+        ub = _kn_einheit(be[0] - bf[0], be[1] - bf[1])
+        cosw = ua[0] * ub[0] + ua[1] * ub[1]
+        if cosw < -0.985:                                     # in line: coupler
+            mx, my = (ae[0] + be[0]) / 2.0, (ae[1] + be[1]) / 2.0
+            lang = d + 2.0 * min(25.0, 0.4 * w)
+            nx, ny = -ua[1] * w / 2.0, ua[0] * w / 2.0
+            ax, ay = ua[0] * lang / 2.0, ua[1] * lang / 2.0
+            return {"art": "verbinder", "breite": w, "punkte": [
+                (mx - ax + nx, my - ay + ny), (mx + ax + nx, my + ay + ny),
+                (mx + ax - nx, my + ay - ny), (mx - ax - nx, my - ay - ny)]}
+        if cosw > 0.985:
+            return None
+        na, nb = (-ua[1], ua[0]), (-ub[1], ub[0])
+        ecken = []
+        for sa, sb in ((1, 1), (-1, 1), (-1, -1), (1, -1)):
+            pa = (ae[0] + na[0] * sa * wa / 2.0, ae[1] + na[1] * sa * wa / 2.0)
+            pb = (be[0] + nb[0] * sb * wb / 2.0, be[1] + nb[1] * sb * wb / 2.0)
+            q = _kn_schnitt(pa, ua, pb, ub)
+            if q is None or dist(q, ae) > 3.0 * thr:
+                return None
+            ecken.append(q)
+        return {"art": "winkel", "breite": w, "punkte": ecken}
+    # tee: the end of one duct at the side of the other
+    treffer = None
+    for (s1, s2, ws), (m1, m2, wm) in (((a1, a2, wa), (b1, b2, wb)), ((b1, b2, wb), (a1, a2, wa))):
+        lx, ly = m2[0] - m1[0], m2[1] - m1[1]
+        l2 = lx * lx + ly * ly
+        if l2 < 1e-12:
+            continue
+        for se, sf in ((s1, s2), (s2, s1)):
+            t = ((se[0] - m1[0]) * lx + (se[1] - m1[1]) * ly) / l2
+            j = (m1[0] + t * lx, m1[1] + t * ly)
+            d = dist(se, j)
+            if 0.05 < t < 0.95 and d <= thr and (treffer is None or d < treffer[0]):
+                treffer = (d, se, sf, ws, m1, m2, wm, j)
+    if treffer is None:
+        return None
+    _d, se, sf, ws, m1, m2, wm, j = treffer
+    m = _kn_einheit(m2[0] - m1[0], m2[1] - m1[1])
+    sd = _kn_einheit(sf[0] - se[0], sf[1] - se[1])           # stub direction away from the main duct
+    nm = (-m[1], m[0])
+    if sd[0] * nm[0] + sd[1] * nm[1] < 0:
+        nm = (-nm[0], -nm[1])
+    cosf, sinf = sd[0] * m[0] + sd[1] * m[1], sd[0] * nm[0] + sd[1] * nm[1]
+    if sinf < 0.17:                                           # (almost) parallel: no tee
+        return None
+    xc, hw = (wm / 2.0) * cosf / sinf, ws / (2.0 * sinf)
+    h = abs(xc) + hw + min(25.0, 0.4 * wm)
+    ls = min(max(0.5 * ws, 20.0), 60.0)
+    lok = [(-h, -wm / 2.0), (h, -wm / 2.0), (h, wm / 2.0), (xc + hw, wm / 2.0),
+           (xc + hw + ls * cosf, wm / 2.0 + ls * sinf), (xc - hw + ls * cosf, wm / 2.0 + ls * sinf),
+           (xc - hw, wm / 2.0), (-h, wm / 2.0)]
+    pts = [(j[0] + m[0] * x + nm[0] * y, j[1] + m[1] * x + nm[1] * y) for x, y in lok]
+    return {"art": "t", "breite": max(wm, ws), "punkte": pts}
+
+
+def kanal_aus_koerper(k):
+    """Centre line data (p1, p2, width) in plane coordinates of a straight 3D duct body (prism
+    whose base is the rectangle from kanal_rechteck) or None."""
+    kd = getattr(k, "kanal", None)
+    if not kd or kd.get("art") != "gerade" or len(k.profil) != 4:
+        return None
+    c = k.profil
+    p1 = ((c[0][0] + c[3][0]) / 2.0, (c[0][1] + c[3][1]) / 2.0)
+    p2 = ((c[1][0] + c[2][0]) / 2.0, (c[1][1] + c[2][1]) / 2.0)
+    return p1, p2, math.hypot(c[0][0] - c[3][0], c[0][1] - c[3][1])
+
+
+def _punkt_in_polygon(x, y, poly):
+    inside = False
+    n = len(poly)
+    for i in range(n):
+        x1, y1 = poly[i]
+        x2, y2 = poly[(i + 1) % n]
+        if (y1 > y) != (y2 > y) and x < (x2 - x1) * (y - y1) / (y2 - y1) + x1:
+            inside = not inside
+    return inside
+
+
+class Kabelkanal(Polylinie):
+    """Cable duct piece in the plan: art "gerade" = straight piece with the centre line
+    `punkte` (2 points) and `breite`; the fittings "verbinder", "winkel", "t" are closed
+    polygons (`punkte` = outline) created by kanal_formstueck(). `hoehe` is the duct height used
+    when the piece is shown in 3D."""
+
+    def __init__(self, punkte, geschlossen=False, breite=60.0, hoehe=40.0, art="gerade", **kw):
+        super().__init__(punkte, False, **kw)
+        self.typ = "kabelkanal"
+        self.art = art if art in KANAL_ARTEN else "gerade"
+        self.geschlossen = self.art != "gerade"
+        self.breite = max(1.0, float(breite))
+        self.hoehe = max(1.0, float(hoehe))
+
+    def kontur(self):
+        if self.art == "gerade":
+            return kanal_rechteck(self.punkte[0], self.punkte[1], self.breite) if len(self.punkte) >= 2 else []
+        return list(self.punkte)
+
+    def prims(self, schraffur=False):
+        k = self.kontur()
+        return [(k, True)] if len(k) >= 3 else []
+
+    def flaechen(self):
+        return []
+
+    def laenge(self):
+        if self.art != "gerade" or len(self.punkte) < 2:
+            return 0.0
+        return math.hypot(self.punkte[1][0] - self.punkte[0][0], self.punkte[1][1] - self.punkte[0][1])
+
+    def bbox(self):
+        k = self.kontur()
+        if not k:
+            return super().bbox()
+        xs = [p[0] for p in k]
+        ys = [p[1] for p in k]
+        return (min(xs), min(ys), max(xs), max(ys))
+
+    def punkt_im_koerper(self, x, y, tol=0.0):
+        k = self.kontur()
+        if len(k) < 3:
+            return False
+        if _punkt_in_polygon(x, y, k):
+            return True
+        return any(abstand_punkt_segment(x, y, k[i][0], k[i][1], k[(i + 1) % len(k)][0],
+                                         k[(i + 1) % len(k)][1]) <= tol for i in range(len(k)))
+
+    def griffe(self):
+        if self.art == "gerade":
+            return super().griffe()
+        b = self.bbox()
+        return [("mid", (b[0] + b[2]) / 2.0, (b[1] + b[3]) / 2.0)]
+
+    def griff_bewegen(self, griff_id, x, y):
+        if self.art == "gerade":
+            super().griff_bewegen(griff_id, x, y)
+        elif griff_id == "mid":
+            b = self.bbox()
+            self.verschieben(x - (b[0] + b[2]) / 2.0, y - (b[1] + b[3]) / 2.0)
+
+
+
 def wand_verknuepfen(elemente):
     """Looks up the wall of every door / window (runtime only, nothing is saved): the opening
     lines up with the wall (centre on the centre line, wall direction and thickness) and the
@@ -2134,7 +2326,7 @@ def wand_in_linien(elemente):
     wand_verknuepfen(elemente)
     out = []
     for e in elemente:
-        if isinstance(e, (Wand, Oeffnung)):
+        if isinstance(e, (Wand, Oeffnung, Kabelkanal)):
             for pl, c in e.prims():
                 out.append(Polylinie(pl, geschlossen=c, layer=e.layer, farbe=e.farbe,
                                      linientyp=e.linientyp, eig_farbe=e.eig_farbe,
@@ -3027,6 +3219,9 @@ class BlockReferenz(Element):
             el.punkte = [self._welt_pts(x, y) for (x, y) in el.punkte]
             if isinstance(el, Wand):
                 el.dicke *= self.skalierung
+            if isinstance(el, Kabelkanal):
+                el.breite *= self.skalierung
+                el.hoehe *= self.skalierung
             if isinstance(el, (Ellipse, Spline)):
                 # parameters would be stale after the transformation
                 for _k in ("cx", "cy", "a", "b", "rot", "stuetz"):
@@ -4822,8 +5017,11 @@ class Koerper3D(Element):
 
     def __init__(self, art="prisma", profil=None, z0=0.0, hoehe=10.0, spitze=None,
                  rund=False, kugel=None, bez="", loecher=None, ebene=None,
-                 ausschnitte=None, glatt=None, r_oben=0.0, r_unten=0.0, netzdaten=None, **kw):
+                 ausschnitte=None, glatt=None, r_oben=0.0, r_unten=0.0, netzdaten=None,
+                 kanal=None, **kw):
         super().__init__("koerper3d", **kw)
+        # cable duct piece: {"art": "gerade" | "verbinder" | "winkel" | "t", "breite": mm}
+        self.kanal = dict(kanal) if isinstance(kanal, dict) else None
         # art "netz": merged body (union of several bodies) = free mesh
         # {"p": [[x, y, z]...], "k": [[i, j]...] edges, "f": [[i, j, k...]...] faces}
         self.netzdaten = None if not netzdaten else {

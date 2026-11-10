@@ -1,6 +1,8 @@
 # Changes
 
 ## 1.1.6
+- New: **Cable ducts in 2D and 3D:** new tools *Cable duct* and *Join ducts* (Insert menu, commands `DUCT` / `DUCTJOIN`). Width (in 3D also height) selectable; flat in the model area in 2D, automatically a body on the face in the 3D view. Between two ducts *Join ducts* creates the matching fitting (coupler, elbow or tee) as a component of its own. Own layer "CD" in red
+- Change: **New toolbar "Building:":** Wall, Door, Window, Join walls and Room move from the tool bar into the new "Building:" bar (together with the cable duct tools); position and order adjustable under View > Toolbars
 - New: **Documentation with its own font:** the dialog *Project > Create / update documentation...* has a new field **Font of the documents** below the title block template (default Arial; also "ISO" or any other font of the list). It applies to the cover sheet, table of contents and all lists and is saved with the project; the texts of the title block keep their own font
 - New: **DXF export of the ISO font:** new setting *Settings > DXF export of the ISO font*: **As text** (DXF text with the text style "ISO", stays editable; font file `isocp.shx`) or **As lines** (every stroke a polyline, looks the same everywhere). Applies to the DXF export of the drawing and of the project
 - Fix: **Grid in the model area:** the heavier major lines sometimes fell on every fifth line and sometimes were missing, depending on zoom and pan (rounding error when detecting the major line). The grid is now counted from the origin in whole steps: every major cell always consists of 5 x 5 small cells at any zoom; lines sit on whole pixels and have the same weight everywhere

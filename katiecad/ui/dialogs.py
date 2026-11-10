@@ -334,6 +334,53 @@ class WandDialog(tk.Toplevel):
         self.destroy()
 
 
+class KanalDialog(tk.Toplevel):
+    """Cable duct: width (and height in 3D). result = {"breite", "hoehe"} or None."""
+
+    def __init__(self, parent, breite=60.0, hoehe=40.0, mit_hoehe=False, laenge=None, titel=None):
+        super().__init__(parent)
+        self.result = None
+        self._hoehe0 = hoehe
+        self.title(titel or tr("dlg.kanal.titel_vorgabe"))
+        self.transient(parent)
+        _modal(self)
+        self.configure(bg=FARBEN["bg_mittel"])
+        f = ttk.Frame(self, padding=14)
+        f.pack(fill=tk.BOTH, expand=True)
+        ttk.Label(f, text=tr("dlg.kanal.breite")).grid(row=0, column=0, sticky=tk.W, pady=4)
+        self.breite_var = tk.StringVar(value=f"{breite:g}")
+        e = ttk.Entry(f, textvariable=self.breite_var, width=10)
+        e.grid(row=0, column=1, sticky=tk.W, padx=8)
+        e.focus_set()
+        e.select_range(0, tk.END)
+        self.hoehe_var = tk.StringVar(value=f"{hoehe:g}")
+        self._mit_hoehe = mit_hoehe
+        if mit_hoehe:
+            ttk.Label(f, text=tr("dlg.kanal.hoehe")).grid(row=1, column=0, sticky=tk.W, pady=4)
+            ttk.Entry(f, textvariable=self.hoehe_var, width=10).grid(row=1, column=1, sticky=tk.W, padx=8)
+        if laenge is not None:
+            ttk.Label(f, text=tr("dlg.kanal.laenge", wert=f"{laenge:.0f}"),
+                      style="Hint.TLabel").grid(row=2, column=0, columnspan=2, sticky=tk.W, pady=2)
+        ttk.Label(f, text=tr("dlg.kanal.hinweis"), style="Hint.TLabel", wraplength=380,
+                  justify=tk.LEFT).grid(row=3, column=0, columnspan=2, sticky=tk.W, pady=(8, 2))
+        bf = ttk.Frame(f)
+        bf.grid(row=4, column=0, columnspan=2, pady=(10, 0))
+        ttk.Button(bf, text=tr("dlg.ok"), command=self._ok).pack(side=tk.LEFT, padx=4)
+        ttk.Button(bf, text=tr("dlg.abbrechen"), command=self.destroy).pack(side=tk.LEFT, padx=4)
+        self.bind("<Return>", lambda ev: self._ok())
+        self.bind("<Escape>", lambda ev: self.destroy())
+        self.wait_window(self)
+
+    def _ok(self):
+        b = _zahl(self.breite_var, 0.0, True)
+        h = _zahl(self.hoehe_var, 0.0, True) if self._mit_hoehe else self._hoehe0
+        if b is None or h is None:
+            messagebox.showwarning(tr("dlg.kanal.titel_vorgabe"), tr("dlg.wand.zahl"), parent=self)
+            return
+        self.result = {"breite": b, "hoehe": h}
+        self.destroy()
+
+
 class OeffnungDialog(tk.Toplevel):
     """Attributes of ONE door or window. result = dict of attributes or None.
     vorgabe=True: the same dialog BEFORE placing (defaults for the following objects)."""

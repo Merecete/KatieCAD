@@ -93,6 +93,13 @@ def _zeichne(name, d, c, f):
         L([(14, 14), (14, 60), (62, 60)], 6); L([(34, 14), (34, 40), (62, 40)], 6)
         L([(14, 14), (34, 14)], 5); L([(62, 40), (62, 60)], 5)
         L([(70, 50), (90, 50)], 4); L([(82, 42), (90, 50), (82, 58)], 4)
+    elif name == "kanal":
+        L([(10, 38), (90, 38)], 6); L([(10, 62), (90, 62)], 6)
+        L([(10, 38), (10, 62)], 5); L([(90, 38), (90, 62)], 5); L([(50, 44), (50, 56)], 4)
+    elif name == "kanalverb":
+        L([(10, 24), (56, 24), (56, 90)], 5); L([(10, 46), (34, 46), (34, 90)], 5)
+        L([(10, 24), (10, 46)], 5); L([(56, 90), (34, 90)], 5)
+        L([(66, 50), (90, 50)], 4); L([(82, 42), (90, 50), (82, 58)], 4)
     elif name == "raum":
         L([(14, 18), (86, 18), (86, 82), (14, 82), (14, 18)], 5)
         L([(30, 40), (70, 40)], 5); L([(30, 54), (62, 54)], 4); L([(30, 68), (54, 68)], 4)
@@ -293,7 +300,7 @@ def _zeichne(name, d, c, f):
 
 
 NAMEN = ("auswahl", "linie", "polylinie", "kreis", "bogen", "ellipse", "spline",
-         "rechteck", "text", "bemassung", "stutzen", "brechen", "wand", "tuer", "fenster", "wandverb", "raum",
+         "rechteck", "text", "bemassung", "stutzen", "brechen", "wand", "tuer", "fenster", "wandverb", "raum", "kanal", "kanalverb",
          "vpunkt", "verbindung", "querverweis", "maske", "klemme", "kabel",
          "koordinatenfeld", "suchen", "zoom_plus", "zoom_minus",
          "zoom_grenzen", "reset", "ftext", "laenge", "manip",

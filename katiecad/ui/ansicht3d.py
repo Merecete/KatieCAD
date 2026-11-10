@@ -19,7 +19,7 @@ from tkinter import ttk
 from katiecad.ui import meldung as messagebox
 
 from katiecad.common.i18n import tr
-from katiecad.model.core import (FARBEN, UI_SCHRIFT, Koerper3D, Gruppe3D, Skizze3D, Bemassung3D, Text3D, Viewport,
+from katiecad.model.core import (FARBEN, UI_SCHRIFT, Koerper3D, Gruppe3D, Skizze3D, kanal_rechteck, kanal_aus_koerper, kanal_formstueck, Bemassung3D, Text3D, Viewport,
                                  quader, zylinder, kegel, pyramide, kugel)
 from katiecad.model import geom3d as G
 from katiecad.model import szene3d as S
@@ -28,7 +28,7 @@ from katiecad.ui.dialogs import _modal, _LayoutNameDialog
 
 # basic 2D tools of the toolbar -> their 3D counterparts (drawing on the work plane / 3D dimension)
 WERKZEUG_3D = {"linie": "linie", "polylinie": "poly", "kreis": "kreis", "rechteck": "rechteck",
-               "bemassung": "bem", "text": "text"}
+               "bemassung": "bem", "text": "text", "kanal": "kanal", "kanalverb": "kanalverb"}
 
 BTN_MITTE, BTN_RECHTS = ("3", "2") if __import__("sys").platform == "darwin" else ("2", "3")
 
@@ -436,7 +436,7 @@ def _vorzeichen(k):
 
 
 class Ansicht3D(tk.Frame):
-    MODI = ("flaeche", "linie", "kreis", "rechteck", "poly", "bem", "pivot", "text", "messen", "verschieben", "strecken")
+    MODI = ("flaeche", "linie", "kreis", "rechteck", "poly", "bem", "kanal", "kanalverb", "pivot", "text", "messen", "verschieben", "strecken")
     SKIZZEN = ("linie", "kreis", "rechteck", "poly")
 
     def __init__(self, app):
@@ -1228,6 +1228,10 @@ class Ansicht3D(tk.Frame):
             self._modus_ende()
             self.info_var.set(tr("d3.msg.ebene_gesetzt"))
             self.zeichne()
+        elif m == "kanal":
+            self._kanal_klick(e)
+        elif m == "kanalverb":
+            self._kanal_verb_klick(e)
         elif m in self.SKIZZEN:
             sk = self._skiz
             if sk is None and self.zustand.get("auto", True):
@@ -1431,6 +1435,81 @@ class Ansicht3D(tk.Frame):
         self.app.redraw()
         self.info_var.set(tr("d3.msg.bem_fertig", wert=b.wert_text(), einheit=self.app.einheit.get()))
 
+    # ---- cable ducts (3D prisms on the work plane) ------------------------
+    def _kanal_masse(self):
+        b, h = self.zustand.get("kanal") or (self.app._kanal_breite, self.app._kanal_hoehe)
+        return b, h
+
+    def _kanal_koerper(self, ebene, punkte, art, breite, hoehe):
+        daten = self.app._kanal_layer_daten()
+        return Koerper3D("prisma", profil=punkte, z0=0.0, hoehe=hoehe, ebene=ebene,
+                         bez=tr("kanal.bez." + art), kanal={"art": art, "breite": breite}, **daten)
+
+    def _kanal_klick(self, e):
+        """Each click after the first creates one straight duct piece (chain)."""
+        sk = self._skiz
+        if sk is None and self.zustand.get("auto", True):
+            fl = self._flaeche_unter(e)
+            if fl:
+                self.zustand["plane"] = {"ebene": fl[0], "pts": fl[1]}
+        p = self._lokal_punkt(e)
+        if p is None:
+            self.info_var.set(tr("d3.msg.keine_ebene"))
+            return
+        if sk is None:
+            self.app._kanal_layer_sicherstellen()
+            self._skiz = {"form": "kanal", "pts": [p], "maus": p}
+            self.info_var.set(tr("d3.msg.kanal_weiter"))
+        else:
+            q = sk["pts"][-1]
+            if math.hypot(p[0] - q[0], p[1] - q[1]) > 1e-6:
+                b, h = self._kanal_masse()
+                k = self._kanal_koerper(self._ebene(), kanal_rechteck(q, p, b), "gerade", b, h)
+                self.app._snapshot()
+                self.app.elemente.append(k)
+                self.app.auswahl = [k]
+                sk["pts"].append(p)
+                self.app.redraw()
+        self.zeichne()
+
+    def _kanal_verb_klick(self, e):
+        """Connect two duct bodies: click duct 1, then duct 2 -> fitting body."""
+        k = S.pick([x for x in self.app.elemente if self._sichtbar(x)], self.kamera,
+                   *self._mitte(), e.x, e.y)
+        if k is None or kanal_aus_koerper(k) is None:
+            self.info_var.set(tr("msg.kanal.keiner"))
+            return
+        sk = self._skiz
+        if sk is None:
+            self._skiz = {"form": "kanalverb", "pts": [], "el": k}
+            self.app.auswahl = [k]
+            self.info_var.set(tr("msg.kanal.verb_zweite"))
+            self.app.redraw()
+            self.zeichne()
+            return
+        a = sk["el"]
+        if k is a:
+            self.info_var.set(tr("msg.kanal.verb_andere"))
+            return
+        self._skiz = None
+        if not k.ebene or not a.ebene or any(abs(x - y) > 1e-6 for x, y in zip(a.ebene, k.ebene)):
+            self.info_var.set(tr("msg.kanal.andere_ebene"))
+            self.zeichne()
+            return
+        ka, kb = kanal_aus_koerper(a), kanal_aus_koerper(k)
+        r = kanal_formstueck(ka, kb)
+        if r is None:
+            self.info_var.set(tr("msg.kanal.kein_formstueck"))
+            self.zeichne()
+            return
+        neu = self._kanal_koerper(a.ebene, r["punkte"], r["art"], r["breite"], max(a.hoehe, k.hoehe))
+        self.app._snapshot()
+        self.app.elemente.append(neu)
+        self.app.auswahl = [neu]
+        self.app.redraw()
+        self.info_var.set(tr("msg.kanal.formstueck_" + r["art"]))
+        self.zeichne()
+
     def _skizze_fertig(self, form, daten):
         self.app._snapshot()
         sk = Skizze3D({"poly": "polylinie"}.get(form, form), self._ebene(), daten, **self._stil())
@@ -1465,7 +1544,7 @@ class Ansicht3D(tk.Frame):
                     for nz in (body.netze() if hasattr(body, "netze") else [body.netz()]):
                         for (i, j) in nz.kanten:
                             self._linie(nz.punkte[i], nz.punkte[j], gelb, 1, (4, 3), "vorschau")
-        if not sk or not self._maus:
+        if not sk or not self._maus or sk["form"] == "kanalverb":
             return
         if sk["form"] == "verschieben":
             q = self._raum_punkt(self._maus)
@@ -1522,6 +1601,14 @@ class Ansicht3D(tk.Frame):
             return
         e = self._ebene()
         q0 = sk["pts"][0]
+        if sk["form"] == "kanal":
+            q = sk["pts"][-1]
+            if math.hypot(p[0] - q[0], p[1] - q[1]) > 1e-6:
+                b, h = self._kanal_masse()
+                prof = kanal_rechteck(q, p, b)
+                self._polylinie([G.ebene_punkt(e, x, y) for x, y in prof], gelb, 1, (4, 3), "vorschau", True)
+                self._polylinie([G.ebene_punkt(e, x, y, h) for x, y in prof], gelb, 1, (4, 3), "vorschau", True)
+            return
         if sk["form"] == "kreis":
             r = math.hypot(p[0] - q0[0], p[1] - q0[1])
             prof = G.kreis_profil(q0[0], q0[1], r, 32)

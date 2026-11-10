@@ -176,9 +176,9 @@ _ln.spiegeln(0, 0, 1, 0)
 check(_ln.daten == [0, 0, 30, -40], "Linie spiegeln")
 _d = core.Skizze3D("linie", G.BODEN_EBENE, [1, 2, 3, 4]).to_dict(); _d.pop("typ", None)
 check(core.Skizze3D(**_d).daten == [1, 2, 3, 4] and core.Skizze3D(**_d).form == "linie", "Linie Round-Trip")
-check(TD.LEISTEN == ("werkzeug", "elektro", "3d") and set(TD.CONFIG_KEY) == set(TD.LEISTEN),
-      "drei Werkzeugleisten")
-for k in ("menu.ansicht.tb_werkzeug", "menu.ansicht.tb_elektro", "menu.ansicht.tb_3d", "d3.vp.waehlen",
+check(TD.LEISTEN == ("werkzeug", "bau", "elektro", "3d") and set(TD.CONFIG_KEY) == set(TD.LEISTEN),
+      "vier Werkzeugleisten")
+for k in ("menu.ansicht.tb_werkzeug", "menu.ansicht.tb_bau", "menu.ansicht.tb_elektro", "menu.ansicht.tb_3d", "d3.vp.waehlen",
           "d3.vp.an", "d3.fang.end", "d3.fang.mitte", "d3.fang.zentrum", "d3.fang.raster",
           "d3.modus.linie", "d3.msg.skizze_linie", "tb.wz.skizze_linie"):
     for T in (I.TEXTE["de"], I.TEXTE["en"]):
@@ -241,7 +241,7 @@ _o2 = core.quader(0, 0, 40, 30, 0, 20); _o2.kanten_oben_unten(100, True, True)
 check(0 < _o2.r_oben <= 10.0 and _o2.r_unten == _o2.r_oben, "Radius oben+unten begrenzt")
 _d2 = _o.to_dict(); _d2.pop("typ", None)
 check(core.Koerper3D(**_d2).r_oben == 5, "r_oben Round-Trip")
-check(W.WERKZEUG_3D == {"linie": "linie", "polylinie": "poly", "kreis": "kreis", "rechteck": "rechteck", "bemassung": "bem", "text": "text"},
+check(W.WERKZEUG_3D == {"linie": "linie", "polylinie": "poly", "kreis": "kreis", "rechteck": "rechteck", "bemassung": "bem", "text": "text", "kanal": "kanal", "kanalverb": "kanalverb"},
       "Werkzeug-Zuordnung 3D")
 check(len(G.profil_einruecken([(0, 0), (10, 0), (10, 10), (0, 10)], 2)) == 4, "Profil einrücken")
 _t = core.Text3D((1, 2, 3), "Hallo", 4)

@@ -73,7 +73,7 @@ from katiecad.model.core import (
     BEFEHLE, PdfSeite, ist_dunkel,
     E_DEVICES, E_LINES, E_CABLE, E_CLAMPS, E_PIN, ELEKTRO_LAYER, FTEXT_LAYER,
     Layer, Layout, Element, Linie, Kreis, Bogen, Rechteck, Polylinie, Text,
-    Ellipse, Spline, Wand, _variantenname, Oeffnung, Raum, RAUM_LAYER, RAUM_LAYER_FARBE, WAND_LAYER, WAND_LAYER_FARBE,
+    Ellipse, Spline, Wand, Kabelkanal, KANAL_LAYER, KANAL_LAYER_FARBE, kanal_formstueck, kanal_aus_koerper, _variantenname, Oeffnung, Raum, RAUM_LAYER, RAUM_LAYER_FARBE, WAND_LAYER, WAND_LAYER_FARBE,
     wand_verknuepfen, wand_in_linien, wand_verbinden, wand_schliessen,
     Bemassung, Viewport, Schraffur, Bild, konturen_aus_elementen, bereich_an_punkt,
     AttributDefinition, Leitung, Verbindungspunkt, Querverweis,
@@ -98,7 +98,7 @@ from katiecad.ui.dialogs import (
     _BlockNameDialog, _BlockAuswahlDialog, BlockBrowserDialog,
     BlockSpeichernDialog,
     ProjektNeuDialog, AttributDefinitionDialog, BlockAttributeDialog,
-    MasstextDialog, WandDialog, OeffnungDialog, RaumDialog, BauteilkatalogDialog, SchnellauswahlDialog, SuchenErsetzenDialog, QuerverweisDialog, PruefungDialog, EigenschaftenPalette, VerbindungspunkteDialog, ProjektDruckDialog,
+    MasstextDialog, WandDialog, KanalDialog, OeffnungDialog, RaumDialog, BauteilkatalogDialog, SchnellauswahlDialog, SuchenErsetzenDialog, QuerverweisDialog, PruefungDialog, EigenschaftenPalette, VerbindungspunkteDialog, ProjektDruckDialog,
     VerbindungspunktDialog, VerbindungDialog, FestMaskeDialog,
     KoordinatenfeldDialog,
     TitleBlockDialog, DokumentationDialog, ListenAuswahlDialog, SchriftenDialog, ProjektEigenschaftenDialog,
@@ -1050,6 +1050,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
     def _build_ui(self):
         self._build_menu()
         self.tb1 = ttk.Frame(self.root, padding=4)      # tools
+        self.tbB = ttk.Frame(self.root, padding=4)      # building
         self.tbE = ttk.Frame(self.root, padding=4)      # electrical
         self.tbD = ttk.Frame(self.root, padding=4)      # 3D
         self.tb2 = ttk.Frame(self.root, padding=4)
@@ -1307,6 +1308,10 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         m_einf.add_command(label=tr("menu.wand.schraffur"), command=self.wand_schraffur_umschalten)
         m_einf.add_command(label=tr("menu.einfuegen.raum"),
                            command=lambda: self._werkzeug_aus_menue("raum"))
+        m_einf.add_command(label=tr("menu.einfuegen.kanal"),
+                           command=lambda: self._werkzeug_aus_menue("kanal"))
+        m_einf.add_command(label=tr("menu.einfuegen.kanalverb"),
+                           command=lambda: self._werkzeug_aus_menue("kanalverb"))
         m_einf.add_separator()
         m_einf.add_command(label=tr("menu.einfuegen.text"),
                            command=lambda: self._werkzeug_aus_menue("text"))
@@ -1360,7 +1365,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                        bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
                        activebackground=FARBEN["cyan"],
                        activeforeground=FARBEN["bg_dunkel"])
-        for _name in ("werkzeug", "elektro", "3d"):
+        for _name in ("werkzeug", "bau", "elektro", "3d"):
             m_n = tk.Menu(m_tb, tearoff=0, bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
                           activebackground=FARBEN["cyan"],
                           activeforeground=FARBEN["bg_dunkel"])
@@ -1572,7 +1577,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
 
     def _build_toolbars(self):
         self._wz_knoepfe = {}
-        for attr in ("tb1", "tbE", "tbD", "tb2", "tb3"):
+        for attr in ("tb1", "tbB", "tbE", "tbD", "tb2", "tb3"):
             if not hasattr(self, attr):
                 frm = ttk.Frame(self.root, padding=4)
                 frm.pack(side=tk.TOP, fill=tk.X)
@@ -1590,12 +1595,19 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         ttk.Label(tb, text=tr("tb.werkzeug"), style="Title.TLabel").pack(side=tk.LEFT, padx=(0, 4))
         for key in ("auswahl", "linie", "polylinie", "kreis", "bogen",
                     "ellipse", "spline", "rechteck", "text", "bemassung",
-                    "stutzen", "brechen", "wand", "tuer", "fenster", "wandverb", "raum"):
+                    "stutzen", "brechen"):
             self._werkzeug_knopf(tb, key, FARBEN["cyan"])
         self._befehl_knopf(tb, "laenge", FARBEN["cyan"], self.laenge_start)
         self._befehl_knopf(tb, "suchen", FARBEN["cyan"], self.suchen_ersetzen)
         self._umschalt_knopf(tb, "manip", FARBEN["cyan"], self._manip_var,
                              lambda: self.manipulator_setzen(self._manip_var.get()))
+
+        # --- Toolbar building (own bar) ---
+        tb = self.tbB
+        self._leisten_griff(tb, "bau")
+        ttk.Label(tb, text=tr("tb.bau"), style="Title.TLabel").pack(side=tk.LEFT, padx=(0, 4))
+        for key in ("wand", "tuer", "fenster", "wandverb", "raum", "kanal", "kanalverb"):
+            self._werkzeug_knopf(tb, key, FARBEN["cyan"])
 
         # --- Toolbar electrical (own bar) ---
         tb = self.tbE
@@ -2110,6 +2122,12 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         elif wz == "wandverb":
             self._wand_verb_erste = None
             self.status.set(tr("msg.wand.verb_erste"))
+        elif wz == "kanal":
+            self._kanal_werkzeug_start()
+        elif wz == "kanalverb":
+            self._kanal_layer_sicherstellen()
+            self._kanal_verb_erste = None
+            self.status.set(tr("msg.kanal.verb_erste"))
         elif wz == "raum":
             self._raum_layer_sicherstellen()
             self.status.set(tr("msg.raum.klick"))
@@ -2659,7 +2677,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             self.status.set(tr("txt.0072"))
             self.redraw()
             return
-        if wz_e in ("wand", "raum") and self.aktuelle_polylinie:
+        if wz_e in ("wand", "raum", "kanal") and self.aktuelle_polylinie:
             # a wall / room in progress is discarded; the tool stays active (a second ESC
             # with nothing in progress goes back to the selection)
             self.aktuelle_polylinie = []
@@ -2670,7 +2688,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             self._eingabe_zuruecksetzen()
             self._update_eingabe_hinweis()
             self.redraw()
-            self.status.set(tr("msg.wand.klick" if wz_e == "wand" else "msg.raum.klick"))
+            self.status.set(tr({"wand": "msg.wand.klick", "kanal": "msg.kanal.klick"}.get(wz_e, "msg.raum.klick")))
             return
         if self._griff_drag_el is not None:
             self._griff_drag_el = None
@@ -3364,7 +3382,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                         ecken[(i + 1) % 4][0], ecken[(i + 1) % 4][1])
                 if isinstance(el, Viewport):
                     zentrum((x1 + x2) / 2, (y1 + y2) / 2)
-            elif isinstance(el, (Wand, Oeffnung)):
+            elif isinstance(el, (Wand, Oeffnung, Kabelkanal)):
                 for pl, c in (el.prims(schraffur=False) if isinstance(el, Wand) else el.prims()):
                     for (x, y) in pl:
                         ende(x, y)
@@ -3473,7 +3491,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             return None
         tol = 12.0 / self._ctx_skala()
         liste = self._ctx_liste()
-        if self.aktuelle_polylinie and self.aktives_werkzeug.get() in ("polylinie", "spline", "wand", "raum"):
+        if self.aktuelle_polylinie and self.aktives_werkzeug.get() in ("polylinie", "spline", "wand", "raum", "kanal"):
             liste = list(liste) + [Polylinie(list(self.aktuelle_polylinie))]
         res = self._finde_snap_in_liste(liste, x, y, tol, ref)
         if res is None and self._ctx()[0] == "layout":
@@ -3838,8 +3856,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             return el.trifft(x_mm, y_mm, tol)
         if isinstance(el, Raum):
             return el.trifft(x_mm, y_mm, tol, self.dezimalkomma.get())   # only the label, the frame is invisible
-        if isinstance(el, Wand) and el.punkt_im_koerper(x_mm, y_mm, tol):
-            return True                          # the whole wall body counts, not only the faces
+        if isinstance(el, (Wand, Kabelkanal)) and el.punkt_im_koerper(x_mm, y_mm, tol):
+            return True                          # the whole wall / duct body counts, not only the faces
         if isinstance(el, Oeffnung) and el.trifft(x_mm, y_mm, tol):
             return True
         if isinstance(el, Text):
@@ -4085,7 +4103,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             self._leitung_klick(x, y)
             return
         if werkzeug != "auswahl":
-            if werkzeug == "wandverb" or (werkzeug == "bemassung" and not self._pts
+            if werkzeug in ("wandverb", "kanalverb") or (werkzeug == "bemassung" and not self._pts
                                           and self.bem_art.get() in ("radius", "durchmesser")):
                 pt = self._px_zu_ctx(event.x, event.y)
             else:
@@ -4159,7 +4177,9 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             self._wand_oeffnung_klick(pt, werkzeug)
         elif werkzeug == "wandverb":
             self._wand_verbinden_klick(pt)
-        elif werkzeug in ("polylinie", "spline", "wand", "raum"):
+        elif werkzeug == "kanalverb":
+            self._kanal_verb_klick(pt)
+        elif werkzeug in ("polylinie", "spline", "wand", "raum", "kanal"):
             if lp is None or not self.aktuelle_polylinie:
                 self.aktuelle_polylinie = [pt]
             else:
@@ -4300,7 +4320,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                    (el.x2, el.y2), (el.x1, el.y2)]
             for i in range(4):
                 segs.append((pts[i], pts[(i + 1) % 4]))
-        elif isinstance(el, (Wand, Oeffnung)):
+        elif isinstance(el, (Wand, Oeffnung, Kabelkanal)):
             for pl, c in (el.prims(schraffur=False) if isinstance(el, Wand) else el.prims()):
                 pts = list(pl) + ([pl[0]] if c and len(pl) > 2 else [])
                 for i in range(len(pts) - 1):
@@ -4703,6 +4723,9 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         if isinstance(el, AttributDefinition):
             self._attdef_bearbeiten(el)
             return
+        if isinstance(el, Kabelkanal):
+            self._kanal_bearbeiten(el)
+            return
         if isinstance(el, Wand):
             self._wand_bearbeiten(el)
             return
@@ -4871,6 +4894,112 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             self.canvas.delete(self._auswahl_rechteck_id)
             self._auswahl_rechteck_id = None
         self.canvas.delete("auswahlvorschau")
+        self.redraw()
+
+    # ---- cable ducts ----------------------------------------------------
+    _kanal_breite = 60.0
+    _kanal_hoehe = 40.0
+    _kanal_verb_erste = None
+
+    def _kanal_layer_sicherstellen(self):
+        """Own layer "CD" for cable ducts (red, created on first use)."""
+        if KANAL_LAYER not in self.layers:
+            self.layers[KANAL_LAYER] = Layer(KANAL_LAYER, KANAL_LAYER_FARBE[0], KANAL_LAYER_FARBE[1])
+            try:
+                self.layer_cb.config(values=list(self.layers.keys()))
+            except Exception:
+                pass
+        return KANAL_LAYER
+
+    def _kanal_layer_daten(self):
+        daten = self._layer_daten()
+        self._kanal_layer_sicherstellen()
+        daten["layer"] = KANAL_LAYER
+        daten["eig_farbe"] = False
+        daten["farbe"] = self.layers[KANAL_LAYER].farbe
+        daten["staerke"] = None
+        daten["linientyp"] = "Volllinie (schmal)"
+        return daten
+
+    def _kanal_werkzeug_start(self):
+        """Cable duct tool selected: ask width (3D: and height), create the layer."""
+        self._kanal_layer_sicherstellen()
+        mit_hoehe = self.ansicht3d_aktiv() and not self._ist_layout()
+        dlg = KanalDialog(self.root, self._kanal_breite, self._kanal_hoehe, mit_hoehe=mit_hoehe)
+        if dlg.result is None:
+            self.aktives_werkzeug.set("auswahl")
+            self._werkzeug_toolbar()
+            return
+        self._kanal_breite = dlg.result["breite"]
+        if mit_hoehe:
+            self._kanal_hoehe = dlg.result["hoehe"]
+        w = self._ansicht3d
+        if w is not None and mit_hoehe:
+            w.zustand["kanal"] = (self._kanal_breite, self._kanal_hoehe)
+        self.status.set(tr("msg.kanal.klick"))
+
+    def _kanal_stuecke(self, punkte, geschlossen=False):
+        """Straight duct pieces, one per segment of the clicked points."""
+        pts = list(punkte) + ([punkte[0]] if geschlossen and len(punkte) > 2 else [])
+        out = []
+        for a, b in zip(pts, pts[1:]):
+            if math.hypot(b[0] - a[0], b[1] - a[1]) > 1e-9:
+                out.append(Kabelkanal([a, b], breite=self._kanal_breite, hoehe=self._kanal_hoehe,
+                                      **self._kanal_layer_daten()))
+        return out
+
+    def _kanal_unter_punkt(self, pt, ausser=None):
+        tol = 8 / self.view["zoom"]
+        for el in reversed(self._ctx_liste()):
+            if isinstance(el, Kabelkanal) and el.art == "gerade" and el is not ausser:
+                l = self.layers.get(el.layer)
+                if l and not l.sichtbar:
+                    continue
+                if el.punkt_im_koerper(pt[0], pt[1], tol):
+                    return el
+        return None
+
+    def _kanal_verb_klick(self, pt):
+        """Connect tool: click duct 1, then duct 2 - the matching fitting is created."""
+        erste = self._kanal_verb_erste
+        if erste is not None and erste not in self._ctx_liste():
+            erste = self._kanal_verb_erste = None
+        k = self._kanal_unter_punkt(pt, ausser=erste)
+        if k is None:
+            self.status.set(tr("msg.kanal.keiner" if erste is None else "msg.kanal.verb_andere"))
+            return
+        if erste is None:
+            self._kanal_verb_erste = k
+            self.auswahl = [k]
+            self.redraw()
+            self.status.set(tr("msg.kanal.verb_zweite"))
+            return
+        r = kanal_formstueck((erste.punkte[0], erste.punkte[1], erste.breite),
+                             (k.punkte[0], k.punkte[1], k.breite))
+        self._kanal_verb_erste = None
+        if r is None:
+            self.auswahl = []
+            self.redraw()
+            self.status.set(tr("msg.kanal.kein_formstueck"))
+            return
+        self._snapshot()
+        neu = Kabelkanal(r["punkte"], art=r["art"], breite=r["breite"],
+                         hoehe=max(erste.hoehe, k.hoehe), **self._kanal_layer_daten())
+        self._ziel_liste().append(neu)
+        self.auswahl = [neu]
+        self.redraw()
+        self.status.set(tr("msg.kanal.formstueck_" + r["art"]))
+
+    def _kanal_bearbeiten(self, el):
+        if el.art != "gerade":
+            self.status.set(tr("msg.kanal.formstueck_fix"))
+            return
+        dlg = KanalDialog(self.root, el.breite, el.hoehe, mit_hoehe=True, laenge=el.laenge(),
+                          titel=tr("dlg.kanal.titel"))
+        if dlg.result is None:
+            return
+        self._snapshot()
+        el.breite, el.hoehe = dlg.result["breite"], dlg.result["hoehe"]
         self.redraw()
 
     # ---- building walls -------------------------------------------------
@@ -5136,7 +5265,9 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             return
         if len(self.aktuelle_polylinie) >= 2:
             self._snapshot()
-            if self.aktives_werkzeug.get() == "wand":
+            if self.aktives_werkzeug.get() == "kanal":
+                self._ziel_liste().extend(self._kanal_stuecke(self.aktuelle_polylinie, geschlossen))
+            elif self.aktives_werkzeug.get() == "wand":
                 self._ziel_liste().append(Wand(
                     self.aktuelle_polylinie, geschlossen=geschlossen,
                     dicke=self._wand_dicke, ausrichtung=self._wand_ausrichtung,
@@ -6185,6 +6316,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             if typ == "spline":     return Spline(**d)
             if typ == "wand":       return Wand(**d)
             if typ == "oeffnung":   return Oeffnung(**d)
+            if typ == "kabelkanal": return Kabelkanal(**d)
             if typ == "raum":       return Raum(**d)
             if typ == "text":       return Text(**d)
             if typ == "bemassung":  return Bemassung(**d)
@@ -6301,7 +6433,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                         continue
                     ent = msp.add_text(zeile, dxfattribs={**attribs, "height": el.hoehe})
                     ent.set_placement((tx, ty), align=ezdxf.enums.TextEntityAlignment.MIDDLE_CENTER)
-            elif isinstance(el, (Wand, Oeffnung)):
+            elif isinstance(el, (Wand, Oeffnung, Kabelkanal)):
                 if isinstance(el, Wand):
                     for q in el.flaechen():
                         h = msp.add_hatch(dxfattribs=attribs)
@@ -6641,7 +6773,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         einh = self._einh_faktor()
         try:
             wort = text.upper()
-            if w in ("polylinie", "spline", "wand", "raum") and self.aktuelle_polylinie and wort in (
+            if w in ("polylinie", "spline", "wand", "raum", "kanal") and self.aktuelle_polylinie and wort in (
                     "S", "SCHLIESSEN", "C", "CLOSE"):
                 self._polylinie_abschliessen(geschlossen=True)
                 self.letzter_punkt = None
@@ -6671,7 +6803,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                 self._eingabe_kreis(text, einh)
             elif w == "rechteck":
                 self._eingabe_rechteck(text, einh)
-            elif w in ("polylinie", "spline", "wand", "raum"):
+            elif w in ("polylinie", "spline", "wand", "raum", "kanal"):
                 self._eingabe_polylinie(text, einh)
             elif w in ("bogen", "bemassung", "ellipse"):
                 self._eingabe_punkt_werkzeug(text, einh)
@@ -7075,7 +7207,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                            (el.x2, el.y2), (el.x1, el.y2)], True)]
         if isinstance(el, Raum):
             return el.prims(self.dezimalkomma.get())
-        if isinstance(el, (Wand, Oeffnung)):
+        if isinstance(el, (Wand, Oeffnung, Kabelkanal)):
             fl = [("f", q) for q in el.flaechen()] if isinstance(el, Wand) else []
             return fl + [("l", pl, c) for pl, c in el.prims()]
         if isinstance(el, Polylinie):
@@ -7654,6 +7786,13 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                 zeige(Polylinie(spline_punkte(pts)))
             elif len(pts) == 2:
                 zeige(Polylinie(pts))
+            a = self.aktuelle_polylinie[-1]
+            label((a[0] + pt[0]) / 2, (a[1] + pt[1]) / 2,
+                  f"{math.hypot(pt[0] - a[0], pt[1] - a[1]) / einh:.2f} {unit}")
+        elif w == "kanal" and self.aktuelle_polylinie:
+            pts = list(self.aktuelle_polylinie) + [pt]
+            for st in self._kanal_stuecke(pts):
+                zeige(st)
             a = self.aktuelle_polylinie[-1]
             label((a[0] + pt[0]) / 2, (a[1] + pt[1]) / 2,
                   f"{math.hypot(pt[0] - a[0], pt[1] - a[1]) / einh:.2f} {unit}")
@@ -8481,7 +8620,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
     def _eingabe_leer(self):
         if self._op is not None:
             self._op_rechtsklick()
-        elif (self.aktives_werkzeug.get() in ("polylinie", "spline", "wand", "raum")
+        elif (self.aktives_werkzeug.get() in ("polylinie", "spline", "wand", "raum", "kanal")
               and self.aktuelle_polylinie):
             self._polylinie_abschliessen(geschlossen=False)
             self.letzter_punkt = None
