@@ -1,6 +1,8 @@
 # Changes
 
 ## 1.1.6
+- New: **Wall opening:** new tool in the "Building:" bar (Insert > Wall opening, command `OPENING`). Works like the window, just without glazing: the wall gets an open gap and only the reveal lines are drawn. Width, height and sill adjustable (double click); hatch and wall faces are left out in the gap
+- New: **Hatch for cable ducts:** as with walls (none, diagonal, cross, solid fill; line spacing adjustable, default 20 mm). In the dialog before drawing and afterwards by double click; also applies to fittings (double click). 2D only, in 3D the duct stays a body
 - New: **Cable duct alignment:** as with walls, the dialog sets whether the drawn line is the duct centre, the left or the right duct edge (2D and 3D)
 - Fix: **Toolbars:** when the window was resized or a bar moved elsewhere, all bars jumped back to the original order; the chosen order is now kept
 - Fix: **Toolbars:** a bar can now reliably be dragged between two others; the mouse position over the target bar decides (left half = before, right half = behind)

@@ -335,12 +335,15 @@ class WandDialog(tk.Toplevel):
 
 
 class KanalDialog(tk.Toplevel):
-    """Cable duct: width (and height in 3D). result = {"breite", "hoehe"} or None."""
+    """Cable duct: width (and height in 3D), position of the drawn line and hatch.
+    result = {"breite", "hoehe", "ausrichtung", "schraffur", "schraffur_abstand"} or None.
+    nur_schraffur: fittings - size fields locked, only the hatch can be changed."""
 
     AUSR = ("mitte", "links", "rechts")
+    SCHR = ("", "schraeg", "kreuz", "voll")
 
     def __init__(self, parent, breite=60.0, hoehe=40.0, mit_hoehe=False, laenge=None, titel=None,
-                 ausrichtung=None):
+                 ausrichtung=None, schraffur="", schraffur_abstand=20.0, nur_schraffur=False):
         super().__init__(parent)
         self.result = None
         self._hoehe0 = hoehe
@@ -350,17 +353,20 @@ class KanalDialog(tk.Toplevel):
         self.configure(bg=FARBEN["bg_mittel"])
         f = ttk.Frame(self, padding=14)
         f.pack(fill=tk.BOTH, expand=True)
+        zustand = "disabled" if nur_schraffur else "normal"
         ttk.Label(f, text=tr("dlg.kanal.breite")).grid(row=0, column=0, sticky=tk.W, pady=4)
         self.breite_var = tk.StringVar(value=f"{breite:g}")
-        e = ttk.Entry(f, textvariable=self.breite_var, width=10)
+        e = ttk.Entry(f, textvariable=self.breite_var, width=10, state=zustand)
         e.grid(row=0, column=1, sticky=tk.W, padx=8)
-        e.focus_set()
-        e.select_range(0, tk.END)
+        if not nur_schraffur:
+            e.focus_set()
+            e.select_range(0, tk.END)
         self.hoehe_var = tk.StringVar(value=f"{hoehe:g}")
         self._mit_hoehe = mit_hoehe
         if mit_hoehe:
             ttk.Label(f, text=tr("dlg.kanal.hoehe")).grid(row=1, column=0, sticky=tk.W, pady=4)
-            ttk.Entry(f, textvariable=self.hoehe_var, width=10).grid(row=1, column=1, sticky=tk.W, padx=8)
+            ttk.Entry(f, textvariable=self.hoehe_var, width=10, state=zustand
+                      ).grid(row=1, column=1, sticky=tk.W, padx=8)
         self._ausr = ausrichtung
         self.ausr_var = tk.StringVar(value=tr("dlg.kanal.ausr." + (ausrichtung or "mitte")))
         if ausrichtung is not None:
@@ -368,13 +374,21 @@ class KanalDialog(tk.Toplevel):
             ttk.Combobox(f, textvariable=self.ausr_var, state="readonly", width=34,
                          values=[tr("dlg.kanal.ausr." + a) for a in self.AUSR]
                          ).grid(row=2, column=1, sticky=tk.W, padx=8)
+        ttk.Label(f, text=tr("dlg.wand.schraffur")).grid(row=3, column=0, sticky=tk.W, pady=4)
+        self.schr_var = tk.StringVar(value=tr("dlg.wand.schr." + (schraffur or "keine")))
+        ttk.Combobox(f, textvariable=self.schr_var, state="readonly", width=34,
+                     values=[tr("dlg.wand.schr." + (a or "keine")) for a in self.SCHR]
+                     ).grid(row=3, column=1, sticky=tk.W, padx=8)
+        ttk.Label(f, text=tr("dlg.wand.schr_abstand")).grid(row=4, column=0, sticky=tk.W, pady=4)
+        self.abst_var = tk.StringVar(value=f"{schraffur_abstand:g}")
+        ttk.Entry(f, textvariable=self.abst_var, width=10).grid(row=4, column=1, sticky=tk.W, padx=8)
         if laenge is not None:
             ttk.Label(f, text=tr("dlg.kanal.laenge", wert=f"{laenge:.0f}"),
-                      style="Hint.TLabel").grid(row=3, column=0, columnspan=2, sticky=tk.W, pady=2)
+                      style="Hint.TLabel").grid(row=5, column=0, columnspan=2, sticky=tk.W, pady=2)
         ttk.Label(f, text=tr("dlg.kanal.hinweis"), style="Hint.TLabel", wraplength=380,
-                  justify=tk.LEFT).grid(row=4, column=0, columnspan=2, sticky=tk.W, pady=(8, 2))
+                  justify=tk.LEFT).grid(row=6, column=0, columnspan=2, sticky=tk.W, pady=(8, 2))
         bf = ttk.Frame(f)
-        bf.grid(row=5, column=0, columnspan=2, pady=(10, 0))
+        bf.grid(row=7, column=0, columnspan=2, pady=(10, 0))
         ttk.Button(bf, text=tr("dlg.ok"), command=self._ok).pack(side=tk.LEFT, padx=4)
         ttk.Button(bf, text=tr("dlg.abbrechen"), command=self.destroy).pack(side=tk.LEFT, padx=4)
         self.bind("<Return>", lambda ev: self._ok())
@@ -384,12 +398,16 @@ class KanalDialog(tk.Toplevel):
     def _ok(self):
         b = _zahl(self.breite_var, 0.0, True)
         h = _zahl(self.hoehe_var, 0.0, True) if self._mit_hoehe else self._hoehe0
-        if b is None or h is None:
+        abst = _zahl(self.abst_var, 0.5)
+        if b is None or h is None or abst is None:
             messagebox.showwarning(tr("dlg.kanal.titel_vorgabe"), tr("dlg.wand.zahl"), parent=self)
             return
         wahl = self.ausr_var.get()
         ausr = next((a for a in self.AUSR if tr("dlg.kanal.ausr." + a) == wahl), "mitte")
-        self.result = {"breite": b, "hoehe": h, "ausrichtung": ausr}
+        sw = self.schr_var.get()
+        schr = next((a for a in self.SCHR if tr("dlg.wand.schr." + (a or "keine")) == sw), "")
+        self.result = {"breite": b, "hoehe": h, "ausrichtung": ausr, "schraffur": schr,
+                       "schraffur_abstand": abst}
         self.destroy()
 
 
@@ -418,7 +436,7 @@ class OeffnungDialog(tk.Toplevel):
             cb.bind("<<ComboboxSelected>>", lambda ev: self._modell_gewechselt())
             r += 1
         felder = [("breite", el.breite), ("hoehe", el.hoehe)]
-        if el.art == "fenster":
+        if el.art in ("fenster", "durchbruch"):
             felder.append(("bruestung", el.bruestung))
         self.vars = {}
         for k, v in felder:

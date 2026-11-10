@@ -126,6 +126,7 @@ BESCHREIBUNG = {
     "tool:brechen": ("Brechen", "Break"),
     "tool:ellipse": ("Ellipse", "Ellipse"),
     "tool:fenster": ("Fenster in Wand", "Window in wall"),
+    "tool:durchbruch": ("Wanddurchbruch", "Wall opening"),
     "tool:ftext": ("Funktionstext", "Function text"),
     "tool:klemme": ("Klemme", "Terminal"),
     "tool:kreis": ("Kreis", "Circle"),

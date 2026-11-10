@@ -89,6 +89,10 @@ def _zeichne(name, d, c, f):
         L([(28, 30), (72, 30)], 5); L([(28, 54), (72, 54)], 5)
         L([(28, 38), (72, 38)], 3); L([(28, 46), (72, 46)], 3)
         L([(28, 30), (28, 54)], 5); L([(72, 30), (72, 54)], 5)
+    elif name == "durchbruch":
+        L([(10, 30), (34, 30)], 5); L([(10, 54), (34, 54)], 5)
+        L([(66, 30), (90, 30)], 5); L([(66, 54), (90, 54)], 5)
+        L([(34, 22), (34, 62)], 5); L([(66, 22), (66, 62)], 5)
     elif name == "wandverb":
         L([(14, 14), (14, 60), (62, 60)], 6); L([(34, 14), (34, 40), (62, 40)], 6)
         L([(14, 14), (34, 14)], 5); L([(62, 40), (62, 60)], 5)
@@ -300,7 +304,7 @@ def _zeichne(name, d, c, f):
 
 
 NAMEN = ("auswahl", "linie", "polylinie", "kreis", "bogen", "ellipse", "spline",
-         "rechteck", "text", "bemassung", "stutzen", "brechen", "wand", "tuer", "fenster", "wandverb", "raum", "kanal", "kanalverb",
+         "rechteck", "text", "bemassung", "stutzen", "brechen", "wand", "tuer", "fenster", "durchbruch", "wandverb", "raum", "kanal", "kanalverb",
          "vpunkt", "verbindung", "querverweis", "maske", "klemme", "kabel",
          "koordinatenfeld", "suchen", "zoom_plus", "zoom_minus",
          "zoom_grenzen", "reset", "ftext", "laenge", "manip",

@@ -682,6 +682,7 @@ BEFEHLE = {
     "SPLINE": "tool:spline", "SPL": "tool:spline",
     "WAND": "tool:wand", "WALL": "tool:wand", "TUER": "tool:tuer", "TÜR": "tool:tuer",
     "DOOR": "tool:tuer", "FENSTER": "tool:fenster", "WINDOW": "tool:fenster",
+    "DURCHBRUCH": "tool:durchbruch", "OPENING": "tool:durchbruch",
     "WANDVERBINDEN": "wand:verbinden", "WALLJOIN": "wand:verbinden", "VERBINDEN": "wand:verbinden",
     "WANDSCHRAFFUR": "wand:schraffur", "WALLHATCH": "wand:schraffur",
     "RAUM": "tool:raum", "ROOM": "tool:raum",
@@ -1387,6 +1388,7 @@ TUER_MODELL_VORGABE = {                       # width, height per door model (mm
 OEFFNUNG_VORGABE = {                          # plan symbols: door / window
     "tuer": {"breite": 1010.0, "hoehe": 2010.0, "bruestung": 0.0},
     "fenster": {"breite": 1250.0, "hoehe": 1250.0, "bruestung": 900.0},
+    "durchbruch": {"breite": 600.0, "hoehe": 600.0, "bruestung": 300.0},
 }
 
 
@@ -1752,7 +1754,8 @@ class Oeffnung(Element):
         for k in ("_geo", "geo"):
             kw.pop(k, None)
         super().__init__("oeffnung", **kw)
-        self.art = "fenster" if art == "fenster" else "tuer"
+        # "durchbruch" = wall opening (gap in the wall, only the reveals, no glazing / leaf)
+        self.art = art if art in ("fenster", "durchbruch") else "tuer"
         v = OEFFNUNG_VORGABE[self.art]
         self.x, self.y = float(x), float(y)
         self.winkel = float(winkel)
@@ -1792,6 +1795,8 @@ class Oeffnung(Element):
             return (cx + ux * s + nx * q, cy + uy * s + ny * q)
 
         out = [([pt(-h, -orr), pt(-h, ol)], False), ([pt(h, -orr), pt(h, ol)], False)]
+        if self.art == "durchbruch":                             # reveals only
+            return out
         if self.art == "fenster":                                # glazing: two thin lines
             for f in (0.35, 0.65):
                 q = -orr + (orr + ol) * f
@@ -1893,6 +1898,34 @@ def kanal_rechteck(p1, p2, breite):
     nx, ny = -uy * breite / 2.0, ux * breite / 2.0
     return [(p1[0] + nx, p1[1] + ny), (p2[0] + nx, p2[1] + ny),
             (p2[0] - nx, p2[1] - ny), (p1[0] - nx, p1[1] - ny)]
+
+
+def polygon_schraffur(poly, winkel_liste, d):
+    """Hatch lines [[p, q], ...] at the given angles (degrees) and spacing d, clipped to a simple
+    polygon (even-odd rule; the lines lie on multiples of d like the wall hatch)."""
+    out = []
+    n = len(poly)
+    for w in winkel_liste:
+        a = math.radians(w)
+        dx, dy = math.cos(a), math.sin(a)
+        nx, ny = -dy, dx
+        proj = [x * nx + y * ny for x, y in poly]
+        for k in range(int(math.ceil(min(proj) / d - 1e-9)), int(math.floor(max(proj) / d + 1e-9)) + 1):
+            c = k * d
+            t = []
+            for i in range(n):
+                p, q = poly[i], poly[(i + 1) % n]
+                fa = p[0] * nx + p[1] * ny - c
+                fb = q[0] * nx + q[1] * ny - c
+                if (fa >= 0.0) != (fb >= 0.0):          # half-open: lines through corners still count
+                    u = fa / (fa - fb)
+                    t.append(((p[0] + (q[0] - p[0]) * u) * dx + (p[1] + (q[1] - p[1]) * u) * dy,
+                              (p[0] + (q[0] - p[0]) * u, p[1] + (q[1] - p[1]) * u)))
+            t.sort(key=lambda e: e[0])
+            for i in range(0, len(t) - 1, 2):
+                if math.hypot(t[i + 1][1][0] - t[i][1][0], t[i + 1][1][1] - t[i][1][1]) > 1e-6:
+                    out.append([t[i][1], t[i + 1][1]])
+    return out
 
 
 def kanal_versatz(punkte, ausrichtung, breite, geschlossen=False):
@@ -2062,9 +2095,12 @@ class Kabelkanal(Polylinie):
     polygons (`punkte` = outline) created by kanal_formstueck(). `hoehe` is the duct height used
     when the piece is shown in 3D."""
 
-    def __init__(self, punkte, geschlossen=False, breite=60.0, hoehe=40.0, art="gerade", **kw):
+    def __init__(self, punkte, geschlossen=False, breite=60.0, hoehe=40.0, art="gerade",
+                 schraffur="", schraffur_abstand=20.0, **kw):
         super().__init__(punkte, False, **kw)
         self.typ = "kabelkanal"
+        self.schraffur = schraffur if schraffur in WAND_SCHRAFFUREN else ""
+        self.schraffur_abstand = max(1.0, float(schraffur_abstand))
         self.art = art if art in KANAL_ARTEN else "gerade"
         self.geschlossen = self.art != "gerade"
         self.breite = max(1.0, float(breite))
@@ -2075,12 +2111,21 @@ class Kabelkanal(Polylinie):
             return kanal_rechteck(self.punkte[0], self.punkte[1], self.breite) if len(self.punkte) >= 2 else []
         return list(self.punkte)
 
-    def prims(self, schraffur=False):
+    def prims(self, schraffur=True):
+        """Outline (+ hatch lines "schraeg" / "kreuz" clipped to the body)."""
         k = self.kontur()
-        return [(k, True)] if len(k) >= 3 else []
+        if len(k) < 3:
+            return []
+        out = [(k, True)]
+        if schraffur and self.schraffur in ("schraeg", "kreuz"):
+            winkel = [45.0] if self.schraffur == "schraeg" else [45.0, 135.0]
+            out += [(pl, False) for pl in polygon_schraffur(k, winkel, self.schraffur_abstand)]
+        return out
 
     def flaechen(self):
-        return []
+        """Solid fill ("voll") or []."""
+        k = self.kontur()
+        return [k] if (self.schraffur == "voll" and len(k) >= 3) else []
 
     def laenge(self):
         if self.art != "gerade" or len(self.punkte) < 2:
@@ -2158,7 +2203,7 @@ def wand_verknuepfen(elemente):
                 o.ausrichtung = w.ausrichtung
                 o.winkel = math.degrees(math.atan2(uy, ux)) % 360.0
             # every wall that contains the opening gets the gap (also overlapping duplicates)
-            if o.art == "tuer":
+            if o.art != "fenster":                   # door / breakthrough: the wall is open
                 w._luecken.append((k, s0 / ln, s1 / ln))
             else:
                 w._fenster.append((k, s0 / ln, s1 / ln))
@@ -3277,6 +3322,7 @@ class BlockReferenz(Element):
             if isinstance(el, Kabelkanal):
                 el.breite *= self.skalierung
                 el.hoehe *= self.skalierung
+                el.schraffur_abstand *= self.skalierung
             if isinstance(el, (Ellipse, Spline)):
                 # parameters would be stale after the transformation
                 for _k in ("cx", "cy", "a", "b", "rot", "stuetz"):

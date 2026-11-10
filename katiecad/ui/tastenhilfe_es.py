@@ -116,6 +116,7 @@ BESCHREIBUNG = {
     "tool:brechen": "Partir",
     "tool:ellipse": "Elipse",
     "tool:fenster": "Ventana en muro",
+    "tool:durchbruch": "Abertura en muro",
     "tool:ftext": "Texto de función",
     "tool:klemme": "Borne",
     "tool:kreis": "Círculo",

@@ -1,6 +1,8 @@
 # Änderungen
 
 ## 1.1.6
+- Neu: **Wanddurchbruch:** neues Werkzeug in der Leiste „Bau:“ (Einfügen › Wanddurchbruch, Befehl `DURCHBRUCH`). Funktioniert wie das Fenster, nur ohne Glasscheibe: Die Wand bekommt eine offene Lücke, gezeichnet werden nur die Laibungslinien. Breite, Höhe und Brüstung einstellbar (Doppelklick); Schraffur und Wandflächen sind in der Lücke ausgespart
+- Neu: **Schraffur für Kabelkanäle:** wie bei der Wand (keine, schräg, Kreuz, Vollfläche; Linienabstand einstellbar, Standard 20 mm). Im Dialog vor dem Zeichnen und nachträglich per Doppelklick; gilt auch für Verbindungsstücke (Doppelklick). Nur in 2D, in 3D bleibt der Kanal ein Körper
 - Neu: **Kabelkanal mit Ausrichtung:** Wie bei der Wand legt der Dialog fest, ob die gezeichnete Linie die Kanalmitte, die linke oder die rechte Kanalkante ist (2D und 3D)
 - Fix: **Werkzeugleisten:** Beim Verändern des Fensters oder Umhängen einer Leiste sprangen alle Leisten zurück in die Ursprungsreihenfolge; die eingestellte Reihenfolge bleibt jetzt erhalten
 - Fix: **Werkzeugleisten:** Eine Leiste lässt sich jetzt zuverlässig zwischen zwei andere ziehen; maßgeblich ist die Mausposition über der Zielleiste (linke Hälfte = davor, rechte = dahinter)

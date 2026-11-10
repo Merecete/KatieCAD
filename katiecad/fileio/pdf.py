@@ -60,7 +60,7 @@ def _prims(el, skala, einh_faktor, dezimalkomma):
     if isinstance(el, Raum):
         return el.prims(dezimalkomma)
     if isinstance(el, (Wand, Oeffnung, Kabelkanal)):
-        fl = [("f", q) for q in el.flaechen()] if isinstance(el, Wand) else []
+        fl = [("f", q) for q in el.flaechen()] if isinstance(el, (Wand, Kabelkanal)) else []
         return fl + [("l", pl, c) for pl, c in el.prims()]
     if isinstance(el, Polylinie):
         return [("l", list(el.punkte), el.geschlossen)] if len(el.punkte) >= 2 else []

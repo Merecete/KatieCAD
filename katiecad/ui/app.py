@@ -1304,6 +1304,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                            command=lambda: self._werkzeug_aus_menue("tuer"))
         m_einf.add_command(label=tr("menu.einfuegen.fenster"),
                            command=lambda: self._werkzeug_aus_menue("fenster"))
+        m_einf.add_command(label=tr("menu.einfuegen.durchbruch"),
+                           command=lambda: self._werkzeug_aus_menue("durchbruch"))
         m_einf.add_command(label=tr("menu.wand.verbinden"), command=self.wand_verbinden_befehl)
         m_einf.add_command(label=tr("menu.wand.schraffur"), command=self.wand_schraffur_umschalten)
         m_einf.add_command(label=tr("menu.einfuegen.raum"),
@@ -1606,7 +1608,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         tb = self.tbB
         self._leisten_griff(tb, "bau")
         ttk.Label(tb, text=tr("tb.bau"), style="Title.TLabel").pack(side=tk.LEFT, padx=(0, 4))
-        for key in ("wand", "tuer", "fenster", "wandverb", "raum", "kanal", "kanalverb"):
+        for key in ("wand", "tuer", "fenster", "durchbruch", "wandverb", "raum", "kanal", "kanalverb"):
             self._werkzeug_knopf(tb, key, FARBEN["cyan"])
 
         # --- Toolbar electrical (own bar) ---
@@ -2116,7 +2118,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         wz = self.aktives_werkzeug.get()
         if wz == "wand":
             self._wand_werkzeug_start()
-        elif wz in ("tuer", "fenster"):
+        elif wz in ("tuer", "fenster", "durchbruch"):
             self._wand_layer_sicherstellen()
             self._oeffnung_vorgabe_dialog(wz)
         elif wz == "wandverb":
@@ -3383,7 +3385,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                 if isinstance(el, Viewport):
                     zentrum((x1 + x2) / 2, (y1 + y2) / 2)
             elif isinstance(el, (Wand, Oeffnung, Kabelkanal)):
-                for pl, c in (el.prims(schraffur=False) if isinstance(el, Wand) else el.prims()):
+                for pl, c in (el.prims(schraffur=False) if isinstance(el, (Wand, Kabelkanal)) else el.prims()):
                     for (x, y) in pl:
                         ende(x, y)
                     pts = list(pl) + ([pl[0]] if c and len(pl) > 2 else [])
@@ -4173,7 +4175,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                 self.redraw()
         elif werkzeug == "ellipse":
             self._ellipse_klick(pt)
-        elif werkzeug in ("tuer", "fenster"):
+        elif werkzeug in ("tuer", "fenster", "durchbruch"):
             self._wand_oeffnung_klick(pt, werkzeug)
         elif werkzeug == "wandverb":
             self._wand_verbinden_klick(pt)
@@ -4321,7 +4323,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             for i in range(4):
                 segs.append((pts[i], pts[(i + 1) % 4]))
         elif isinstance(el, (Wand, Oeffnung, Kabelkanal)):
-            for pl, c in (el.prims(schraffur=False) if isinstance(el, Wand) else el.prims()):
+            for pl, c in (el.prims(schraffur=False) if isinstance(el, (Wand, Kabelkanal)) else el.prims()):
                 pts = list(pl) + ([pl[0]] if c and len(pl) > 2 else [])
                 for i in range(len(pts) - 1):
                     segs.append((pts[i], pts[i + 1]))
@@ -4900,6 +4902,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
     _kanal_breite = 60.0
     _kanal_hoehe = 40.0
     _kanal_ausrichtung = "mitte"
+    _kanal_schraffur = ""
+    _kanal_schraffur_abstand = 20.0
     _kanal_verb_erste = None
 
     def _kanal_layer_sicherstellen(self):
@@ -4927,13 +4931,16 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self._kanal_layer_sicherstellen()
         mit_hoehe = self.ansicht3d_aktiv() and not self._ist_layout()
         dlg = KanalDialog(self.root, self._kanal_breite, self._kanal_hoehe, mit_hoehe=mit_hoehe,
-                          ausrichtung=self._kanal_ausrichtung)
+                          ausrichtung=self._kanal_ausrichtung, schraffur=self._kanal_schraffur,
+                          schraffur_abstand=self._kanal_schraffur_abstand)
         if dlg.result is None:
             self.aktives_werkzeug.set("auswahl")
             self._werkzeug_toolbar()
             return
         self._kanal_breite = dlg.result["breite"]
         self._kanal_ausrichtung = dlg.result["ausrichtung"]
+        self._kanal_schraffur = dlg.result["schraffur"]
+        self._kanal_schraffur_abstand = dlg.result["schraffur_abstand"]
         if mit_hoehe:
             self._kanal_hoehe = dlg.result["hoehe"]
         w = self._ansicht3d
@@ -4945,6 +4952,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
     def _kanal_stuecke(self, punkte, geschlossen=False):
         """Straight duct pieces, one per segment of the clicked points."""
         return [Kabelkanal([a, b], breite=self._kanal_breite, hoehe=self._kanal_hoehe,
+                           schraffur=self._kanal_schraffur,
+                           schraffur_abstand=self._kanal_schraffur_abstand,
                            **self._kanal_layer_daten())
                 for a, b in kanal_kette(
                     kanal_versatz(punkte, self._kanal_ausrichtung, self._kanal_breite, geschlossen),
@@ -4986,22 +4995,26 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             return
         self._snapshot()
         neu = Kabelkanal(r["punkte"], art=r["art"], breite=r["breite"],
-                         hoehe=max(erste.hoehe, k.hoehe), **self._kanal_layer_daten())
+                         hoehe=max(erste.hoehe, k.hoehe), schraffur=erste.schraffur,
+                         schraffur_abstand=erste.schraffur_abstand, **self._kanal_layer_daten())
         self._ziel_liste().append(neu)
         self.auswahl = [neu]
         self.redraw()
         self.status.set(tr("msg.kanal.formstueck_" + r["art"]))
 
     def _kanal_bearbeiten(self, el):
-        if el.art != "gerade":
-            self.status.set(tr("msg.kanal.formstueck_fix"))
-            return
-        dlg = KanalDialog(self.root, el.breite, el.hoehe, mit_hoehe=True, laenge=el.laenge(),
-                          titel=tr("dlg.kanal.titel"))
+        gerade = el.art == "gerade"
+        dlg = KanalDialog(self.root, el.breite, el.hoehe, mit_hoehe=True,
+                          laenge=el.laenge() if gerade else None, titel=tr("dlg.kanal.titel"),
+                          schraffur=el.schraffur, schraffur_abstand=el.schraffur_abstand,
+                          nur_schraffur=not gerade)
         if dlg.result is None:
             return
         self._snapshot()
-        el.breite, el.hoehe = dlg.result["breite"], dlg.result["hoehe"]
+        if gerade:
+            el.breite, el.hoehe = dlg.result["breite"], dlg.result["hoehe"]
+        el.schraffur = dlg.result["schraffur"]
+        el.schraffur_abstand = dlg.result["schraffur_abstand"]
         self.redraw()
 
     # ---- building walls -------------------------------------------------
@@ -6436,7 +6449,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                     ent = msp.add_text(zeile, dxfattribs={**attribs, "height": el.hoehe})
                     ent.set_placement((tx, ty), align=ezdxf.enums.TextEntityAlignment.MIDDLE_CENTER)
             elif isinstance(el, (Wand, Oeffnung, Kabelkanal)):
-                if isinstance(el, Wand):
+                if isinstance(el, (Wand, Kabelkanal)):
                     for q in el.flaechen():
                         h = msp.add_hatch(dxfattribs=attribs)
                         h.set_solid_fill()
@@ -7210,7 +7223,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         if isinstance(el, Raum):
             return el.prims(self.dezimalkomma.get())
         if isinstance(el, (Wand, Oeffnung, Kabelkanal)):
-            fl = [("f", q) for q in el.flaechen()] if isinstance(el, Wand) else []
+            fl = [("f", q) for q in el.flaechen()] if isinstance(el, (Wand, Kabelkanal)) else []
             return fl + [("l", pl, c) for pl, c in el.prims()]
         if isinstance(el, Polylinie):
             return [("l", list(el.punkte), el.geschlossen)] if len(el.punkte) >= 2 else []

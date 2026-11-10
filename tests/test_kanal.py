@@ -49,6 +49,34 @@ check(core.kanal_versatz([(0, 0), (5, 5)], "mitte", 60) == [(0.0, 0.0), (5.0, 5.
 for lang in ("de", "en", "es"):
     check(all(("dlg.kanal.ausr." + a) in i18n.TEXTE[lang] for a in ("mitte", "links", "rechts")), "i18n Ausrichtung " + lang)
 
+# duct hatch
+kh = core.Kabelkanal([(0, 0), (1000, 0)], breite=60, schraffur="schraeg", schraffur_abstand=20)
+n0 = len(core.Kabelkanal([(0, 0), (1000, 0)], breite=60).prims())
+check(n0 == 1 and len(kh.prims()) > 30, "Kanal Schraffur schraeg")
+check(len(core.Kabelkanal([(0, 0), (1000, 0)], breite=60, schraffur="kreuz").prims()) > len(core.Kabelkanal([(0, 0), (1000, 0)], breite=60, schraffur="schraeg").prims()), "Kreuzschraffur")
+check(len(core.Kabelkanal([(0, 0), (1000, 0)], breite=60, schraffur="voll").flaechen()) == 1 and not core.Kabelkanal([(0, 0), (1000, 0)], breite=60).flaechen(), "Vollflaeche")
+check(len(kh.prims(schraffur=False)) == 1, "ohne Schraffur fuer Fang")
+dh = kh.to_dict(); dh.pop("typ", None)
+check(core.Kabelkanal(**dh).schraffur == "schraeg" and core.Kabelkanal(**dh).schraffur_abstand == 20, "Schraffur Round-Trip")
+tstk = core.kanal_formstueck(((0, 0), (1000, 0), 60), ((500, 30), (500, 1000), 60))
+th = core.Kabelkanal(tstk["punkte"], art="t", breite=60, schraffur="schraeg", schraffur_abstand=10)
+check(len(th.prims()) > 5, "T-Stueck schraffiert (nicht konvex)")
+hl = core.polygon_schraffur([(0, 0), (100, 0), (100, 100), (0, 100)], [45.0], 20)
+check(len(hl) >= 7 and any(abs(l[0][0] - l[0][1]) < 1e-6 for l in hl) and all(abs(p[0]) <= 100.001 and abs(p[1]) <= 100.001 for l in hl for p in l), "polygon_schraffur im Rechteck")
+
+# wall opening (breakthrough): gap in the wall, only reveals
+wd = core.Wand([(0, 0), (4000, 0)], dicke=240)
+od = core.Oeffnung("durchbruch", 2000, 0, 0, breite=600)
+check(od.art == "durchbruch" and len(od.prims()) == 2, "Durchbruch nur Laibungen")
+of = core.Oeffnung("fenster", 1000, 0, 0)
+check(len(of.prims()) == 4, "Fenster unveraendert")
+core.wand_verknuepfen([wd, od])
+check(len(wd._luecken) == 1 and not wd._fenster, "Durchbruch schneidet Luecke")
+check(len(wd.koerper()) == 2, "Wandkoerper zweiteilig")
+for lang in ("de", "en", "es"):
+    check(all(k in i18n.TEXTE[lang] for k in ("tb.wz.durchbruch", "menu.einfuegen.durchbruch", "dlg.wand.titel_durchbruch", "dlg.wand.titel_vorgabe_durchbruch", "dlg.wand.art.durchbruch", "msg.wand.durchbruch")), "i18n Durchbruch " + lang)
+check("durchbruch" in icons.NAMEN and core.BEFEHLE["DURCHBRUCH"] == "tool:durchbruch", "Icon/Befehl Durchbruch")
+
 # drop of a toolbar between two others (by screen rectangle)
 class _TB:
     def __init__(s, x): s.x = x
