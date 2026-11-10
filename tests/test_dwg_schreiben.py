@@ -111,4 +111,24 @@ with tempfile.TemporaryDirectory() as td:
         check(cad_import.dwg_version(pf) == erwartet, "dwg_version " + erwartet)
 check(cad_import.dwg_version(os.path.join(td, "fehlt.dwg")) == "", "dwg_version fehlende Datei")
 check(all("msg.dwg.r2007_hinweis" in i18n.TEXTE[l] for l in ("de", "en", "es")), "i18n R2007-Hinweis")
+
+# regression: the DXF import path must not touch the DWG-only variable (_r2007)
+class _FakeImp:
+    def __init__(self, doc, layers):
+        self.elemente = []; self.uebersprungen = {}; self.fehler = 0
+        self.neue_layer = []; self.faktor = 1.0
+    def importiere(self, ents):
+        pass
+class _FakeDoc:
+    def modelspace(self):
+        return []
+_alt = (cad_import.EZDXF_OK, cad_import.dxf_lesen, cad_import.DxfImporter)
+cad_import.EZDXF_OK = True
+cad_import.dxf_lesen = lambda p: (_FakeDoc(), [])
+cad_import.DxfImporter = _FakeImp
+try:
+    r = cad_import.importiere_datei("x.dxf", {})
+    check(r.quelle == "ezdxf", "DXF-Import ohne _r2007-Fehler")
+finally:
+    cad_import.EZDXF_OK, cad_import.dxf_lesen, cad_import.DxfImporter = _alt
 print(f"test_dwg_schreiben - OK ({ok} Pruefungen)")

@@ -558,6 +558,7 @@ def importiere_datei(pfad, layers):
     ext = os.path.splitext(pfad)[1].lower()
     erg = ImportErgebnis()
 
+    _r2007 = False
     if ext == ".dwg":
         if not EZDXF_OK:
             raise RuntimeError("ezdxf ist nicht installiert (pip install ezdxf).")

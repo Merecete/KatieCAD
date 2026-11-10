@@ -1,6 +1,7 @@
 # Changes
 
 ## 1.1.6
+- Fix: **DXF import:** importing a DXF file showed the error "cannot access local variable '_r2007'" (bug in the new R2007 note, DXF only)
 - Change: **Info centre text** shortened and extended by DWG export
 - Change: **Menu item "Print project…":** renamed (formerly "Print sheets / export PDF…"), matching *File > Print*; the "PDF" suffix suggested that only PDFs could be printed
 - New: **One Import and one Export in the File menu:** *Import…* reads DWG, DXF, PDF and images (format by file extension), *Export…* writes DXF or DWG (file type in the save dialog). The separate entries for DXF, DWG, PDF and image are gone; PDF/image output stays under *Print*. When importing DWG/DXF: if something is already drawn (or a project is open), KatieCAD asks whether the file opens as a *new drawing* or is *inserted into the current drawing*; with "new" the current drawing is closed like *File > New* (asking about saving)
