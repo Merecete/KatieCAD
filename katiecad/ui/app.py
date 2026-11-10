@@ -7263,6 +7263,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             for kind in el.aufgeloest():
                 out.extend(self._el_polylinien(kind, skala))
             return out
+        if isinstance(el, (Wand, Kabelkanal)):                    # selection frame: outline only, not the hatch
+            return [(pl, c) for pl, c in el.prims(schraffur=False)]
         out = [(p[1], p[2]) for p in self._prims(el, skala) if p[0] == "l"]
         if isinstance(el, Bemassung):
             g = el.geometrie(self._einh_faktor(), self.dezimalkomma.get())
