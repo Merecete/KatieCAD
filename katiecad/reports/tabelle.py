@@ -68,8 +68,11 @@ def _fs(hoehe):
     return hoehe / CAD_VERSALHOEHE
 
 
+SCHRIFT = ["Arial"]            # font of the report texts (set by berichte_erzeugen)
+
+
 def _breite(s, hoehe):
-    return pdf_textbreite(s, _fs(hoehe))
+    return pdf_textbreite(s, _fs(hoehe), False, SCHRIFT[0])
 
 
 def _teile(wert):
@@ -129,7 +132,7 @@ def _blockhoehe(n, h):
 
 def _text(x, y, s, h, ausr):
     anker = {"l": "mitte_links", "r": "mitte_rechts", "c": "mitte_zentriert"}[ausr]
-    return Text(x, y, s, h, 0.0, "Arial", einfuegepunkt=anker, **TEXT)
+    return Text(x, y, s, h, 0.0, SCHRIFT[0], einfuegepunkt=anker, **TEXT)
 
 
 def zeilen_vorbereiten(zeilen, gruppe=None, leer_bei_wiederholung=()):
@@ -205,7 +208,7 @@ def tabellen_seiten(spalten, zeilen, flaeche, titel="", textgroesse=2.5,
     for seite in seiten:
         el = []
         if titel:
-            el.append(Text(x1, y2, titel, TITEL_HOEHE_, 0.0, "Arial",
+            el.append(Text(x1, y2, titel, TITEL_HOEHE_, 0.0, SCHRIFT[0],
                            einfuegepunkt="oben_links", **TEXT))
         unten = oben - kopf_h - sum(e[2] for e in seite)
         # Header row

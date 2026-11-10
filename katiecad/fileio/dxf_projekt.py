@@ -11,6 +11,24 @@ import math
 from katiecad.model.core import (ZEICHNUNGSFORMATE, clip_polyline,
                                  TEXT_ZEILE)
 from katiecad.fileio.pdf import pdf_seite_erzeugen
+from katiecad.model import normschrift as NS
+
+# DXF export of the built-in ISO font: "text" = TEXT entities with an ISO text style,
+# "linien" = every stroke as a polyline (looks identical everywhere, not editable as text)
+ISO_MODUS = "text"
+ISO_SCHRIFTDATEI = "isocp.shx"        # font file of the text style (ships with AutoCAD / BricsCAD)
+
+
+def iso_stil(doc, kursiv):
+    """Name of the text style for the ISO font (created on first use)."""
+    name = "ISO_kursiv" if kursiv else "ISO"
+    try:
+        if name not in doc.styles:
+            st = doc.styles.add(name, font=ISO_SCHRIFTDATEI)
+            st.dxf.oblique = 15.0 if kursiv else 0.0
+    except Exception:
+        return None
+    return name
 
 VALID_LW = (0, 5, 9, 13, 15, 18, 20, 25, 30, 35, 40, 50, 53, 60, 70, 80, 90,
             100, 106, 120, 140, 158, 200, 211)
@@ -103,7 +121,7 @@ class DxfSeite:
         c = self._clip()
         if c and not (c[0] <= x <= c[2] and c[1] <= y <= c[3]):
             return
-        self.ops.append(("t", x, y, inhalt, hoehe, winkel, farbe, mitte))
+        self.ops.append(("t", x, y, inhalt, hoehe, winkel, farbe, mitte, familie, fett))
 
 
 def _rgb(hexfarbe):
@@ -190,12 +208,26 @@ def dxf_projekt_schreiben(doc, seiten, spalten=4, abstand=50.0):
                 h.paths.add_polyline_path([(x + ox, y + oy) for x, y in pts],
                                           is_closed=True)
             else:
-                _, x, y, inhalt, hoehe, winkel, farbe, mitte = op
+                _, x, y, inhalt, hoehe, winkel, farbe, mitte = op[:8]
+                fam = op[8] if len(op) > 8 else ""
+                fett = op[9] if len(op) > 9 else False
+                if fam and NS.ist_normschrift(fam):
+                    if ISO_MODUS == "linien":
+                        for zug in NS.zuege_welt(inhalt, x + ox, y + oy, hoehe, winkel,
+                                                 NS.ist_kursiv(fam), mitte, TEXT_ZEILE):
+                            att = {"layer": layer,
+                                   "lineweight": _lineweight(NS.strichbreite(hoehe, fett))}
+                            att.update(_farbattribute(farbe))
+                            msp.add_lwpolyline(zug, dxfattribs=att)
+                        continue
+                    stil = iso_stil(doc, NS.ist_kursiv(fam))
+                else:
+                    stil = None
                 _text_schreiben(msp, layer, inhalt, x + ox, y + oy, hoehe,
-                                winkel, farbe, mitte)
+                                winkel, farbe, mitte, stil)
 
 
-def _text_schreiben(msp, layer, inhalt, x, y, hoehe, winkel, farbe, mitte):
+def _text_schreiben(msp, layer, inhalt, x, y, hoehe, winkel, farbe, mitte, stil=None):
     a = math.radians(winkel)
     ey = (-math.sin(a), math.cos(a))
     zeilen = inhalt.split("\n") or [""]
@@ -206,6 +238,8 @@ def _text_schreiben(msp, layer, inhalt, x, y, hoehe, winkel, farbe, mitte):
         up = (n - 1 - i) * TEXT_ZEILE * hoehe
         px, py = x + ey[0] * up, y + ey[1] * up
         att = {"layer": layer, "height": hoehe, "rotation": winkel}
+        if stil:
+            att["style"] = stil
         att.update(_farbattribute(farbe))
         t = msp.add_text(z, dxfattribs=att)
         if mitte:

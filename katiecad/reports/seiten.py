@@ -22,6 +22,7 @@ from katiecad.model.core import (Text, Linie, Rechteck, FARBEN, ZEICHEN_FARBE,
                                  ZEICHNUNGSFORMATE)
 from katiecad.model import titleblock as TB
 from katiecad.common.i18n import tr, datum_text
+from katiecad.reports import tabelle as TAB
 from katiecad.reports import daten as D
 from katiecad.reports import daten_listen as DL
 from katiecad.reports import daten_sps as DS
@@ -262,10 +263,10 @@ def deckblatt_inhalt(daten, projektname, flaeche, heute, sprache, skala=1.0):
     hoehe = y2 - y1
     el = []
     anlage = daten.get("anlage") or projektname
-    el.append(Text(cx, y2 - 0.26 * hoehe, anlage, 10.0 * f, 0.0, "Arial",
+    el.append(Text(cx, y2 - 0.26 * hoehe, anlage, 10.0 * f, 0.0, TAB.SCHRIFT[0],
                    einfuegepunkt="mitte_zentriert", **TEXT))
     el.append(Text(cx, y2 - 0.38 * hoehe, tr("rep.deck.untertitel"), 5.0 * f, 0.0,
-                   "Arial", einfuegepunkt="mitte_zentriert", **TEXT))
+                   TAB.SCHRIFT[0], einfuegepunkt="mitte_zentriert", **TEXT))
     ly = y2 - 0.45 * hoehe
     el.append(Linie(cx - 70 * f, ly, cx + 70 * f, ly, staerke=0.5, **LINIE))
     datum = daten.get("datum") or datum_text(heute, sprache)
@@ -282,9 +283,9 @@ def deckblatt_inhalt(daten, projektname, flaeche, heute, sprache, skala=1.0):
     schritt = min(8.0 * f, max(4.5 * f, (start - y1 - 2.0) / max(1, len(zeilen))))
     for i, (k, v) in enumerate(zeilen):
         y = start - i * schritt
-        el.append(Text(cx - 4.0 * f, y, k, 3.5 * f, 0.0, "Arial",
+        el.append(Text(cx - 4.0 * f, y, k, 3.5 * f, 0.0, TAB.SCHRIFT[0],
                        einfuegepunkt="mitte_rechts", **TEXT))
-        el.append(Text(cx + 4.0 * f, y, v, 3.5 * f, 0.0, "Arial",
+        el.append(Text(cx + 4.0 * f, y, v, 3.5 * f, 0.0, TAB.SCHRIFT[0],
                        einfuegepunkt="mitte_links", **TEXT))
     return el
 
@@ -401,7 +402,7 @@ def _name(basis, k, n):
 # ------------------------------------------------------------------
 # Main function
 # ------------------------------------------------------------------
-def berichte_erzeugen(blaetter, projektname, daten, aktiv, vorlage, sprache,
+def _berichte_erzeugen(blaetter, projektname, daten, aktiv, vorlage, sprache,
                       ordner=(), heute=None, klemmen_in_geraeteliste=True,
                       format=FORMAT, katalog=None):
     """Creates the requested report sheets (format: drawing format name, A4 or A3;
@@ -513,3 +514,12 @@ def beschreibung_aus_layouts(layouts):
                 if teile:
                     return " - ".join(teile[:2])
     return ""
+
+
+def berichte_erzeugen(*args, schrift="Arial", **kw):
+    """Creates the report sheets (see _berichte_erzeugen); `schrift` = font of all report texts."""
+    TAB.SCHRIFT[0] = schrift or "Arial"
+    try:
+        return _berichte_erzeugen(*args, **kw)
+    finally:
+        TAB.SCHRIFT[0] = "Arial"

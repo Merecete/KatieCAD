@@ -432,6 +432,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self._bem_end_anzeige = tk.StringVar(value=tr("dlg.eig.end.pfeil"))
         self.bem_dez = tk.IntVar(value=2)
         self.dezimalkomma = tk.BooleanVar(value=(SPRACHE["aktuell"] != "en"))
+        self.dxf_iso_var = tk.StringVar(
+            value="linien" if lade_konfiguration().get("dxf_iso") == "linien" else "text")
         self._pts = []
         self._bem_kreis = None
         self._snap_ausschluss = None
@@ -1496,6 +1498,13 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         m_einst.add_separator()
         m_einst.add_command(label=tr("menu.ansicht.schriften"),
                             command=self.schriften_verwalten)
+        m_dxfiso = tk.Menu(m_einst, tearoff=0, bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
+                           activebackground=FARBEN["cyan"],
+                           activeforeground=FARBEN["bg_dunkel"])
+        for _w in ("text", "linien"):
+            m_dxfiso.add_radiobutton(label=tr("menu.einst.dxfiso." + _w), value=_w,
+                                     variable=self.dxf_iso_var, command=self._dxf_iso_gesetzt)
+        m_einst.add_cascade(label=tr("menu.einst.dxfiso"), menu=m_dxfiso)
         menubar.add_cascade(label=tr("menu.einstellungen"), menu=m_einst)
 
         # Help
@@ -6286,6 +6295,10 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                 for zi, zeile in enumerate(t.inhalt.split("\n")):
                     tx, ty = el.text_pos()
                     ty += (len(t.inhalt.split("\n")) - 1) / 2.0 * el.hoehe * 1.4 - zi * el.hoehe * 1.4
+                    if NORMSCHRIFT.ist_normschrift(schrift_name(el.schriftart)):
+                        self._dxf_text(msp, zeile, tx, ty, el.hoehe, 0.0, el.layer, mitte=True,
+                                       fam=schrift_name(el.schriftart))
+                        continue
                     ent = msp.add_text(zeile, dxfattribs={**attribs, "height": el.hoehe})
                     ent.set_placement((tx, ty), align=ezdxf.enums.TextEntityAlignment.MIDDLE_CENTER)
             elif isinstance(el, (Wand, Oeffnung)):
@@ -6300,7 +6313,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                 msp.add_lwpolyline(el.punkte, close=el.geschlossen, dxfattribs=attribs)
             elif isinstance(el, Text):
                 self._dxf_text(msp, el.inhalt, el.x, el.y, el.hoehe, el.winkel,
-                               el.layer, einfuegepunkt=el.einfuegepunkt)
+                               el.layer, einfuegepunkt=el.einfuegepunkt,
+                               fam=schrift_name(el.schriftart), fett=schrift_fett(el.schriftart))
             elif isinstance(el, Bemassung):
                 g = el.geometrie(self._einh_faktor(), self.dezimalkomma.get())
                 for (x1, y1, x2, y2) in g["linien"]:
@@ -6314,7 +6328,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                     msp.add_solid([(x, y), a, b, b], dxfattribs=attribs)
                 if g["text"]:
                     s, cx, cy, ang, w, h = g["text"]
-                    self._dxf_text(msp, s, cx, cy, h, ang, el.layer, mitte=True)
+                    self._dxf_text(msp, s, cx, cy, h, ang, el.layer, mitte=True,
+                                   fam=schrift_name(getattr(el, "schriftart", "Arial")))
             elif isinstance(el, ZUSAMMENGESETZT):
                 for kind in el.aufgeloest():
                     self._element_zu_dxf(msp, kind)
@@ -6336,7 +6351,17 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             print(f"Element konnte nicht exportiert werden: {e}")
 
     def _dxf_text(self, msp, inhalt, x, y, hoehe, winkel, layer,
-                  mitte=False, einfuegepunkt=None):
+                  mitte=False, einfuegepunkt=None, fam=None, fett=False):
+        stil = None
+        if fam and NORMSCHRIFT.ist_normschrift(fam):          # built-in ISO font
+            from katiecad.fileio import dxf_projekt as _dp
+            tmp = Text(x, y, inhalt, hoehe, winkel, fam,
+                       einfuegepunkt=einfuegepunkt or ("mitte_zentriert" if mitte else "unten_links"))
+            if self._dxf_iso_modus() == "linien":
+                for zug in tmp.striche_welt() or []:
+                    msp.add_lwpolyline(zug, dxfattribs={"layer": layer})
+                return
+            stil = _dp.iso_stil(msp.doc, NORMSCHRIFT.ist_kursiv(fam))
         try:
             from ezdxf.enums import TextEntityAlignment as A
         except Exception:
@@ -6361,6 +6386,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             einfuegepunkt = "mitte_zentriert" if mitte else "unten_links"
         align = zuordnung.get(einfuegepunkt)
 
+        extra = {"style": stil} if stil else {}
         if "\n" in inhalt:
             attach = {
                 "oben_links": 1, "oben_zentriert": 2, "oben_rechts": 3,
@@ -6370,13 +6396,13 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             m = msp.add_mtext(
                 inhalt.replace("\n", "\\P"),
                 dxfattribs={"layer": layer, "char_height": hoehe,
-                            "rotation": winkel, "attachment_point": attach})
+                            "rotation": winkel, "attachment_point": attach, **extra})
             m.set_location((x, y))
             return
 
         t = msp.add_text(inhalt,
                          dxfattribs={"layer": layer, "height": hoehe,
-                                     "rotation": winkel})
+                                     "rotation": winkel, **extra})
         if align is not None:
             try:
                 t.set_placement((x, y), align=align)
@@ -10638,6 +10664,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                 raise ValueError(tr("msg.druckp.keine_seiten")
                                  + ("\n\n" + _dp.FEHLER[0] if _dp.FEHLER else ""))
             doc = ezdxf.new(dxfversion="R2010")
+            from katiecad.fileio import dxf_projekt as _dpm
+            _dpm.ISO_MODUS = self._dxf_iso_modus()
             dxf_projekt_schreiben(doc, seiten, spalten=4)
             doc.saveas(pfad)
         except Exception as ex:
@@ -10820,7 +10848,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         p.doku = {"berichte": res["berichte"], "vorlage": res["vorlage"],
                   "klemmen_geraete": res["klemmen_geraete"],
                   "einpolig_auswerten": bool(res.get("einpolig_auswerten")),
-                  "format": res.get("format", "a4")}
+                  "format": res.get("format", "a4"),
+                  "schrift": res.get("schrift", "Arial")}
         self._einpolig_sync()
         vorlage = None
         try:
@@ -10837,7 +10866,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                 SPRACHE["aktuell"], SEI.spalten_ordner(programm, p.ordner),
                 klemmen_in_geraeteliste=res["klemmen_geraete"],
                 format=SEI.format_name(res.get("format")),
-                katalog=p.daten.get("bauteile", []))
+                katalog=p.daten.get("bauteile", []),
+                schrift=res.get("schrift", "Arial"))
             basis = self._leere_zeichnung_daten(einstellungen_uebernehmen=True)
             neu_aktiv = ANW.ins_projekt(p, vorne, hinten, basis,
                                         self._json_atomar_schreiben,
@@ -11176,6 +11206,13 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self.status.set(tr("msg.variante.fertig", name=d.name, variante=vname,
                            n=len(d.variante_liste())))
         self._update_eingabe_hinweis()
+
+    def _dxf_iso_modus(self):
+        """DXF export of the ISO font: "text" (TEXT with ISO style) or "linien" (strokes)."""
+        return "linien" if self.dxf_iso_var.get() == "linien" else "text"
+
+    def _dxf_iso_gesetzt(self):
+        self._config_setzen("dxf_iso", self._dxf_iso_modus())
 
     def _config_setzen(self, schluessel, wert):
         try:

@@ -9,9 +9,10 @@ Glyph data: char -> (width, [polyline, ...]) in units with the baseline at y = 0
 """
 import math
 
-NAME = "KatieCAD Normschrift"
-NAME_KURSIV = "KatieCAD Normschrift kursiv"
+NAME = "ISO"
+NAME_KURSIV = "ISO kursiv"
 NAMEN = (NAME, NAME_KURSIV)
+_ALT = {"KatieCAD Normschrift": NAME, "KatieCAD Normschrift kursiv": NAME_KURSIV}   # names used during development
 
 KAPPE = 10.0          # cap height in units
 ABSTAND = 2.5         # gap between letters
@@ -21,11 +22,11 @@ NEIGUNG = math.radians(15.0)
 
 
 def ist_normschrift(name):
-    return str(name) in NAMEN
+    return str(name) in NAMEN or str(name) in _ALT
 
 
 def ist_kursiv(name):
-    return str(name) == NAME_KURSIV
+    return _ALT.get(str(name), str(name)) == NAME_KURSIV
 
 
 def _arc(cx, cy, rx, ry, a0, a1, n=None):
@@ -236,4 +237,26 @@ def zeile_zuege(zeile, hoehe, kursiv=False):
         for z in zuege:
             out.append([((x0 + px + py * t) * f, py * f) for (px, py) in z])
         x0 += w + ABSTAND
+    return out
+
+
+def zuege_welt(inhalt, x, y, hoehe, winkel=0.0, kursiv=False, mitte=False, zeile=1.65):
+    """Strokes of a (multi-line) text in drawing coordinates. (x, y) = baseline start of the
+    LAST line (like the PDF output); mitte=True: (x, y) is the centre of the cap height of
+    the text box centred horizontally. `zeile` = line pitch in cap heights."""
+    a = math.radians(winkel)
+    ex, ey = (math.cos(a), math.sin(a)), (-math.sin(a), math.cos(a))
+    zeilen = (inhalt or "").split("\n") or [""]
+    n = len(zeilen)
+    out = []
+    for i, z in enumerate(zeilen):
+        up = (n - 1 - i) * zeile * hoehe
+        ox, oy = x + ey[0] * up, y + ey[1] * up
+        if mitte:
+            w = zeilenbreite_einheiten(z) * hoehe / KAPPE
+            ox -= ex[0] * w / 2 + ey[0] * hoehe / 2
+            oy -= ex[1] * w / 2 + ey[1] * hoehe / 2
+        for zug in zeile_zuege(z, hoehe, kursiv):
+            out.append([(ox + ex[0] * px + ey[0] * py, oy + ex[1] * px + ey[1] * py)
+                        for (px, py) in zug])
     return out

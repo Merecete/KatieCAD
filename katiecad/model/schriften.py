@@ -17,7 +17,7 @@ import sys
 
 STANDARD_SCHRIFTEN = ["Arial", "Courier New", "Times New Roman",
                       "Consolas", "Verdana", "Tahoma", "Segoe UI",
-                      "KatieCAD Normschrift", "KatieCAD Normschrift kursiv"]   # last two: built-in stroke fonts
+                      "ISO", "ISO kursiv"]   # last two: built-in stroke fonts
 
 MAX_EINBETTEN = 12 * 1024 * 1024        # bigger font files are not embedded (PDF size)
 

@@ -2679,6 +2679,12 @@ class DokumentationDialog(tk.Toplevel):
         if namen:
             self.cb.current(idx)
 
+        ttk.Label(f, text=tr("dlg.doku.schrift"), style="Title.TLabel").pack(
+            anchor=tk.W, pady=(12, 2))
+        self.v_schrift = tk.StringVar(value=schrift_name(einst.get("schrift") or "Arial"))
+        ttk.Combobox(f, textvariable=self.v_schrift, values=list(SCHRIFTARTEN),
+                     state="readonly", width=40).pack(anchor=tk.W, padx=10)
+
         ttk.Label(f, text=tr("dlg.doku.format"), style="Title.TLabel").pack(
             anchor=tk.W, pady=(12, 2))
         ff = ttk.Frame(f)
@@ -2714,6 +2720,7 @@ class DokumentationDialog(tk.Toplevel):
             "klemmen_geraete": bool(self.v_klg.get()),
             "einpolig_auswerten": bool(self.v_ep.get()),
             "format": self.v_format.get(),
+            "schrift": self.v_schrift.get() or "Arial",
         }
         self.destroy()
 

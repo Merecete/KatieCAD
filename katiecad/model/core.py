@@ -844,10 +844,9 @@ class PdfSeite:
             if familie and NORMSCHRIFT.ist_normschrift(familie):
                 # built-in stroke font: draw the strokes as lines (no font file needed)
                 sb = NORMSCHRIFT.strichbreite(hoehe, fett)
-                kur = NORMSCHRIFT.ist_kursiv(familie)
-                for zug in NORMSCHRIFT.zeile_zuege(z, hoehe, kur):
-                    self.linie([(ox + ex[0] * px + ey[0] * py, oy + ex[1] * px + ey[1] * py)
-                                for (px, py) in zug], sb, farbe)
+                for zug in NORMSCHRIFT.zuege_welt(z, ox, oy, hoehe, winkel,
+                                                  NORMSCHRIFT.ist_kursiv(familie)):
+                    self.linie(zug, sb, farbe)
                 continue
             ttf = SCHRIFTEN.pdf_ttf(familie, fett) if familie else None
             if ttf is not None:                  # embedded extra font: glyph numbers (Identity-H)
@@ -2207,6 +2206,21 @@ class Text(Element):
             ecken.append((ux + sx * ex[0] + sy * ey[0],
                           uy + sx * ex[1] + sy * ey[1]))
         return ecken
+
+    def striche_welt(self):
+        """Strokes of the text in drawing coordinates if it uses the built-in ISO font,
+        else None (same position as the screen and PDF output)."""
+        fam = schrift_name(self.schriftart)
+        if not NORMSCHRIFT.ist_normschrift(fam):
+            return None
+        w, h = self.masse()
+        dx, dy = self._versatz_lokal(w, h)
+        a = math.radians(self.winkel)
+        ex, ey = (math.cos(a), math.sin(a)), (-math.sin(a), math.cos(a))
+        bx = self.x + dx * ex[0] + (dy + 0.3 * self.hoehe) * ey[0]
+        by = self.y + dx * ex[1] + (dy + 0.3 * self.hoehe) * ey[1]
+        return NORMSCHRIFT.zuege_welt(self.inhalt, bx, by, self.hoehe, self.winkel,
+                                      NORMSCHRIFT.ist_kursiv(fam), False, TEXT_ZEILE)
 
     def rahmen(self):
         return self.ecken_welt()

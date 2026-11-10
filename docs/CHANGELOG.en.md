@@ -1,8 +1,10 @@
 # Changes
 
 ## 1.1.6
+- New: **Documentation with its own font:** the dialog *Project > Create / update documentation...* has a new field **Font of the documents** below the title block template (default Arial; also "ISO" or any other font of the list). It applies to the cover sheet, table of contents and all lists and is saved with the project; the texts of the title block keep their own font
+- New: **DXF export of the ISO font:** new setting *Settings > DXF export of the ISO font*: **As text** (DXF text with the text style "ISO", stays editable; font file `isocp.shx`) or **As lines** (every stroke a polyline, looks the same everywhere). Applies to the DXF export of the drawing and of the project
 - Fix: **Grid in the model area:** the heavier major lines sometimes fell on every fifth line and sometimes were missing, depending on zoom and pan (rounding error when detecting the major line). The grid is now counted from the origin in whole steps: every major cell always consists of 5 x 5 small cells at any zoom; lines sit on whole pixels and have the same weight everywhere
-- New: **Standard lettering:** new built-in single-stroke fonts "KatieCAD Normschrift" (upright) and "KatieCAD Normschrift kursiv" (15 degrees), modelled on ISO 3098 / DIN 6776 type B (capitals 10/10 h, lower case 7/10 h, stroke width 1/10 h). Selectable in the font list (toolbar, text dialog, properties, dimensions, rooms); nothing to install, screen and PDF look the same on every computer. Contains A-Z, a-z, 0-9, umlauts, sharp s, Ø ø Ω µ ° ± ² ³ € and common symbols. In the DXF export it stays a normal text
+- New: **Standard lettering:** new built-in single-stroke fonts "ISO" (upright) and "ISO kursiv" (15 degrees), modelled on ISO 3098 / DIN 6776 type B (capitals 10/10 h, lower case 7/10 h, stroke width 1/10 h). Selectable in the font list (toolbar, text dialog, properties, dimensions, rooms); nothing to install, screen and PDF look the same on every computer. Contains A-Z, a-z, 0-9, umlauts, sharp s, Ø ø Ω µ ° ± ² ³ € and common symbols. In the DXF export it stays a normal text
 
 ## 1.1.5
 - Fix: **Exploding a block keeps attributes:** attributes stay attribute definitions (tag, prompt, size, position); the current value becomes the default. So an exploded block can be changed and made into a block again (before, the attributes became normal texts)
