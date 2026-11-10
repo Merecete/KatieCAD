@@ -1,7 +1,6 @@
 """DWG import diagnosis (run on your PC):  python tools/dwg_diagnose.py datei.dwg [ausgabe.dxf]
 
-Reads the DWG with every available engine (ODA File Converter, LibreDWG, ezdwg), and prints for
-each: entity types in the model space, extents, blocks with base points and INSERTs. Optionally
+Reads the DWG with the built-in ezdwg (LibreDWG as fallback), and prints: entity types in the model space, extents, blocks with base points and INSERTs. Optionally
 saves the converted DXF of each engine next to the given path (name_<engine>.dxf) so you can open
 them in a CAD program and compare - this shows whether a wrong picture comes from the DWG
 conversion or from KatieCAD's import.
@@ -52,13 +51,11 @@ def main():
         return
     pfad = sys.argv[1]
     ausgabe = sys.argv[2] if len(sys.argv) > 2 else None
-    for motor in ("oda", "auto"):
-        cad_import.DWG_MOTOR = motor
-        try:
-            doc, quelle = cad_import.dwg_zu_dxf_doc(pfad)
-            bericht(doc, quelle, ausgabe)
-        except Exception as ex:
-            print(f"\n=== Motor {motor}: nicht möglich: {ex}")
+    try:
+        doc, quelle = cad_import.dwg_zu_dxf_doc(pfad)
+        bericht(doc, quelle, ausgabe)
+    except Exception as ex:
+        print(f"\n=== DWG nicht lesbar: {ex}")
 
 
 if __name__ == "__main__":

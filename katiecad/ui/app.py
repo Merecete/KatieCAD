@@ -96,7 +96,7 @@ from katiecad.ui.dialogs import (
     _LayoutNameDialog, BlattEigenschaftenDialog, PropertiesDialog, ViewportDialog,
     LayerDialog, LayerEditDialog, TextDialog, ArrayDialog, SchraffurDialog, DruckDialog,
     _BlockNameDialog, _BlockAuswahlDialog, BlockBrowserDialog,
-    BlockSpeichernDialog,
+    BlockSpeichernDialog, ImportZielDialog,
     ProjektNeuDialog, AttributDefinitionDialog, BlockAttributeDialog,
     MasstextDialog, WandDialog, KanalDialog, OeffnungDialog, RaumDialog, BauteilkatalogDialog, SchnellauswahlDialog, SuchenErsetzenDialog, QuerverweisDialog, PruefungDialog, EigenschaftenPalette, VerbindungspunkteDialog, ProjektDruckDialog,
     VerbindungspunktDialog, VerbindungDialog, FestMaskeDialog,
@@ -435,9 +435,6 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self.dezimalkomma = tk.BooleanVar(value=(SPRACHE["aktuell"] != "en"))
         self.dxf_iso_var = tk.StringVar(
             value="linien" if lade_konfiguration().get("dxf_iso") == "linien" else "text")
-        _motor = lade_konfiguration().get("dwg_motor")
-        self.dwg_motor_var = tk.StringVar(value=_motor if _motor in ("auto", "oda") else "auto")
-        self._dwg_motor_gesetzt(speichern=False)
         self._pts = []
         self._bem_kreis = None
         self._snap_ausschluss = None
@@ -1125,8 +1122,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         m_datei.add_command(label=tr("menu.datei.speichern"), command=self.speichern,
                             accelerator=tr("txt.0254"))
         m_datei.add_separator()
-        m_datei.add_command(label=tr("menu.datei.import_dxf"), command=self.import_dxf)
-        m_datei.add_command(label=tr("menu.datei.import_dwg"), command=self.import_dwg)
+        m_datei.add_command(label=tr("menu.datei.import_cad"), command=self.import_cad)
         m_datei.add_command(label=tr("menu.datei.import_pdf"), command=self.import_pdf)
         m_datei.add_command(label=tr("menu.datei.import_bild"), command=self.import_bild)
         m_datei.add_command(label=tr("menu.datei.export_dxf"), command=self.export_dxf)
@@ -1172,6 +1168,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                               command=self.projekt_drucken)
         m_projekt.add_command(label=tr("menu.datei.export_projekt_dxf"),
                               command=self.projekt_dxf_exportieren)
+        m_projekt.add_command(label=tr("menu.datei.export_projekt_dwg"),
+                              command=lambda: self.projekt_dxf_exportieren("dwg"))
         m_projekt.add_separator()
         m_projekt.add_command(label=tr("menu.projekt.nummerieren"),
                               command=self.geraete_nummerieren)
@@ -1519,12 +1517,6 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             m_dxfiso.add_radiobutton(label=tr("menu.einst.dxfiso." + _w), value=_w,
                                      variable=self.dxf_iso_var, command=self._dxf_iso_gesetzt)
         m_einst.add_cascade(label=tr("menu.einst.dxfiso"), menu=m_dxfiso)
-        m_dwgm = tk.Menu(m_einst, tearoff=0, bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
-                         activebackground=FARBEN["cyan"], activeforeground=FARBEN["bg_dunkel"])
-        for _w in ("auto", "oda"):
-            m_dwgm.add_radiobutton(label=tr("menu.einst.dwgmotor." + _w), value=_w,
-                                   variable=self.dwg_motor_var, command=self._dwg_motor_gesetzt)
-        m_einst.add_cascade(label=tr("menu.einst.dwgmotor"), menu=m_dwgm)
         menubar.add_cascade(label=tr("menu.einstellungen"), menu=m_einst)
 
         # Help
@@ -2634,7 +2626,16 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             return
         xs, ys = [], []
         for el in liste:
-            b = el.bbox()
+            if not self._ist_layout():                 # hidden layers do not count
+                l = self.layers.get(getattr(el, "layer", None))
+                if l is not None and not l.sichtbar:
+                    continue
+            try:
+                b = el.bbox()
+            except Exception:
+                continue
+            if not b or not all(isinstance(w, (int, float)) and math.isfinite(w) for w in b[:4]):
+                continue
             xs.extend([b[0], b[2]])
             ys.extend([b[1], b[3]])
         if not xs or not ys:
@@ -2650,7 +2651,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         neuer_zoom = min(zoom_x, zoom_y)
         cx = (minx + maxx) / 2
         cy = (miny + maxy) / 2
-        self.view["zoom"] = max(0.001, neuer_zoom)
+        self.view["zoom"] = max(1e-7, neuer_zoom)       # large drawings (mm) need very small zooms
         self.view["ox"] = cw / 2 - cx * self.view["zoom"]
         self.view["oy"] = ch / 2 + cy * self.view["zoom"]
         self.redraw()
@@ -6287,7 +6288,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             messagebox.showwarning(
                 "Log", (tr("txt.0153", p0=ex, p1=pf)), parent=self.root)
 
-    def neu(self):
+    def neu(self, bestaetigen=True):
         """File > New: closes the current drawing and starts a new, empty single drawing.
         With an open project the WHOLE project is closed (sheets are managed in the side bar
         only). It never happens without asking."""
@@ -6298,30 +6299,30 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                 frage = (tr("txt.0097", p0=p.name))
                 antwort = messagebox.askyesnocancel(titel, frage, parent=self.root)
                 if antwort is None:
-                    return
+                    return False
                 if antwort and not self.projekt_speichern():
-                    return
+                    return False
             else:
                 frage = (tr("txt.0098", p0=p.name))
-                if not messagebox.askyesno(titel, frage, default=messagebox.NO, parent=self.root):
-                    return
+                if bestaetigen and not messagebox.askyesno(titel, frage, default=messagebox.NO, parent=self.root):
+                    return False
             self._projekt_zuruecksetzen()
             self.status.set(tr("msg.projekt.geschlossen"))
-            return
+            return True
         if self._dirty:
             antwort = messagebox.askyesnocancel(
                 titel,
                 (tr("txt.0099")), parent=self.root)
             if antwort is None:
-                return
+                return False
             if antwort:
                 if not self.speichern():
-                    return
-        elif not messagebox.askyesno(
+                    return False
+        elif bestaetigen and not messagebox.askyesno(
                 titel,
                 (tr("txt.0154")),
                 default=messagebox.NO, parent=self.root):
-            return
+            return False
         self.elemente = []
         self.layouts = [Layout("Layout1", Layout.STANDARD_FORMAT, "#1c132d")]
         self.aktives_layout = 0
@@ -6349,6 +6350,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self.redraw()
         self._zeichne_raster()
         self._viewport_modus_anzeige_aktualisieren()
+        return True
 
     def speichern(self):
         if self.projekt is not None:
@@ -6671,9 +6673,10 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                 pass
         t.set_placement((x, y))
 
-    def _cad_import(self, art):
-        """Common import for DXF and DWG (art = 'dxf' | 'dwg')."""
-        titel = art.upper()
+    def _cad_import(self):
+        """One import for DXF and DWG (by file extension). Asks whether the drawing opens as a
+        NEW drawing or is added to the current one."""
+        titel = "DWG / DXF"
         if not CADIMPORT_VERFUEGBAR or not EZDXF_VERFUEGBAR:
             messagebox.showwarning(titel,
                 (tr("txt.0103")))
@@ -6685,18 +6688,35 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                        ((tr("txt.0198")), "*.*")])
         if not pfad:
             return
+        if self._ist_layout():
+            self.status.set(tr("txt.0095"))
+            return
+        art = "dwg" if pfad.lower().endswith(".dwg") else "dxf"
+        titel = art.upper()
+        neu_oeffnen = False
+        if self.elemente or self.projekt is not None or self._dirty:
+            dlg = ImportZielDialog(self.root, os.path.basename(pfad))
+            if dlg.result is None:
+                return
+            neu_oeffnen = dlg.result == "neu"
         try:
             self.root.config(cursor="watch")
             self.root.update_idletasks()
         except Exception:
             pass
         try:
-            erg = cadimport.importiere_datei(pfad, self.layers)
+            ziel_layer = dict(self.layers) if neu_oeffnen else self.layers
+            erg = cadimport.importiere_datei(pfad, ziel_layer)
             if not erg.elemente:
                 messagebox.showwarning(titel,
                     (tr("txt.0202")) +
                     self._import_bericht(erg))
                 return
+            if neu_oeffnen:
+                if not self.neu(bestaetigen=False):
+                    return
+                for nm, l in ziel_layer.items():         # layers of the file (neu() may reset them)
+                    self.layers.setdefault(nm, l)
             self._snapshot()
             self.elemente.extend(erg.elemente)
             self.layer_cb.config(values=list(self.layers.keys()))
@@ -6731,11 +6751,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         z += erg.hinweise
         return "\n".join(z)
 
-    def import_dxf(self):
-        self._cad_import("dxf")
-
-    def import_dwg(self):
-        self._cad_import("dwg")
+    def import_cad(self):
+        self._cad_import()
 
     def import_pdf(self):
         """Imports one page of a PDF as vector geometry; PDF layers (optional
@@ -10906,19 +10923,20 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                                   TB.make_info(p, i, SPRACHE["aktuell"], lay.format))
         return kontexte, nicht_lesbar
 
-    def projekt_dxf_exportieren(self):
-        """The whole project as ONE DXF file (sheets side by side, 4 per row)."""
+    def projekt_dxf_exportieren(self, art="dxf"):
+        """The whole project as ONE DXF or DWG file (sheets side by side, 4 per row)."""
+        titel = art.upper()
         p = self.projekt
         if p is None:
             self.status.set(tr("msg.projekt.kein_projekt"))
             return
         if not EZDXF_VERFUEGBAR:
-            messagebox.showwarning("DXF", (tr("txt.0101")))
+            messagebox.showwarning(titel, (tr("txt.0101")))
             return
         pfad = filedialog.asksaveasfilename(
-            parent=self.root, defaultextension=".dxf", initialdir=p.ordner,
-            initialfile=p.name + ".dxf",
-            filetypes=[("DXF", "*.dxf")])
+            parent=self.root, defaultextension="." + art, initialdir=p.ordner,
+            initialfile=p.name + "." + art,
+            filetypes=[(titel, "*." + art)])
         if not pfad:
             return
         try:
@@ -10936,15 +10954,23 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             from katiecad.fileio import dxf_projekt as _dpm
             _dpm.ISO_MODUS = self._dxf_iso_modus()
             dxf_projekt_schreiben(doc, seiten, spalten=4)
-            doc.saveas(pfad)
+            bericht = ""
+            if art == "dwg":
+                from katiecad.fileio.cad_import import dxf_doc_als_dwg_speichern
+                bericht = dxf_doc_als_dwg_speichern(doc, pfad)
+            else:
+                doc.saveas(pfad)
         except Exception as ex:
-            messagebox.showerror("DXF", (tr("txt.0155", p0=ex)), parent=self.root)
+            messagebox.showerror(titel, (tr("txt.0155", p0=ex)), parent=self.root)
             return
-        self.status.set(tr("msg.dxfp.fertig", n=len(seiten), pfad=pfad))
+        self.status.set(tr("msg.dxfp.fertig" if art == "dxf" else "msg.dwgp.fertig",
+                           n=len(seiten), pfad=pfad))
         rest = uebersprungen + nicht_lesbar
         if rest:
-            messagebox.showinfo("DXF", tr("msg.druckp.uebersprungen",
+            messagebox.showinfo(titel, tr("msg.druckp.uebersprungen",
                                           liste="\n".join(rest)), parent=self.root)
+        if bericht:
+            messagebox.showinfo(titel, tr("msg.dwg.bericht", bericht=bericht, pfad=pfad), parent=self.root)
 
     def projekt_drucken(self):
         p = self.projekt
@@ -11479,14 +11505,6 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
     def _dxf_iso_modus(self):
         """DXF export of the ISO font: "text" (TEXT with ISO style) or "linien" (strokes)."""
         return "linien" if self.dxf_iso_var.get() == "linien" else "text"
-
-    def _dwg_motor_gesetzt(self, speichern=True):
-        """DWG engine for import / export (cad_import.DWG_MOTOR), remembered in the settings."""
-        from katiecad.fileio import cad_import
-        w = self.dwg_motor_var.get()
-        cad_import.DWG_MOTOR = w if w in cad_import.DWG_MOTOREN else "auto"
-        if speichern:
-            self._config_setzen("dwg_motor", cad_import.DWG_MOTOR)
 
     def _dxf_iso_gesetzt(self):
         self._config_setzen("dxf_iso", self._dxf_iso_modus())

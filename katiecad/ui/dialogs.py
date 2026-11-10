@@ -219,6 +219,37 @@ class _LayoutNameDialog(tk.Toplevel):
         self.destroy()
 
 
+class ImportZielDialog(tk.Toplevel):
+    """Asks where an imported DXF / DWG goes. result = "neu" | "einfuegen" | None."""
+
+    def __init__(self, parent, dateiname):
+        super().__init__(parent)
+        self.result = None
+        self.title(tr("dlg.importziel.titel"))
+        self.transient(parent)
+        _modal(self)
+        self.configure(bg=FARBEN["bg_mittel"])
+        f = ttk.Frame(self, padding=14)
+        f.pack(fill=tk.BOTH, expand=True)
+        ttk.Label(f, text=tr("dlg.importziel.frage", name=dateiname),
+                  wraplength=380, justify=tk.LEFT).pack(anchor=tk.W, pady=(0, 10))
+        bf = ttk.Frame(f)
+        bf.pack(fill=tk.X)
+        b1 = ttk.Button(bf, text=tr("dlg.importziel.neu"), command=lambda: self._waehle("neu"))
+        b1.pack(side=tk.LEFT, padx=4)
+        ttk.Button(bf, text=tr("dlg.importziel.einfuegen"),
+                   command=lambda: self._waehle("einfuegen")).pack(side=tk.LEFT, padx=4)
+        ttk.Button(bf, text=tr("dlg.abbrechen"), command=self.destroy).pack(side=tk.LEFT, padx=4)
+        b1.focus_set()
+        self.bind("<Return>", lambda e: self._waehle("neu"))
+        self.bind("<Escape>", lambda e: self.destroy())
+        self.wait_window(self)
+
+    def _waehle(self, was):
+        self.result = was
+        self.destroy()
+
+
 class MasstextDialog(tk.Toplevel):
     """Free dimension text. result = text ("" = show the measured value again) or None."""
 

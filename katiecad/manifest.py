@@ -17,7 +17,7 @@ MODULE = {
     "katiecad.model.blocks":      "Block / device files (*.katieblock) read/write",
     "katiecad.electrical.logic":  "Electrical logic: cross references, device references, wires",
     "katiecad.fileio.pdf":        "PDF output from model/layout",
-    "katiecad.fileio.cad_import": "DXF/DWG import (ezdxf, ezdwg; ODA/LibreDWG optional)",
+    "katiecad.fileio.cad_import": "DXF/DWG import (ezdxf, ezdwg; LibreDWG optional)",
     "katiecad.fileio.dwg_schreiben": "DWG export (ezdwg writer)",
     "katiecad.common.i18n":       "UI texts DE/EN",
     "katiecad.common.config":     "Persistent user settings (language)",

@@ -381,9 +381,9 @@ changes in them are lost; your drawing sheets stay untouched.
 
 ## 10. Import and export
 
-- **File > Import DXF… / Import DWG…** reads foreign drawings, **Export DXF… / Export DWG…**
+- **File > Import DWG / DXF…** (one command for both formats, recognised by the file extension) reads foreign drawings, **Export DXF… / Export DWG…**
   writes them. DXF works directly. DWG import works without extra software (built-in `ezdwg`). If a DWG file is not read cleanly,
-  save it in the source program as DXF or as a newer DWG (R2013/R2018). KatieCAD never starts an external program by itself. **Export DWG** also works without extra software since 1.1.6 (built-in writer via `ezdwg`, MIT licensed, format R2018, R2000 if needed). The writer does not know every entity type: ellipses, splines and bulge polylines are written as lines/arcs, hatches only as outline, unsupported elements are left out - after the export KatieCAD shows what was affected. For important deliveries also export as DXF and check it in the target program. Under **Settings > DWG converter** you choose: *Automatic* (built-in; LibreDWG only if you installed it yourself) or *Use ODA File Converter* (only on your explicit choice; the ODA converter is not free for commercial use and is not part of KatieCAD). To test with your own files: `python tools/dwg_test.py`.
+  save it in the source program as DXF or as a newer DWG (R2013/R2018). KatieCAD never starts an external program by itself. **Export DWG** also works without extra software since 1.1.6 (built-in writer via `ezdwg`, MIT licensed, format R2018, R2000 if needed). The writer does not know every entity type: ellipses, splines and bulge polylines are written as lines/arcs, hatches only as outline, unsupported elements are left out - after the export KatieCAD shows what was affected. For important deliveries also export as DXF and check it in the target program. No external converter program is needed; only if you installed LibreDWG (`dwg2dxf`) yourself, KatieCAD uses it as a fallback when reading. **On import** KatieCAD asks whether the file should be opened as a *new drawing* or *inserted into the current drawing* (the question is skipped when the drawing is empty). Afterwards the view zooms to the drawing (Zoom Extents). To test with your own files: `python tools/dwg_test.py`.
 - **Which area is exported?** *Export DXF…* and *Export DWG…* take the area you are in: in the **model** view the model area, in a **layout** view the active layout as a sheet in mm (like the project DXF: sheet frame, title block, viewport content; the sheet name is placed above it). The status bar names the exported area.
 - **File > Export DXF…** writes the drawing as DXF.
 - PDF: see section 6.
@@ -447,8 +447,8 @@ Edit › Properties opens a window for the current selection, also mixed (lines,
 
 **Edit › Mirror** (command `MIRROR`/`MI`, also in the right-click menu): select objects, Enter, pick two points of the mirror line (live preview), then decide whether the originals are deleted. Texts stay readable (not mirrored); blocks including pins and labels are mirrored correctly and remain devices.
 
-## Whole project as one DXF file
-**Project › Export project as one DXF…** evaluates all sheets like printing (layout with frame, title block and viewports) and places them side by side in one DXF file: 4 sheets per row, then a new row. Every sheet is on its own layer (`Blatt_01` ...), plus `Blattgrenze` and `Blattnamen`.
+## Whole project as one DXF / DWG file
+**Project › Export project to DXF…** or **Export project to DWG…** evaluates all sheets like printing (layout with frame, title block and viewports) and places them side by side in one DXF file: 4 sheets per row, then a new row. Every sheet is on its own layer (`Blatt_01` ...), plus `Blattgrenze` and `Blattnamen`.
 
 ## Info window and log
 Help › About shows the logo, version and license. **License** opens the license text; **Log** opens the log file (`katiecad-log.txt` in the KatieCAD settings folder) in your default text editor – useful for error reports. The previous session's log is kept as `katiecad-log.txt.old`.

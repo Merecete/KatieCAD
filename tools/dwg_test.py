@@ -1,7 +1,7 @@
 """DWG export test (run on your PC):  python tools/dwg_test.py [ausgabeordner]
 
 Builds a small ezdxf drawing with all common entity types, writes it as DWG with the built-in
-ezdwg writer (and with the ODA File Converter, if installed, for comparison), reads the
+ezdwg writer, reads the
 files back with ezdwg and prints what arrived. Then open the *.dwg files in AutoCAD / another CAD
 program and compare with the DXF written next to them.
 """
@@ -68,16 +68,6 @@ def main():
             print("   zurückgelesen:", zaehlen(pfad))
         except Exception as ex:
             print(f"[ezdwg {version}] FEHLER: {ex}")
-    if cad_import.oda_verfuegbar():
-        pfad = os.path.join(ziel, "oda.dwg")
-        try:
-            cad_import.DWG_MOTOR = "oda"
-            print("[ODA]", cad_import.dxf_doc_als_dwg_speichern(doc, pfad))
-            print("   zurückgelesen:", zaehlen(pfad))
-        except Exception as ex:
-            print("[ODA] FEHLER:", ex)
-    else:
-        print("[ODA] nicht installiert (nur zum Vergleich, nicht nötig)")
     print("\nBitte die *.dwg in AutoCAD o.ä. öffnen und mit vergleich.dxf vergleichen.")
     print("Der Viertelbogen (Radius 30) muss oben rechts vom Kreismittelpunkt (50,50) liegen;"
           " liegt er falsch, steht in dwg_schreiben.py ARC_IN_RADIANTEN auf True.")

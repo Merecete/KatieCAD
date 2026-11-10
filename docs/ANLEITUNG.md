@@ -387,9 +387,9 @@ unverändert.
 
 ## 10. Import und Export
 
-- **Datei > Import DXF… / Import DWG…** liest fremde Zeichnungen ein, **Export DXF… / Export DWG…**
+- **Datei > Import DWG / DXF…** (ein Befehl für beide Formate, erkannt an der Dateiendung) liest fremde Zeichnungen ein, **Export DXF… / Export DWG…**
   schreibt sie. DXF geht direkt. DWG-Import funktioniert ohne Zusatzprogramm (eingebautes `ezdwg`). Wird eine DWG-Datei nicht sauber gelesen,
-  speichere sie im Quellprogramm als DXF oder als neueres DWG (R2013/R2018). KatieCAD startet nie von selbst ein externes Programm. **Export DWG** funktioniert seit 1.1.6 ebenfalls ohne Zusatzprogramm (eingebauter Schreiber über `ezdwg`, MIT-lizenziert, Format R2018, bei Bedarf R2000). Der Schreiber kennt nicht alle Elementarten: Ellipsen, Splines und Bogenpolylinien werden als Linien/Bögen übernommen, Schraffuren nur als Umriss, nicht unterstützte Elemente ausgelassen – nach dem Export zeigt KatieCAD, was betroffen war. Für wichtige Abgaben zusätzlich als DXF exportieren und im Zielprogramm prüfen. Unter **Einstellungen › DWG-Konverter** wählst du: *Automatisch* (eingebaut; LibreDWG nur, falls du es selbst installiert hast) oder *ODA File Converter verwenden* (nur auf deinen ausdrücklichen Wunsch; der ODA-Konverter ist für kommerzielle Nutzung nicht kostenlos und gehört nicht zu KatieCAD). Zum Testen mit eigenen Dateien: `python tools/dwg_test.py`.
+  speichere sie im Quellprogramm als DXF oder als neueres DWG (R2013/R2018). KatieCAD startet nie von selbst ein externes Programm. **Export DWG** funktioniert seit 1.1.6 ebenfalls ohne Zusatzprogramm (eingebauter Schreiber über `ezdwg`, MIT-lizenziert, Format R2018, bei Bedarf R2000). Der Schreiber kennt nicht alle Elementarten: Ellipsen, Splines und Bogenpolylinien werden als Linien/Bögen übernommen, Schraffuren nur als Umriss, nicht unterstützte Elemente ausgelassen – nach dem Export zeigt KatieCAD, was betroffen war. Für wichtige Abgaben zusätzlich als DXF exportieren und im Zielprogramm prüfen. Es wird kein externes Konverterprogramm benötigt; nur falls du LibreDWG (`dwg2dxf`) selbst installiert hast, nutzt KatieCAD es als Ersatz beim Lesen. **Beim Import** fragt KatieCAD, ob die Datei als *neue Zeichnung* geöffnet oder in die *aktuelle Zeichnung eingefügt* werden soll (bei leerer Zeichnung entfällt die Frage). Danach zoomt die Ansicht auf die Zeichnung (Zoom Grenzen). Zum Testen mit eigenen Dateien: `python tools/dwg_test.py`.
 - **Welcher Bereich wird exportiert?** *Export DXF…* und *Export DWG…* nehmen den Bereich, in dem du gerade bist: In der **Modell**-Ansicht den Modellbereich, in einer **Layout**-Ansicht das aktive Layout als Blatt in mm (wie beim Projekt-DXF: Blattrahmen, Titelblock, Ansichtsfenster-Inhalt; das Blatt steht mit seinem Namen darüber). Die Statuszeile nennt den exportierten Bereich.
 - **Datei > Export DXF…** schreibt die Zeichnung als DXF.
 - PDF: siehe Abschnitt 6.
@@ -460,8 +460,8 @@ Bearbeiten › Eigenschaften öffnet ein Fenster für die aktuelle Auswahl – a
 
 **Bearbeiten › Spiegeln** (Befehl `SPIEGELN`/`MI`, auch im Rechtsklickmenü): Objekte wählen, Enter, zwei Punkte der Spiegelachse klicken (Vorschau live), dann entscheiden, ob die Originale gelöscht werden. Texte bleiben lesbar (nicht gespiegelt), Blöcke inklusive Pins und Beschriftung werden korrekt gespiegelt und bleiben Geräte.
 
-## Projekt als eine DXF-Datei
-**Projekt › Projekt als eine DXF exportieren…** wertet alle Blätter wie beim Drucken aus (Layout mit Rahmen, Schriftfeld und Viewports) und legt sie in einer DXF-Datei nebeneinander ab: 4 Blätter pro Zeile, dann eine neue Zeile. Jedes Blatt liegt auf einem eigenen Layer (`Blatt_01` …), dazu `Blattgrenze` und `Blattnamen`.
+## Projekt als eine DXF-/DWG-Datei
+**Projekt › Projekt in DXF exportieren…** bzw. **Projekt in DWG exportieren…** wertet alle Blätter wie beim Drucken aus (Layout mit Rahmen, Schriftfeld und Viewports) und legt sie in einer DXF-Datei nebeneinander ab: 4 Blätter pro Zeile, dann eine neue Zeile. Jedes Blatt liegt auf einem eigenen Layer (`Blatt_01` …), dazu `Blattgrenze` und `Blattnamen`.
 
 ## Info-Fenster und Log
 Hilfe › Info zeigt Logo, Version und Lizenz. Mit **Lizenz** öffnest du den Lizenztext, mit **Log** öffnet sich die Log-Datei (`katiecad-log.txt` im KatieCAD-Einstellungsordner) im Standard-Editor – hilfreich bei Fehlermeldungen. Die Datei der vorherigen Sitzung bleibt als `katiecad-log.txt.old` erhalten.

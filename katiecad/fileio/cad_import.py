@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 katiecad/fileio/cad_import.py - Robust DXF/DWG import for KatieCAD.
-Contains NO Tkinter. Called by CadApp.import_dxf / import_dwg.
+Contains NO Tkinter. Called by CadApp.import_cad.
 
 Supported (DXF):
   LINE, CIRCLE, ARC, ELLIPSE, SPLINE, LWPOLYLINE, POLYLINE (2D/3D, with
@@ -12,10 +12,8 @@ In addition: layer colours (ACI/RGB), layers off/frozen, line types,
 line weights, units ($INSUNITS -> mm), OCS (extrusion -Z),
 damaged files via ezdxf.recover.
 
-DWG: converted to DXF by the built-in ezdwg; LibreDWG (dwg2dxf) as a fallback and the ODA File
-Converter (via ezdxf.addons.odafc, only when chosen in the settings). LibreDWG and ODA are OPTIONAL external programs that the user may
-install separately (KatieCAD only starts them, nothing is bundled);
-ezdwg is a pip dependency and the built-in fallback.
+DWG: converted to DXF by the built-in ezdwg (pip dependency, MIT); LibreDWG (dwg2dxf) only as a
+fallback if the user has installed it separately (KatieCAD bundles nothing).
 """
 
 import math
@@ -485,67 +483,9 @@ def dxf_lesen(pfad):
         return doc, hinweise
 
 
-def _oda_pfad_setzen():
-    """Looks for the ODA File Converter in the usual locations (Windows)."""
-    import glob
-    if not sys.platform.startswith("win"):
-        # macOS / Linux: usual install locations (the PATH is searched by ezdxf)
-        kand = ["/Applications/ODAFileConverter.app/Contents/MacOS/ODAFileConverter",
-                "/usr/bin/ODAFileConverter", "/usr/local/bin/ODAFileConverter"]
-        kand += glob.glob("/opt/ODAFileConverter*/ODAFileConverter")
-        kand += glob.glob("/opt/ODAFileConverter*/usr/bin/ODAFileConverter")
-        kand += glob.glob(os.path.expanduser("~/ODAFileConverter*.AppImage"))
-        for k in kand:
-            if os.path.isfile(k) and os.access(k, os.X_OK):
-                try:
-                    ezdxf.options.set("odafc-addon", "unix_exec_path", k)
-                except Exception:
-                    pass
-                return
-        return
-    kandidaten = []
-    for basis in (os.environ.get("ProgramFiles", r"C:\Program Files"),
-                  os.environ.get("ProgramFiles(x86)",
-                                 r"C:\Program Files (x86)")):
-        kandidaten += glob.glob(os.path.join(basis, "ODA",
-                                             "ODAFileConverter*",
-                                             "ODAFileConverter.exe"))
-    if kandidaten:
-        try:
-            ezdxf.options.set("odafc-addon", "win_exec_path",
-                              sorted(kandidaten)[-1])
-        except Exception:
-            pass
-
-
-def oda_verfuegbar():
-    """True if the ODA File Converter is installed (needed for DWG export)."""
-    try:
-        from ezdxf.addons import odafc
-        _oda_pfad_setzen()
-        return bool(odafc.is_installed())
-    except Exception:
-        return False
-
-
-# DWG engine. "auto" = the built-in ezdwg (MIT, no extra program); LibreDWG (dwg2dxf) only as a
-# fallback when the user has installed it. "oda" = the ODA File Converter, ONLY when the user
-# chooses it in the settings (it is an optional external program, free for non-commercial use
-# only - KatieCAD never starts it by itself).
-DWG_MOTOR = "auto"
-DWG_MOTOREN = ("auto", "oda")
-
-
 def dxf_doc_als_dwg_speichern(doc, pfad, version="R2018"):
-    """Writes an ezdxf document as DWG. Returns a short report text (what was written / left out),
-    raises RuntimeError with a readable text if the chosen engine cannot do it."""
-    if DWG_MOTOR == "oda":
-        if not oda_verfuegbar():
-            raise RuntimeError("Der ODA File Converter ist nicht installiert. In den Einstellungen "
-                               "(DWG-Konverter) wieder auf 'Automatisch' stellen oder als DXF exportieren.")
-        from ezdxf.addons import odafc
-        odafc.export_dwg(doc, pfad, version=version, replace=True)
-        return "ODA File Converter"
+    """Writes an ezdxf document as DWG with the built-in writer (ezdwg). Returns a short report
+    text (what was written / left out), raises RuntimeError with a readable text."""
     from katiecad.fileio import dwg_schreiben
     try:
         return "ezdwg: " + dwg_schreiben.dxf_doc_zu_dwg(doc, pfad, version).text()
@@ -554,25 +494,13 @@ def dxf_doc_als_dwg_speichern(doc, pfad, version="R2018"):
 
 
 def dwg_zu_dxf_doc(pfad):
-    """Converts DWG -> ezdxf document.
-    Order: built-in ezdwg, then LibreDWG (only if installed); with the setting "ODA" the ODA File
-    Converter comes first. Returns: (doc, source) or raises RuntimeError with help text."""
+    """Converts DWG -> ezdxf document with the built-in ezdwg; LibreDWG (dwg2dxf) only as a
+    fallback if the user has installed it. Returns: (doc, source) or raises RuntimeError."""
     fehler = []
-    if DWG_MOTOR == "oda":
-        try:
-            from ezdxf.addons import odafc
-            _oda_pfad_setzen()
-            if odafc.is_installed():
-                return odafc.readfile(pfad), "ODA File Converter"
-            fehler.append("ODA File Converter nicht gefunden")
-        except Exception as ex:
-            fehler.append(f"ODA: {ex}")
-    # built-in ezdwg: ships with KatieCAD (pip package); DWG -> temporary DXF -> normal DXF import
     try:
         return _ezdwg_zu_dxf_doc(pfad), "ezdwg"
     except Exception as ex:
         fehler.append(f"ezdwg: {ex}")
-    # LibreDWG as a fallback (optional, only if the user installed it)
     exe = shutil.which("dwg2dxf")
     if exe:
         try:
