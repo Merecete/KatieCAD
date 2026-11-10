@@ -1,4 +1,4 @@
 ezdxf
 Pillow
-ezdwg
+ezdwg>=0.19.2
 pypdf

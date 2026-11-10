@@ -528,17 +528,34 @@ def oda_verfuegbar():
         return False
 
 
+# DWG engine: "auto" = built-in ezdwg first (no extra program), the ODA File Converter only as a
+# fallback; "ezdwg" = only the built-in one; "oda" = only the ODA File Converter (optional,
+# not free for commercial use). Set from the program settings.
+DWG_MOTOR = "auto"
+DWG_MOTOREN = ("auto", "ezdwg", "oda")
+
+
 def dxf_doc_als_dwg_speichern(doc, pfad, version="R2018"):
-    """Writes an ezdxf document as DWG (ODA File Converter required).
-    Raises RuntimeError with a readable text if the converter is missing."""
-    if not oda_verfuegbar():
-        raise RuntimeError(
-            "Für den DWG-Export wird der kostenlose 'ODA File Converter' "
-            "benötigt (opendesign.com/guestfiles/oda_file_converter). "
-            "Installieren und KatieCAD neu starten.\n"
-            "Alternativ als DXF exportieren.")
-    from ezdxf.addons import odafc
-    odafc.export_dwg(doc, pfad, version=version, replace=True)
+    """Writes an ezdxf document as DWG. Returns a short report text (what was written / left out),
+    raises RuntimeError with a readable text if no engine can do it."""
+    fehler = []
+    if DWG_MOTOR in ("auto", "ezdwg"):
+        try:
+            from katiecad.fileio import dwg_schreiben
+            bericht = dwg_schreiben.dxf_doc_zu_dwg(doc, pfad, version)
+            return "ezdwg: " + bericht.text()
+        except Exception as ex:
+            fehler.append(str(ex))
+            if DWG_MOTOR == "ezdwg":
+                raise RuntimeError(fehler[-1])
+    if oda_verfuegbar():
+        from ezdxf.addons import odafc
+        odafc.export_dwg(doc, pfad, version=version, replace=True)
+        return "ODA File Converter"
+    raise RuntimeError(
+        (fehler[0] + "\n\n" if fehler else "") +
+        "Als Ausweg den DWG-Export mit dem optionalen 'ODA File Converter' nutzen "
+        "(opendesign.com/guestfiles/oda_file_converter) oder als DXF exportieren.")
 
 
 def dwg_zu_dxf_doc(pfad):
@@ -547,15 +564,16 @@ def dwg_zu_dxf_doc(pfad):
     ezdwg (always available).
     Returns: (doc, source) or raises RuntimeError with help text."""
     fehler = []
-    # 1) ODA File Converter
-    try:
-        from ezdxf.addons import odafc
-        _oda_pfad_setzen()
-        if odafc.is_installed():
-            return odafc.readfile(pfad), "ODA File Converter"
-        fehler.append("ODA File Converter nicht gefunden")
-    except Exception as ex:
-        fehler.append(f"ODA: {ex}")
+    # 1) ODA File Converter (skipped when the built-in engine is chosen)
+    if DWG_MOTOR != "ezdwg":
+        try:
+            from ezdxf.addons import odafc
+            _oda_pfad_setzen()
+            if odafc.is_installed():
+                return odafc.readfile(pfad), "ODA File Converter"
+            fehler.append("ODA File Converter nicht gefunden")
+        except Exception as ex:
+            fehler.append(f"ODA: {ex}")
     # 2) LibreDWG
     exe = shutil.which("dwg2dxf")
     if exe:

@@ -384,7 +384,7 @@ changes in them are lost; your drawing sheets stay untouched.
 - **File > Import DXF… / Import DWG…** reads foreign drawings, **Export DXF… / Export DWG…**
   writes them. DXF works directly. DWG import works without extra software (built-in `ezdwg`). For difficult files you can optionally
   install the free **ODA File Converter** (opendesign.com/guestfiles/oda_file_converter);
-  KatieCAD then uses it automatically (restart required) and reads more accurately. **Export DWG** needs this converter, **Export DXF** does not.
+  KatieCAD then uses it automatically (restart required) and reads more accurately. **Export DWG** also works without extra software since 1.1.6 (built-in writer via `ezdwg`, MIT licensed, format R2018, R2000 if needed). The writer does not know every entity type: ellipses, splines and bulge polylines are written as lines/arcs, hatches only as outline, unsupported elements are left out - after the export KatieCAD shows what was affected. For important deliveries also export as DXF and check it in the target program. Under **Settings > DWG converter** you choose: *Automatic* (built-in, ODA only as fallback), *Built-in only* or *ODA File Converter only* (optional; the ODA converter is not free for commercial use). To test with your own files: `python tools/dwg_test.py`.
 - **File > Export DXF…** writes the drawing as DXF.
 - PDF: see section 6.
 

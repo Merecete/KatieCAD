@@ -390,7 +390,7 @@ unverändert.
 - **Datei > Import DXF… / Import DWG…** liest fremde Zeichnungen ein, **Export DXF… / Export DWG…**
   schreibt sie. DXF geht direkt. DWG-Import funktioniert ohne Zusatzprogramm (eingebautes `ezdwg`). Für schwierige Dateien kannst du
   optional den kostenlosen **ODA File Converter** (opendesign.com/guestfiles/oda_file_converter) installieren;
-  KatieCAD nutzt ihn dann automatisch (Neustart nötig) und liest genauer. **Export DWG** braucht diesen Konverter, **Export DXF** nicht.
+  KatieCAD nutzt ihn dann automatisch (Neustart nötig) und liest genauer. **Export DWG** funktioniert seit 1.1.6 ebenfalls ohne Zusatzprogramm (eingebauter Schreiber über `ezdwg`, MIT-lizenziert, Format R2018, bei Bedarf R2000). Der Schreiber kennt nicht alle Elementarten: Ellipsen, Splines und Bogenpolylinien werden als Linien/Bögen übernommen, Schraffuren nur als Umriss, nicht unterstützte Elemente ausgelassen – nach dem Export zeigt KatieCAD, was betroffen war. Für wichtige Abgaben zusätzlich als DXF exportieren und im Zielprogramm prüfen. Unter **Einstellungen › DWG-Konverter** wählst du: *Automatisch* (eingebaut, ODA nur als Ersatz), *Nur eingebaut* oder *Nur ODA File Converter* (optional; der ODA-Konverter ist für kommerzielle Nutzung nicht kostenlos). Zum Testen mit eigenen Dateien: `python tools/dwg_test.py`.
 - **Datei > Export DXF…** schreibt die Zeichnung als DXF.
 - PDF: siehe Abschnitt 6.
 

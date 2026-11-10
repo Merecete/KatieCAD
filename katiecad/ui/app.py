@@ -435,6 +435,9 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self.dezimalkomma = tk.BooleanVar(value=(SPRACHE["aktuell"] != "en"))
         self.dxf_iso_var = tk.StringVar(
             value="linien" if lade_konfiguration().get("dxf_iso") == "linien" else "text")
+        _motor = lade_konfiguration().get("dwg_motor")
+        self.dwg_motor_var = tk.StringVar(value=_motor if _motor in ("auto", "ezdwg", "oda") else "auto")
+        self._dwg_motor_gesetzt(speichern=False)
         self._pts = []
         self._bem_kreis = None
         self._snap_ausschluss = None
@@ -1516,6 +1519,12 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             m_dxfiso.add_radiobutton(label=tr("menu.einst.dxfiso." + _w), value=_w,
                                      variable=self.dxf_iso_var, command=self._dxf_iso_gesetzt)
         m_einst.add_cascade(label=tr("menu.einst.dxfiso"), menu=m_dxfiso)
+        m_dwgm = tk.Menu(m_einst, tearoff=0, bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
+                         activebackground=FARBEN["cyan"], activeforeground=FARBEN["bg_dunkel"])
+        for _w in ("auto", "ezdwg", "oda"):
+            m_dwgm.add_radiobutton(label=tr("menu.einst.dwgmotor." + _w), value=_w,
+                                   variable=self.dwg_motor_var, command=self._dwg_motor_gesetzt)
+        m_einst.add_cascade(label=tr("menu.einst.dwgmotor"), menu=m_dwgm)
         menubar.add_cascade(label=tr("menu.einstellungen"), menu=m_einst)
 
         # Help
@@ -6489,10 +6498,13 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             doc = self._dxf_dokument()
             if art == "dwg":
                 from katiecad.fileio.cad_import import dxf_doc_als_dwg_speichern
-                dxf_doc_als_dwg_speichern(doc, pfad)
+                bericht = dxf_doc_als_dwg_speichern(doc, pfad)
             else:
                 doc.saveas(pfad)
-            self.status.set((tr("txt.0102", p0=titel, p1=pfad)))
+                bericht = ""
+            self.status.set((tr("txt.0102", p0=titel, p1=pfad)) + (" - " + bericht if bericht else ""))
+            if bericht and any(w in bericht for w in ("nicht übernommen", "als Linien")):
+                messagebox.showinfo(titel, tr("msg.dwg.bericht", bericht=bericht, pfad=pfad))
         except Exception as e:
             messagebox.showerror(titel,
                 (tr("txt.0155", p0=e)))
@@ -11450,6 +11462,14 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
     def _dxf_iso_modus(self):
         """DXF export of the ISO font: "text" (TEXT with ISO style) or "linien" (strokes)."""
         return "linien" if self.dxf_iso_var.get() == "linien" else "text"
+
+    def _dwg_motor_gesetzt(self, speichern=True):
+        """DWG engine for import / export (cad_import.DWG_MOTOR), remembered in the settings."""
+        from katiecad.fileio import cad_import
+        w = self.dwg_motor_var.get()
+        cad_import.DWG_MOTOR = w if w in cad_import.DWG_MOTOREN else "auto"
+        if speichern:
+            self._config_setzen("dwg_motor", cad_import.DWG_MOTOR)
 
     def _dxf_iso_gesetzt(self):
         self._config_setzen("dxf_iso", self._dxf_iso_modus())
