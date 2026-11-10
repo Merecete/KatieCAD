@@ -23,10 +23,11 @@ class Cv:
     def create_oval(s, *a, **k): s.l.append(("O", a, k))
     def tag_lower(s, *a): pass
 
-def lauf(zoom, ox, oy, raster=5.0, punkt=False):
+def lauf(zoom, ox, oy, raster=5.0, punkt=False, farbe=None):
     a = types.SimpleNamespace(canvas=Cv(), raster_sichtbar=V(True), raster_punktiert=V(punkt),
                               view={"zoom": zoom, "ox": ox, "oy": oy}, bg_modell="#ffffff",
-                              raster_mm=raster, _ist_layout=lambda: False)
+                              raster_mm=raster, _ist_layout=lambda: False, raster_farbe=farbe)
+    a._raster_farben = lambda: A.CadApp._raster_farben(a)
     a._zahl = lambda x, d: x
     A.CadApp._zeichne_raster(a)
     return a.canvas.l
@@ -45,4 +46,15 @@ for zoom in (0.5, 1.0, 1.37, 2.0, 3.3, 7.77, 10.0):
         check(len(abst) <= 2 and (not abst or max(abst) - min(abst) <= 1), "gleiche Abstaende der Hauptlinien zoom %s" % zoom)
 l = lauf(2.0, 50, 50, punkt=True)
 check(sum(1 for x in l if x[0] == "O") > 10 and len(l) - sum(1 for x in l if x[0] == "O") == 2, "punktiertes Raster: Punkte + 2 Achsen")
+# grid colour: default unchanged, chosen colour mixed with the background
+fl = {k["fill"] for a, k in lauf(2.0, 50, 50) if "fill" in k}
+check("#c8c8c8" in fl and "#909090" in fl, "Standard-Rasterfarben unveraendert")
+fr = {k["fill"] for a, k in lauf(2.0, 50, 50, farbe="#d14d4d") if "fill" in k}
+check("#c8c8c8" not in fr and len(fr) >= 3, "gewaehlte Rasterfarbe")
+from katiecad.model import core as _c
+check(_c.farbe_mischen("#000000", "#ffffff", 0.5) == "#808080" and _c.farbe_mischen("#102030", "#102030", 0.7) == "#102030", "farbe_mischen")
+check(len(_c.RASTER_PRESETS) == 8, "Raster-Vorgaben")
+from katiecad.common import i18n
+for lang in ("de", "en", "es"):
+    check(all(("dlg.rasterfarbe.preset_%d" % i) in i18n.TEXTE[lang] for i in range(8)) and all(k in i18n.TEXTE[lang] for k in ("tb.rasterfarbe", "menu.ansicht.rasterfarbe", "menu.ansicht.rasterfarbe_std", "dlg.rasterfarbe.standard")), "i18n Rasterfarbe " + lang)
 print(f"test_raster - OK ({ok} Pruefungen)")

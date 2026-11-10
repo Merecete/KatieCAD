@@ -120,6 +120,21 @@ BG_PRESETS = {
     "Beige (Sepia)":        "#f4ecd8",
 }
 
+# grid colours (base colour; the line / dot colours are mixed with the background)
+RASTER_PRESETS = {
+    "Violett": "#7a5ab8", "Grau": "#808080", "Blau": "#3d7fd1", "Grün": "#3da35d",
+    "Rot": "#d14d4d", "Orange": "#d1a13d", "Weiß": "#ffffff", "Schwarz": "#000000",
+}
+
+
+def farbe_mischen(a, b, t):
+    """Colour between a (t=0) and b (t=1), '#rrggbb'."""
+    def z(h):
+        return [int(h[i:i + 2], 16) for i in (1, 3, 5)]
+    ca, cb = z(a), z(b)
+    return "#%02x%02x%02x" % tuple(round(x + (y - x) * t) for x, y in zip(ca, cb))
+
+
 SCHRIFTARTEN = list(SCHRIFTEN.STANDARD_SCHRIFTEN)     # default fonts + user-chosen ones
 
 

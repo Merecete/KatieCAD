@@ -4041,9 +4041,11 @@ class FarbDialog(tk.Toplevel):
 
     ZELLE = 24
 
-    def __init__(self, parent, farbe="#c29bff", titel=None, von_layer=False, presets=None):
+    def __init__(self, parent, farbe="#c29bff", titel=None, von_layer=False, presets=None,
+                 preset_praefix="dlg.farbe.preset_"):
         super().__init__(parent)
         self._presets = presets
+        self._preset_praefix = preset_praefix
         from katiecad.model import ral as RAL
         self.RAL = RAL
         from katiecad.model import aci as _aci
@@ -4142,7 +4144,7 @@ class FarbDialog(tk.Toplevel):
             row=11, column=0, columnspan=2, sticky=tk.EW, pady=(10, 0))
         if presets:
             # ready-made colours (e.g. drawing backgrounds); names are translated by position
-            self._preset_namen = {tr("dlg.farbe.preset_%d" % i): hexf
+            self._preset_namen = {tr(self._preset_praefix + str(i)): hexf
                                   for i, hexf in enumerate(presets.values())}
             ttk.Label(rechts, text=tr("dlg.farbe.vorgabe")).grid(
                 row=12, column=0, sticky=tk.W, pady=(10, 0))
@@ -4465,10 +4467,11 @@ class FarbDialog(tk.Toplevel):
         self.destroy()
 
 
-def farbe_waehlen(parent, farbe="#c29bff", titel=None, von_layer=False, presets=None):
+def farbe_waehlen(parent, farbe="#c29bff", titel=None, von_layer=False, presets=None,
+                  preset_praefix="dlg.farbe.preset_"):
     """Opens the KatieCAD colour dialog -> '#rrggbb', VON_LAYER (only with von_layer=True,
     button "By layer") or None."""
-    dlg = FarbDialog(parent, farbe, titel, von_layer, presets)
+    dlg = FarbDialog(parent, farbe, titel, von_layer, presets, preset_praefix)
     parent.wait_window(dlg)
     return dlg.result
 

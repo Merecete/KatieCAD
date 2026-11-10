@@ -67,7 +67,7 @@ import katiecad.model.core as core
 from katiecad.model.core import (
     FARBEN, FARBSCHEMEN, FARBSCHEMA, farbschema_anwenden, EINHEITEN, ZEICHNUNGSFORMATE, MASSSTAEBE, LINIENTYPEN,
     schrift_fett, schrift_name, schrift_setzen, schriftarten_aktualisieren, SCHRIFTEN,
-    RASTER_GROESSEN, BG_PRESETS, SCHRIFTARTEN, LINIENSTAERKEN,
+    RASTER_GROESSEN, BG_PRESETS, RASTER_PRESETS, farbe_mischen, SCHRIFTARTEN, LINIENSTAERKEN,
     GRIFF_RADIUS, MIN_VP_GROESSE, PASTE_OFFSET_MM,
     TEXT_BREITE, TEXT_ZEILE, CAD_VERSALHOEHE, LW_PX_FAKTOR, BEM_RICHTUNGEN,
     BEFEHLE, PdfSeite, ist_dunkel,
@@ -316,6 +316,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self.text_schriftart = tk.StringVar(value="Arial")
 
         self.bg_modell = self._farbe_gueltig(_cfg_bg.get("bg_modell"), "#120a1f")
+        self.raster_farbe = self._farbe_gueltig(_cfg_bg.get("raster_farbe"), None)   # None = default
 
         self.view_modell = {"zoom": 1.5, "ox": 100, "oy": 700}
 
@@ -1502,6 +1503,9 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                             command=lambda: self.bg_waehlen("modell"))
         m_einst.add_command(label=tr("menu.ansicht.bg_layout"),
                             command=lambda: self.bg_waehlen("layout"))
+        m_einst.add_command(label=tr("menu.ansicht.rasterfarbe"), command=self.raster_farbe_waehlen)
+        m_einst.add_command(label=tr("menu.ansicht.rasterfarbe_std"),
+                            command=lambda: self._raster_farbe_setzen(None))
         m_einst.add_separator()
         m_einst.add_command(label=tr("menu.ansicht.schriften"),
                             command=self.schriften_verwalten)
@@ -1792,6 +1796,19 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self.bg_preset_cb.pack(side=tk.LEFT, padx=2)
         self.bg_preset_cb.bind("<<ComboboxSelected>>",
                                self._bg_preset_angewendet)
+        ttk.Label(tb3, text="  " + tr("tb.rasterfarbe"), style="Title.TLabel").pack(side=tk.LEFT)
+        self.raster_btn = self._farb_swatch(
+            tb3, self.raster_farbe or self._raster_farben_standard(), self.raster_farbe_waehlen)
+        self.raster_btn.pack(side=tk.LEFT, padx=4)
+        self.raster_preset_cb = ttk.Combobox(
+            tb3, width=14, state="readonly",
+            values=[tr("dlg.rasterfarbe.standard")]
+            + [tr("dlg.rasterfarbe.preset_%d" % i) for i in range(len(RASTER_PRESETS))])
+        self.raster_preset_cb.pack(side=tk.LEFT, padx=2)
+        self.raster_preset_cb.set(tr("dlg.rasterfarbe.standard") if not self.raster_farbe else next(
+            (tr("dlg.rasterfarbe.preset_%d" % i) for i, h in enumerate(RASTER_PRESETS.values())
+             if h == self.raster_farbe), ""))
+        self.raster_preset_cb.bind("<<ComboboxSelected>>", self._raster_preset_angewendet)
 
     def _build_eingabeleiste(self):
         self.frame_eingabe = ttk.Frame(self.root, padding=(6, 4))
@@ -2508,9 +2525,55 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
            (bereich == "layout" and aktuell_layout):
             self.canvas.config(bg=hexc)
             self.bg_btn.config(bg=hexc)
+            if not self.raster_farbe:
+                self.raster_btn.config(bg=self._raster_farben_standard())
             self.redraw()
             self._zeichne_raster()
         self._mark_dirty()
+
+    def _raster_farben(self):
+        """(dot, minor line, major line, dot outline) mixed from the chosen grid colour and the
+        model background; the default colours are used while no colour is chosen."""
+        bg = self.bg_modell
+        f = self.raster_farbe
+        return (farbe_mischen(bg, f, 0.70), farbe_mischen(bg, f, 0.22),
+                farbe_mischen(bg, f, 0.45), farbe_mischen(bg, f, 0.50))
+
+    def raster_farbe_waehlen(self):
+        aktuell = self.raster_farbe or self._raster_farben_standard()
+        hexc = farbe_waehlen(self.root, aktuell, tr("tb.rasterfarbe"), presets=RASTER_PRESETS,
+                             preset_praefix="dlg.rasterfarbe.preset_")
+        if hexc:
+            self._raster_farbe_setzen(hexc)
+
+    def _raster_farben_standard(self):
+        return "#7a5ab8" if ist_dunkel(self.bg_modell) else "#909090"
+
+    def _raster_farbe_setzen(self, hexc):
+        """hexc = '#rrggbb' or None (back to the default); remembered in the program settings."""
+        self.raster_farbe = hexc
+        daten = lade_konfiguration()
+        if hexc:
+            daten["raster_farbe"] = hexc
+        else:
+            daten.pop("raster_farbe", None)
+        speichere_konfiguration(daten)
+        try:
+            self.raster_btn.config(bg=hexc or self._raster_farben_standard())
+            self.raster_preset_cb.set(tr("dlg.rasterfarbe.standard") if not hexc else "")
+        except (AttributeError, tk.TclError):
+            pass
+        self._zeichne_raster()
+
+    def _raster_preset_angewendet(self, event=None):
+        name = self.raster_preset_cb.get()
+        if name == tr("dlg.rasterfarbe.standard"):
+            self._raster_farbe_setzen(None)
+            return
+        for i, hexf in enumerate(RASTER_PRESETS.values()):
+            if tr("dlg.rasterfarbe.preset_%d" % i) == name:
+                self._raster_farbe_setzen(hexf)
+                return
 
     def _bg_preset_angewendet(self, event=None):
         hexf = self._bg_preset_map.get(self.bg_preset_cb.get())
@@ -2851,7 +2914,10 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         h = c.winfo_height() or 700
         v = self.view
         dunkel = ist_dunkel(self.bg_modell)
-        if dunkel:
+        if self.raster_farbe:
+            farbe_punkt, farbe_linie_klein, farbe_linie_gross, rand_farbe = self._raster_farben()
+            farbe_achse = FARBEN["cyan"] if dunkel else FARBEN["cyan_dunkel"]
+        elif dunkel:
             farbe_punkt = "#322352"
             farbe_linie_klein = "#1c132d"
             farbe_linie_gross = "#2c1c47"

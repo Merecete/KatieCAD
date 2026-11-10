@@ -107,6 +107,8 @@ line weight in the toolbar.
 
 **Drawing background (Settings > Model background... / Layout background...):** sets the background colour of the model or the layout view - freely chosen or via the **Preset** field (Default, White/paper, Black, Dark grey, Light grey, Blue, Beige) (remembered in the program, applies to all drawings).
 
+**Grid colour (Settings > Grid colour... / Reset grid colour; since 1.1.6):** sets the colour of the grid in the model area. In the bottom bar next to *Background* there is the colour field *Grid:* and a list (Default, Violet, Grey, Blue, Green, Red, Orange, White, Black); *Default* returns to the original grid colour. Dots and minor and major lines are mixed from the chosen colour and the background, so the grid stays subtle on light and dark backgrounds. The choice is remembered in the program and applies to all drawings.
+
 **Toolbar:** the tools are icons (drawing purple, electrical red). Rest the mouse on an icon to see its name. The active tool has a lighter background.
 
 **Offset (Edit > Offset, commands `OFFSET` / `O`):** enter the distance, click an object, then click the side where the copy is to be created. Works with lines, circles, arcs, rectangles and polylines (corners are mitred). If the distance is too large (inwards), KatieCAD says "not possible".

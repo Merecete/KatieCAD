@@ -108,6 +108,8 @@ und Farbe, Linienart und Linienstärke in der Werkzeugleiste.
 
 **Zeichenhintergrund (Einstellungen › Hintergrund Modell… / Hintergrund Layout…):** stellt die Hintergrundfarbe der Modell- bzw. der Layout-Ansicht ein – frei wählbar oder über das Feld **Vorgabe** (Standard, Weiß/Papier, Schwarz, Dunkelgrau, Hellgrau, Blau, Beige) (wird im Programm gemerkt und gilt für alle Zeichnungen).
 
+**Rasterfarbe (Einstellungen › Rasterfarbe… / Rasterfarbe zurücksetzen; ab 1.1.6):** stellt die Farbe des Rasters im Modellbereich ein. In der Leiste unten neben *Hintergrund* gibt es dazu das Farbfeld *Raster:* und eine Auswahlliste (Standard, Violett, Grau, Blau, Grün, Rot, Orange, Weiß, Schwarz); *Standard* kehrt zur ursprünglichen Rasterfarbe zurück. Punkte sowie kleine und große Linien werden aus der gewählten Farbe und dem Hintergrund gemischt, so bleibt das Raster auf hellem und dunklem Hintergrund dezent. Die Wahl wird im Programm gemerkt und gilt für alle Zeichnungen.
+
 **Versatz (Bearbeiten › Versatz, Befehle `VERSATZ` / `O`):** Abstand eingeben, Objekt anklicken, dann die Seite anklicken, auf der die Kopie entstehen soll. Funktioniert mit Linien, Kreisen, Bögen, Rechtecken und Polylinien (Ecken mit Gehrung). Ist der Abstand zu groß (nach innen), meldet KatieCAD „nicht möglich“.
 
 **Länge ändern (Bearbeiten › Länge ändern, Werkzeugleiste, Befehl `LAENGE`):** Linie nahe an dem Ende anklicken, das sich ändern soll. Dann entweder das neue Ende anklicken (es wird auf die Linienrichtung projiziert, Objektfang darf benutzt werden) oder die Änderung in die Eingabezeile tippen: `+5` verlängert um 5, `-5` kürzt um 5, `=50` setzt die Länge auf 50 (Einheit wie im Projekt). Danach die nächste Linie anklicken oder ESC.

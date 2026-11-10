@@ -1,6 +1,7 @@
 # Änderungen
 
 ## 1.1.6
+- Neu: **Rasterfarbe:** Die Farbe des Rasters im Modellbereich lässt sich ändern: in der Leiste neben „Hintergrund“ (Farbfeld und Auswahlliste mit Violett, Grau, Blau, Grün, Rot, Orange, Weiß, Schwarz und „Standard“) sowie unter *Einstellungen › Rasterfarbe…* bzw. *Rasterfarbe zurücksetzen (Standard)*. Punkte, kleine und große Linien werden aus der gewählten Farbe und dem Hintergrund gemischt, die Wahl wird im Programm gemerkt (nicht in der Zeichnung)
 - Fix: **Schraffur bei Auswahl:** Bei ausgewählten Wänden und Kabelkanälen wurde die Schraffur in der Auswahlfarbe (blau) überdeckt; die Auswahlmarkierung umrandet jetzt nur noch den Körper, die Schraffur behält die Layerfarbe
 - Neu: **Wanddurchbruch:** neues Werkzeug in der Leiste „Bau:“ (Einfügen › Wanddurchbruch, Befehl `DURCHBRUCH`). Funktioniert wie das Fenster, nur ohne Glasscheibe: Die Wand bekommt eine offene Lücke, gezeichnet werden nur die Laibungslinien. Breite, Höhe und Brüstung einstellbar (Doppelklick); Schraffur und Wandflächen sind in der Lücke ausgespart
 - Neu: **Schraffur für Kabelkanäle:** wie bei der Wand (keine, schräg, Kreuz, Vollfläche; Linienabstand einstellbar, Standard 20 mm). Im Dialog vor dem Zeichnen und nachträglich per Doppelklick; gilt auch für Verbindungsstücke (Doppelklick). Nur in 2D, in 3D bleibt der Kanal ein Körper
