@@ -106,4 +106,11 @@ check(cad_import.DWG_MOTOREN == ("auto", "ezdwg", "oda"), "Motoren")
 from katiecad.common import i18n
 for lang in ("de", "en", "es"):
     check(all(k in i18n.TEXTE[lang] for k in ("menu.einst.dwgmotor", "menu.einst.dwgmotor.auto", "menu.einst.dwgmotor.ezdwg", "menu.einst.dwgmotor.oda", "msg.dwg.bericht")), "i18n DWG " + lang)
+import tempfile
+with tempfile.TemporaryDirectory() as td:
+    for kopf, erwartet in ((b"AC1021", "AC1021"), (b"AC1032", "AC1032"), (b"XXXXXX", "")):
+        pf = os.path.join(td, "t.dwg"); open(pf, "wb").write(kopf + b"\0" * 20)
+        check(cad_import.dwg_version(pf) == erwartet, "dwg_version " + erwartet)
+check(cad_import.dwg_version(os.path.join(td, "fehlt.dwg")) == "", "dwg_version fehlende Datei")
+check(all("msg.dwg.r2007_hinweis" in i18n.TEXTE[l] for l in ("de", "en", "es")), "i18n R2007-Hinweis")
 print(f"test_dwg_schreiben - OK ({ok} Pruefungen)")

@@ -623,6 +623,16 @@ class ImportErgebnis:
         self.hinweise = []
 
 
+def dwg_version(pfad):
+    """DWG format code from the file header, e.g. "AC1021" (R2007) / "AC1032" (R2018); "" if unknown."""
+    try:
+        with open(pfad, "rb") as f:
+            kopf = f.read(6).decode("ascii", "replace")
+        return kopf if kopf.startswith("AC") else ""
+    except OSError:
+        return ""
+
+
 def importiere_datei(pfad, layers):
     """Reads .dxf or .dwg and returns an ImportErgebnis.
     'layers' (dict) is extended with new layers.
@@ -644,6 +654,9 @@ def importiere_datei(pfad, layers):
                 "Alternativ: Datei in AutoCAD/LibreCAD/DraftSight als DXF "
                 "speichern und den DXF-Import verwenden.\n\n"
                 "Details: " + str(konv_fehler))
+        if erg.quelle == "ezdwg" and dwg_version(pfad) == "AC1021":
+            from katiecad.common.i18n import tr
+            erg.hinweise.append(tr("msg.dwg.r2007_hinweis"))
     else:
         if not EZDXF_OK:
             raise RuntimeError("ezdxf ist nicht installiert (pip install ezdxf).")

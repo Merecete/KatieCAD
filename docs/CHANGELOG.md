@@ -1,6 +1,7 @@
 # Änderungen
 
 ## 1.1.6
+- Neu: **Hinweis bei DWG-Dateien im Format R2007:** Wird eine solche Datei mit dem eingebauten Leser (ezdwg) importiert, weist KatieCAD darauf hin, dass dieses Format nur eingeschränkt gelesen wird (ODA oder Speichern als DXF/neueres DWG ist genauer). Neues Diagnose-Skript `tools/dwg_diagnose.py`
 - Änderung: **Export DXF / DWG nach Ansicht:** Befindest du dich in einer Layout-Ansicht, wird das aktive Layout als Blatt exportiert (wie beim Projekt-DXF), im Modellbereich wie bisher der Modellbereich. Die Statuszeile nennt den exportierten Bereich
 - Neu: **DWG-Export ohne Zusatzprogramm:** Der Export DWG nutzt jetzt den eingebauten Schreiber von `ezdwg` (MIT) und braucht den ODA File Converter nicht mehr. Nicht darstellbare Elemente werden als Linien/Bögen übernommen oder ausgelassen und nach dem Export gemeldet. Neue Einstellung *DWG-Konverter* (Automatisch / Nur eingebaut / Nur ODA); Testskript `tools/dwg_test.py`; `ezdwg` mindestens 0.19.2 (requirements.txt). **Noch nicht in echten CAD-Programmen geprüft – bitte mit eigenen Dateien testen**
 - Fix: **Rasterfarbe:** Das Farbfeld neben „Raster:“ zeigte nach einer Änderung nicht die neue Farbe (Namenskonflikt mit dem Raster-Schalter der Statusleiste, dessen Farbe dabei verändert wurde)
