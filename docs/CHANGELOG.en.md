@@ -1,5 +1,8 @@
 # Changes
 
+## 1.1.6
+- New: **Standard lettering:** new built-in single-stroke fonts "KatieCAD Normschrift" (upright) and "KatieCAD Normschrift kursiv" (15 degrees), modelled on ISO 3098 / DIN 6776 type B (capitals 10/10 h, lower case 7/10 h, stroke width 1/10 h). Selectable in the font list (toolbar, text dialog, properties, dimensions, rooms); nothing to install, screen and PDF look the same on every computer. Contains A-Z, a-z, 0-9, umlauts, sharp s, Ø ø Ω µ ° ± ² ³ € and common symbols. In the DXF export it stays a normal text
+
 ## 1.1.5
 - Fix: **Exploding a block keeps attributes:** attributes stay attribute definitions (tag, prompt, size, position); the current value becomes the default. So an exploded block can be changed and made into a block again (before, the attributes became normal texts)
 - Fix: **Grips on lines:** when dragging a line end point at its grip, Ortho (relative to the other end) and object snap including the snap marker, also **intersection snap with crossing lines** (a line can be shortened/extended exactly onto another line) now work (before, Ortho and the display of the snap point were missing)

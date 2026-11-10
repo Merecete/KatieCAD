@@ -1,5 +1,8 @@
 # Änderungen
 
+## 1.1.6
+- New: **Normschrift:** neue eingebaute Strichschrift „KatieCAD Normschrift“ (aufrecht) und „KatieCAD Normschrift kursiv“ (15°) nach dem Vorbild von ISO 3098 / DIN 6776 Form B (Großbuchstaben 10/10 h, Kleinbuchstaben 7/10 h, Strichbreite 1/10 h). Auswählbar in der Schriftliste (Leiste, Text-Dialog, Eigenschaften, Bemaßung, Raum); keine Installation nötig, Bildschirm und PDF sehen auf jedem Rechner gleich aus. Enthalten: A–Z, a–z, 0–9, Umlaute, ß, Ø ø Ω µ ° ± ² ³ € und gängige Sonderzeichen. Im DXF-Export bleibt es ein normaler Text
+
 ## 1.1.5
 - Fix: **Block auflösen (Sprengen) behält Attribute:** Attribute bleiben Attributdefinitionen (Tag, Beschriftung, Größe, Lage); der aktuelle Wert wird zur Vorgabe. So lässt sich ein aufgelöster Block ändern und wieder zum Block machen (vorher wurden die Attribute zu normalen Texten)
 - Fix: **Griffe an Linien:** Beim Ziehen eines Linien-Endpunkts am Griff funktionieren jetzt Ortho (relativ zum anderen Ende) und der Objektfang inkl. Fangmarker, auch der **Schnittpunktfang mit kreuzenden Linien** (Linie lässt sich exakt auf eine andere Linie kürzen/verlängern) (vorher fehlten Ortho und die Anzeige des Fangpunkts)

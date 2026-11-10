@@ -19,6 +19,7 @@ from copy import deepcopy
 from katiecad.common.i18n import tr, SPRACHE
 from katiecad.model.geom2d import ellipse_punkte, spline_punkte
 from katiecad.model import schriften as SCHRIFTEN
+from katiecad.model import normschrift as NORMSCHRIFT
 from katiecad.model.geom3d import (prisma_netz_gerundet, profil_abrunden, v_rotieren, punkt_rotieren, prisma_netz, pyramide_netz, kugel_netz, kreis_profil,
                                    rechteck_profil, netz_abbilden, Netz, ebene_punkt, ebene_basis, BODEN_EBENE, v_cross)
 
@@ -746,6 +747,8 @@ def schrift_setzen(name, fett):
 
 
 def pdf_textbreite(s, schriftgroesse, fett=False, familie=None):
+    if familie and NORMSCHRIFT.ist_normschrift(familie):       # built-in stroke font
+        return NORMSCHRIFT.breite(s, schriftgroesse * CAD_VERSALHOEHE)
     if familie:                                  # additional installed font: real metrics
         fn = SCHRIFTEN.breite(familie, fett)
         if fn is not None:
@@ -838,6 +841,14 @@ class PdfSeite:
                 w = pdf_textbreite(z, fs, fett, familie)
                 ox -= ex[0] * w / 2 + ey[0] * hoehe / 2
                 oy -= ex[1] * w / 2 + ey[1] * hoehe / 2
+            if familie and NORMSCHRIFT.ist_normschrift(familie):
+                # built-in stroke font: draw the strokes as lines (no font file needed)
+                sb = NORMSCHRIFT.strichbreite(hoehe, fett)
+                kur = NORMSCHRIFT.ist_kursiv(familie)
+                for zug in NORMSCHRIFT.zeile_zuege(z, hoehe, kur):
+                    self.linie([(ox + ex[0] * px + ey[0] * py, oy + ex[1] * px + ey[1] * py)
+                                for (px, py) in zug], sb, farbe)
+                continue
             ttf = SCHRIFTEN.pdf_ttf(familie, fett) if familie else None
             if ttf is not None:                  # embedded extra font: glyph numbers (Identity-H)
                 if not hasattr(self, "zusatz"):
@@ -2368,7 +2379,9 @@ class Bemassung(Element):
         s = h / 2.5
         gap, ueber, tgap = 0.625 * s, 1.25 * s, 0.625 * s
         txt = self.text(faktor, komma)
-        tw = max(max(pdf_textbreite(z, h / CAD_VERSALHOEHE)
+        fam_b = schrift_name(getattr(self, "schriftart", "Arial"))
+        tw = max(max(pdf_textbreite(z, h / CAD_VERSALHOEHE, False,
+                                    fam_b if NORMSCHRIFT.ist_normschrift(fam_b) else None)
                      for z in txt.split("\n")), TEXT_BREITE * h)
         res = {"linien": [], "pfeile": [], "text": None, "mitte": None}
         manuell = self.tx is not None and self.ty is not None

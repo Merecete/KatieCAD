@@ -23,6 +23,7 @@ from copy import deepcopy
 import os, sys, tempfile, subprocess, datetime, time
 _PROJEKT_WURZEL = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tkinter.font as tkfont
+from katiecad.model import normschrift as NORMSCHRIFT
 
 try:
     import ezdxf
@@ -7175,6 +7176,23 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             c.create_line(ux_px, uy_px,
                           ux_px + ex[0] * w_px, uy_px + ex[1] * w_px,
                           fill=farbe, tags=tags)
+            return
+
+        if NORMSCHRIFT.ist_normschrift(schrift_name(fam)):
+            # built-in stroke font: draw the strokes as lines
+            kur = NORMSCHRIFT.ist_kursiv(schrift_name(fam))
+            breite_px = max(1.0, NORMSCHRIFT.strichbreite(hoehe, schrift_fett(fam)) * skala)
+            for i, z in enumerate(zeilen):
+                up = (n - 1 - i) * TEXT_ZEILE * hoehe * skala + 0.3 * hoehe * skala
+                ox = ux_px + ey[0] * up
+                oy = uy_px + ey[1] * up
+                for zug in NORMSCHRIFT.zeile_zuege(z, hoehe, kur):
+                    pts = [(ox + (ex[0] * qx + ey[0] * qy) * skala,
+                            oy + (ex[1] * qx + ey[1] * qy) * skala) for (qx, qy) in zug]
+                    for teil in clip_polyline(pts, clip):
+                        flat = [v for q in teil for v in q]
+                        c.create_line(*flat, fill=farbe, width=breite_px, tags=tags,
+                                      capstyle=tk.ROUND, joinstyle=tk.ROUND)
             return
 
         em = max(4, min(600, int(round(h_px / CAD_VERSALHOEHE))))

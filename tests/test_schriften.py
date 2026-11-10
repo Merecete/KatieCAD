@@ -22,7 +22,7 @@ if gef:
     name = sorted(gef)[0]
     check(SF.aktiviere([name], gef) == [name] and SF.ist_zusatz(name), "aktiviert")
     core.schriftarten_aktualisieren()
-    check(core.SCHRIFTARTEN[-1] == name and core.SCHRIFTARTEN[:7] == SF.STANDARD_SCHRIFTEN, "Liste erweitert")
+    check(core.SCHRIFTARTEN[-1] == name and core.SCHRIFTARTEN[:len(SF.STANDARD_SCHRIFTEN)] == SF.STANDARD_SCHRIFTEN, "Liste erweitert")
     f = SF.breite(name)
     check(f is not None and f("Hallo") > 0 and f("HH") == 2 * f("H"), "Breiten aus der Schriftdatei")
     check(abs(core.pdf_textbreite("Hallo", 10, False, name) - f("Hallo") / 100.0) < 1e-9, "pdf_textbreite nutzt Schrift")
