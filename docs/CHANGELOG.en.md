@@ -1,6 +1,7 @@
 # Changes
 
 ## 1.1.6
+- Fix: **Grid colour:** the colour field next to "Grid:" did not show the new colour after a change (name clash with the grid switch of the status bar, whose colour was changed instead)
 - Fix: **Empty selection fields:** the lists next to "Background" and "Grid" stayed empty as long as no preset had been chosen. They now always show a text: the name of the matching preset, otherwise "Custom colour" (also after switching between model and layout)
 - New: **Grid colour:** the colour of the grid in the model area can be changed: in the bar next to "Background" (colour field and list with violet, grey, blue, green, red, orange, white, black and "Default") and under *Settings > Grid colour...* or *Reset grid colour (default)*. Dots, minor and major lines are mixed from the chosen colour and the background; the choice is remembered in the program (not in the drawing)
 - Fix: **Hatch when selected:** for selected walls and cable ducts the hatch was covered by the selection colour (blue); the selection mark now outlines only the body, the hatch keeps the layer colour

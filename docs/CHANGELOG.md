@@ -1,6 +1,7 @@
 # Änderungen
 
 ## 1.1.6
+- Fix: **Rasterfarbe:** Das Farbfeld neben „Raster:“ zeigte nach einer Änderung nicht die neue Farbe (Namenskonflikt mit dem Raster-Schalter der Statusleiste, dessen Farbe dabei verändert wurde)
 - Fix: **Leere Auswahlfelder:** Die Listen neben „Hintergrund“ und „Raster“ blieben leer, solange man keine Vorgabe gewählt hatte. Sie zeigen jetzt immer einen Text: den Namen der passenden Vorgabe, sonst „Eigene Farbe“ (auch nach Wechsel zwischen Modell und Layout)
 - Neu: **Rasterfarbe:** Die Farbe des Rasters im Modellbereich lässt sich ändern: in der Leiste neben „Hintergrund“ (Farbfeld und Auswahlliste mit Violett, Grau, Blau, Grün, Rot, Orange, Weiß, Schwarz und „Standard“) sowie unter *Einstellungen › Rasterfarbe…* bzw. *Rasterfarbe zurücksetzen (Standard)*. Punkte, kleine und große Linien werden aus der gewählten Farbe und dem Hintergrund gemischt, die Wahl wird im Programm gemerkt (nicht in der Zeichnung)
 - Fix: **Schraffur bei Auswahl:** Bei ausgewählten Wänden und Kabelkanälen wurde die Schraffur in der Auswahlfarbe (blau) überdeckt; die Auswahlmarkierung umrandet jetzt nur noch den Körper, die Schraffur behält die Layerfarbe

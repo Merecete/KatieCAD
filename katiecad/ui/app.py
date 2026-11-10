@@ -1797,9 +1797,9 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self.bg_preset_cb.bind("<<ComboboxSelected>>",
                                self._bg_preset_angewendet)
         ttk.Label(tb3, text="  " + tr("tb.rasterfarbe"), style="Title.TLabel").pack(side=tk.LEFT)
-        self.raster_btn = self._farb_swatch(
+        self.raster_farb_btn = self._farb_swatch(
             tb3, self.raster_farbe or self._raster_farben_standard(), self.raster_farbe_waehlen)
-        self.raster_btn.pack(side=tk.LEFT, padx=4)
+        self.raster_farb_btn.pack(side=tk.LEFT, padx=4)
         self.raster_preset_cb = ttk.Combobox(
             tb3, width=14, state="readonly",
             values=[tr("dlg.rasterfarbe.standard")]
@@ -2526,7 +2526,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             self.canvas.config(bg=hexc)
             self.bg_btn.config(bg=hexc)
             if not self.raster_farbe:
-                self.raster_btn.config(bg=self._raster_farben_standard())
+                self.raster_farb_btn.config(bg=self._raster_farben_standard())
             self.redraw()
             self._farb_combos_aktualisieren()
             self._zeichne_raster()
@@ -2577,7 +2577,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             daten.pop("raster_farbe", None)
         speichere_konfiguration(daten)
         try:
-            self.raster_btn.config(bg=hexc or self._raster_farben_standard())
+            self.raster_farb_btn.config(bg=hexc or self._raster_farben_standard())
         except (AttributeError, tk.TclError):
             pass
         self._farb_combos_aktualisieren()
