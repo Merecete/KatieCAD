@@ -56,5 +56,5 @@ check(_c.farbe_mischen("#000000", "#ffffff", 0.5) == "#808080" and _c.farbe_misc
 check(len(_c.RASTER_PRESETS) == 8, "Raster-Vorgaben")
 from katiecad.common import i18n
 for lang in ("de", "en", "es"):
-    check(all(("dlg.rasterfarbe.preset_%d" % i) in i18n.TEXTE[lang] for i in range(8)) and all(k in i18n.TEXTE[lang] for k in ("tb.rasterfarbe", "menu.ansicht.rasterfarbe", "menu.ansicht.rasterfarbe_std", "dlg.rasterfarbe.standard")), "i18n Rasterfarbe " + lang)
+    check(all(("dlg.rasterfarbe.preset_%d" % i) in i18n.TEXTE[lang] for i in range(8)) and all(k in i18n.TEXTE[lang] for k in ("dlg.farbe.eigene", "tb.rasterfarbe", "menu.ansicht.rasterfarbe", "menu.ansicht.rasterfarbe_std", "dlg.rasterfarbe.standard")), "i18n Rasterfarbe " + lang)
 print(f"test_raster - OK ({ok} Pruefungen)")

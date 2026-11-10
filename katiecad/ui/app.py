@@ -1805,10 +1805,9 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             values=[tr("dlg.rasterfarbe.standard")]
             + [tr("dlg.rasterfarbe.preset_%d" % i) for i in range(len(RASTER_PRESETS))])
         self.raster_preset_cb.pack(side=tk.LEFT, padx=2)
-        self.raster_preset_cb.set(tr("dlg.rasterfarbe.standard") if not self.raster_farbe else next(
-            (tr("dlg.rasterfarbe.preset_%d" % i) for i, h in enumerate(RASTER_PRESETS.values())
-             if h == self.raster_farbe), ""))
+        self._farb_combos_aktualisieren()
         self.raster_preset_cb.bind("<<ComboboxSelected>>", self._raster_preset_angewendet)
+        self._farb_combos_aktualisieren()
 
     def _build_eingabeleiste(self):
         self.frame_eingabe = ttk.Frame(self.root, padding=(6, 4))
@@ -2492,6 +2491,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         bg = self.bg_modell if not self._ist_layout() else self.bg_layout
         self.canvas.config(bg=bg)
         self.bg_btn.config(bg=bg)
+        self._farb_combos_aktualisieren()
         self._zeichne_raster()
         self.redraw()
         self._viewport_modus_anzeige_aktualisieren()
@@ -2528,8 +2528,26 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             if not self.raster_farbe:
                 self.raster_btn.config(bg=self._raster_farben_standard())
             self.redraw()
+            self._farb_combos_aktualisieren()
             self._zeichne_raster()
         self._mark_dirty()
+
+    def _farb_combos_aktualisieren(self):
+        """Background / grid lists always show a text: the preset name of the current colour,
+        otherwise "Own colour" (the lists are read-only, an empty field looked unfinished)."""
+        eigene = tr("dlg.farbe.eigene")
+        try:
+            bg = (self.bg_layout if self._ist_layout() else self.bg_modell).lower()
+            self.bg_preset_cb.set(next((n for n, h in self._bg_preset_map.items() if h.lower() == bg), eigene))
+            if not self.raster_farbe:
+                self.raster_preset_cb.set(tr("dlg.rasterfarbe.standard"))
+            else:
+                rf = self.raster_farbe.lower()
+                self.raster_preset_cb.set(next(
+                    (tr("dlg.rasterfarbe.preset_%d" % i) for i, h in enumerate(RASTER_PRESETS.values())
+                     if h.lower() == rf), eigene))
+        except (AttributeError, tk.TclError):
+            pass
 
     def _raster_farben(self):
         """(dot, minor line, major line, dot outline) mixed from the chosen grid colour and the
@@ -2560,9 +2578,9 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         speichere_konfiguration(daten)
         try:
             self.raster_btn.config(bg=hexc or self._raster_farben_standard())
-            self.raster_preset_cb.set(tr("dlg.rasterfarbe.standard") if not hexc else "")
         except (AttributeError, tk.TclError):
             pass
+        self._farb_combos_aktualisieren()
         self._zeichne_raster()
 
     def _raster_preset_angewendet(self, event=None):
