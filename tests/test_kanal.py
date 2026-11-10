@@ -40,6 +40,15 @@ check(len(ks) == 2 and abs(ks[0][1][0] - 1030) < 1e-6 and abs(ks[1][0][1] + 30) 
 check(len(core.kanal_kette([(0, 0), (1000, 0), (1000, 1000), (0, 1000)], 60, True)) == 4, "Kette geschlossen")
 check(core.kanal_kette([(0, 0), (500, 0), (1000, 0)], 60)[0][1] == (500.0, 0.0), "gerade: keine Verlaengerung")
 
+# alignment: line = left / right edge of the duct
+vl = core.kanal_versatz([(0, 0), (1000, 0), (1000, 1000)], "links", 60)
+vr = core.kanal_versatz([(0, 0), (1000, 0), (1000, 1000)], "rechts", 60)
+check(abs(vl[0][1] + 30) < 1e-6 and abs(vl[1][0] - 1030) < 1e-6 and abs(vl[1][1] + 30) < 1e-6, "Versatz links (Linie = linke Kante)")
+check(abs(vr[0][1] - 30) < 1e-6 and abs(vr[1][0] - 970) < 1e-6, "Versatz rechts")
+check(core.kanal_versatz([(0, 0), (5, 5)], "mitte", 60) == [(0.0, 0.0), (5.0, 5.0)], "Versatz mitte")
+for lang in ("de", "en", "es"):
+    check(all(("dlg.kanal.ausr." + a) in i18n.TEXTE[lang] for a in ("mitte", "links", "rechts")), "i18n Ausrichtung " + lang)
+
 # drop of a toolbar between two others (by screen rectangle)
 class _TB:
     def __init__(s, x): s.x = x

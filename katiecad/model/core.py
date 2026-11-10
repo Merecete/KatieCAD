@@ -1895,6 +1895,36 @@ def kanal_rechteck(p1, p2, breite):
             (p2[0] - nx, p2[1] - ny), (p1[0] - nx, p1[1] - ny)]
 
 
+def kanal_versatz(punkte, ausrichtung, breite, geschlossen=False):
+    """Centre line of a duct drawn along the clicked line: "mitte" = the line is the centre,
+    "links"/"rechts" = the line is the left/right edge of the duct (like walls). Corners are
+    mitred, so the result stays a chain."""
+    d = {"mitte": 0.0, "links": -breite / 2.0, "rechts": breite / 2.0}.get(ausrichtung, 0.0)
+    pts = [(float(x), float(y)) for x, y in punkte]
+    if abs(d) < 1e-12 or len(pts) < 2:
+        return pts
+    n = len(pts)
+    out = []
+    for i, p in enumerate(pts):
+        vor = pts[i - 1] if (i > 0 or geschlossen) else None
+        nach = pts[(i + 1) % n] if (i < n - 1 or geschlossen) else None
+        ns = []
+        if vor is not None and math.hypot(p[0] - vor[0], p[1] - vor[1]) > 1e-9:
+            ux, uy = _kn_einheit(p[0] - vor[0], p[1] - vor[1]); ns.append((-uy, ux))
+        if nach is not None and math.hypot(nach[0] - p[0], nach[1] - p[1]) > 1e-9:
+            ux, uy = _kn_einheit(nach[0] - p[0], nach[1] - p[1]); ns.append((-uy, ux))
+        if not ns:
+            out.append(p)
+        elif len(ns) == 1:
+            out.append((p[0] + ns[0][0] * d, p[1] + ns[0][1] * d))
+        else:
+            (n1x, n1y), (n2x, n2y) = ns
+            k = 1.0 + n1x * n2x + n1y * n2y
+            k = max(k, 0.2)                      # extreme reversal: limit the mitre
+            out.append((p[0] + (n1x + n2x) / k * d, p[1] + (n1y + n2y) / k * d))
+    return out
+
+
 def kanal_kette(punkte, breite, geschlossen=False):
     """Segments [(a, b), ...] of a duct chain through the clicked points. At every corner both
     pieces are lengthened by (width/2)*tan(turn/2), so their outer edges meet in the outer corner

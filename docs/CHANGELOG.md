@@ -1,6 +1,8 @@
 # Änderungen
 
 ## 1.1.6
+- Neu: **Kabelkanal mit Ausrichtung:** Wie bei der Wand legt der Dialog fest, ob die gezeichnete Linie die Kanalmitte, die linke oder die rechte Kanalkante ist (2D und 3D)
+- Fix: **Werkzeugleisten:** Beim Verändern des Fensters oder Umhängen einer Leiste sprangen alle Leisten zurück in die Ursprungsreihenfolge; die eingestellte Reihenfolge bleibt jetzt erhalten
 - Fix: **Werkzeugleisten:** Eine Leiste lässt sich jetzt zuverlässig zwischen zwei andere ziehen; maßgeblich ist die Mausposition über der Zielleiste (linke Hälfte = davor, rechte = dahinter)
 - Neu: **Kabelkanäle in 2D und 3D:** neue Werkzeuge *Kabelkanal* und *Kanäle verbinden* (Einfügen-Menü, Befehle `KANAL` / `KANALVERBINDEN`). Breite (in 3D auch Höhe) wählbar; in 2D flach im Modellbereich, in der 3D-Ansicht automatisch als Körper auf der Fläche. Zwischen zwei Kanälen erzeugt *Kanäle verbinden* das passende Verbindungsstück (Verbinder, Winkel oder T-Stück) als eigenes Bauteil. Ecken von Kanalketten stoßen bündig (Außenkante bis zur Außenecke). Eigene Ebene „CD“ in Rot
 - Änderung: **Neue Werkzeugleiste „Bau:“:** Wand, Tür, Fenster, Wände verbinden und Raum wandern aus der Werkzeugleiste in die neue Leiste „Bau:“ (zusammen mit den Kabelkanal-Werkzeugen); Position und Reihenfolge einstellbar unter Ansicht › Werkzeugleisten

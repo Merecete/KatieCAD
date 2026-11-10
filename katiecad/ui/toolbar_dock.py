@@ -246,7 +246,7 @@ class ToolbarDockMixin:
 
     def _toolbar_neu_gitter(self):
         self._tb_resize_id = None
-        rechts = [n for n in LEISTEN if self._leiste(n) is not None
+        rechts = [n for n in self.toolbar_reihenfolge() if self._leiste(n) is not None
                   and self.toolbar_position(n) == "rechts"]
         key = (self.root.winfo_height() // ZELLE_PX, self.root.winfo_width() // 40, len(rechts))
         if getattr(self, "_tb_zeilen", None) == key:
@@ -255,7 +255,7 @@ class ToolbarDockMixin:
         for n in rechts:
             self._leiste_gitter(n, len(rechts))
         for pos in ("oben", "unten"):
-            self._zone_reihen(pos, [n for n in LEISTEN if self._leiste(n) is not None
+            self._zone_reihen(pos, [n for n in self.toolbar_reihenfolge() if self._leiste(n) is not None
                                     and self.toolbar_position(n) == pos])
 
     def _leiste_ablegen(self, name, px, py):

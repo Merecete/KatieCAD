@@ -1,6 +1,8 @@
 # Changes
 
 ## 1.1.6
+- New: **Cable duct alignment:** as with walls, the dialog sets whether the drawn line is the duct centre, the left or the right duct edge (2D and 3D)
+- Fix: **Toolbars:** when the window was resized or a bar moved elsewhere, all bars jumped back to the original order; the chosen order is now kept
 - Fix: **Toolbars:** a bar can now reliably be dragged between two others; the mouse position over the target bar decides (left half = before, right half = behind)
 - New: **Cable ducts in 2D and 3D:** new tools *Cable duct* and *Join ducts* (Insert menu, commands `DUCT` / `DUCTJOIN`). Width (in 3D also height) selectable; flat in the model area in 2D, automatically a body on the face in the 3D view. Between two ducts *Join ducts* creates the matching fitting (coupler, elbow or tee) as a component of its own. Corners of duct chains meet flush (outer edge up to the outer corner). Own layer "CD" in red
 - Change: **New toolbar "Building:":** Wall, Door, Window, Join walls and Room move from the tool bar into the new "Building:" bar (together with the cable duct tools); position and order adjustable under View > Toolbars

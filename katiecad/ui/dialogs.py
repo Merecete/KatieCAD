@@ -337,7 +337,10 @@ class WandDialog(tk.Toplevel):
 class KanalDialog(tk.Toplevel):
     """Cable duct: width (and height in 3D). result = {"breite", "hoehe"} or None."""
 
-    def __init__(self, parent, breite=60.0, hoehe=40.0, mit_hoehe=False, laenge=None, titel=None):
+    AUSR = ("mitte", "links", "rechts")
+
+    def __init__(self, parent, breite=60.0, hoehe=40.0, mit_hoehe=False, laenge=None, titel=None,
+                 ausrichtung=None):
         super().__init__(parent)
         self.result = None
         self._hoehe0 = hoehe
@@ -358,13 +361,20 @@ class KanalDialog(tk.Toplevel):
         if mit_hoehe:
             ttk.Label(f, text=tr("dlg.kanal.hoehe")).grid(row=1, column=0, sticky=tk.W, pady=4)
             ttk.Entry(f, textvariable=self.hoehe_var, width=10).grid(row=1, column=1, sticky=tk.W, padx=8)
+        self._ausr = ausrichtung
+        self.ausr_var = tk.StringVar(value=tr("dlg.kanal.ausr." + (ausrichtung or "mitte")))
+        if ausrichtung is not None:
+            ttk.Label(f, text=tr("dlg.kanal.ausrichtung")).grid(row=2, column=0, sticky=tk.W, pady=4)
+            ttk.Combobox(f, textvariable=self.ausr_var, state="readonly", width=34,
+                         values=[tr("dlg.kanal.ausr." + a) for a in self.AUSR]
+                         ).grid(row=2, column=1, sticky=tk.W, padx=8)
         if laenge is not None:
             ttk.Label(f, text=tr("dlg.kanal.laenge", wert=f"{laenge:.0f}"),
-                      style="Hint.TLabel").grid(row=2, column=0, columnspan=2, sticky=tk.W, pady=2)
+                      style="Hint.TLabel").grid(row=3, column=0, columnspan=2, sticky=tk.W, pady=2)
         ttk.Label(f, text=tr("dlg.kanal.hinweis"), style="Hint.TLabel", wraplength=380,
-                  justify=tk.LEFT).grid(row=3, column=0, columnspan=2, sticky=tk.W, pady=(8, 2))
+                  justify=tk.LEFT).grid(row=4, column=0, columnspan=2, sticky=tk.W, pady=(8, 2))
         bf = ttk.Frame(f)
-        bf.grid(row=4, column=0, columnspan=2, pady=(10, 0))
+        bf.grid(row=5, column=0, columnspan=2, pady=(10, 0))
         ttk.Button(bf, text=tr("dlg.ok"), command=self._ok).pack(side=tk.LEFT, padx=4)
         ttk.Button(bf, text=tr("dlg.abbrechen"), command=self.destroy).pack(side=tk.LEFT, padx=4)
         self.bind("<Return>", lambda ev: self._ok())
@@ -377,7 +387,9 @@ class KanalDialog(tk.Toplevel):
         if b is None or h is None:
             messagebox.showwarning(tr("dlg.kanal.titel_vorgabe"), tr("dlg.wand.zahl"), parent=self)
             return
-        self.result = {"breite": b, "hoehe": h}
+        wahl = self.ausr_var.get()
+        ausr = next((a for a in self.AUSR if tr("dlg.kanal.ausr." + a) == wahl), "mitte")
+        self.result = {"breite": b, "hoehe": h, "ausrichtung": ausr}
         self.destroy()
 
 

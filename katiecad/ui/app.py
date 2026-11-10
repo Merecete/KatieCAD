@@ -73,7 +73,7 @@ from katiecad.model.core import (
     BEFEHLE, PdfSeite, ist_dunkel,
     E_DEVICES, E_LINES, E_CABLE, E_CLAMPS, E_PIN, ELEKTRO_LAYER, FTEXT_LAYER,
     Layer, Layout, Element, Linie, Kreis, Bogen, Rechteck, Polylinie, Text,
-    Ellipse, Spline, Wand, Kabelkanal, kanal_kette, KANAL_LAYER, KANAL_LAYER_FARBE, kanal_formstueck, kanal_aus_koerper, _variantenname, Oeffnung, Raum, RAUM_LAYER, RAUM_LAYER_FARBE, WAND_LAYER, WAND_LAYER_FARBE,
+    Ellipse, Spline, Wand, Kabelkanal, kanal_kette, kanal_versatz, KANAL_LAYER, KANAL_LAYER_FARBE, kanal_formstueck, kanal_aus_koerper, _variantenname, Oeffnung, Raum, RAUM_LAYER, RAUM_LAYER_FARBE, WAND_LAYER, WAND_LAYER_FARBE,
     wand_verknuepfen, wand_in_linien, wand_verbinden, wand_schliessen,
     Bemassung, Viewport, Schraffur, Bild, konturen_aus_elementen, bereich_an_punkt,
     AttributDefinition, Leitung, Verbindungspunkt, Querverweis,
@@ -4899,6 +4899,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
     # ---- cable ducts ----------------------------------------------------
     _kanal_breite = 60.0
     _kanal_hoehe = 40.0
+    _kanal_ausrichtung = "mitte"
     _kanal_verb_erste = None
 
     def _kanal_layer_sicherstellen(self):
@@ -4925,24 +4926,29 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         """Cable duct tool selected: ask width (3D: and height), create the layer."""
         self._kanal_layer_sicherstellen()
         mit_hoehe = self.ansicht3d_aktiv() and not self._ist_layout()
-        dlg = KanalDialog(self.root, self._kanal_breite, self._kanal_hoehe, mit_hoehe=mit_hoehe)
+        dlg = KanalDialog(self.root, self._kanal_breite, self._kanal_hoehe, mit_hoehe=mit_hoehe,
+                          ausrichtung=self._kanal_ausrichtung)
         if dlg.result is None:
             self.aktives_werkzeug.set("auswahl")
             self._werkzeug_toolbar()
             return
         self._kanal_breite = dlg.result["breite"]
+        self._kanal_ausrichtung = dlg.result["ausrichtung"]
         if mit_hoehe:
             self._kanal_hoehe = dlg.result["hoehe"]
         w = self._ansicht3d
         if w is not None and mit_hoehe:
             w.zustand["kanal"] = (self._kanal_breite, self._kanal_hoehe)
+            w.zustand["kanal_ausr"] = self._kanal_ausrichtung
         self.status.set(tr("msg.kanal.klick"))
 
     def _kanal_stuecke(self, punkte, geschlossen=False):
         """Straight duct pieces, one per segment of the clicked points."""
         return [Kabelkanal([a, b], breite=self._kanal_breite, hoehe=self._kanal_hoehe,
                            **self._kanal_layer_daten())
-                for a, b in kanal_kette(punkte, self._kanal_breite, geschlossen)]
+                for a, b in kanal_kette(
+                    kanal_versatz(punkte, self._kanal_ausrichtung, self._kanal_breite, geschlossen),
+                    self._kanal_breite, geschlossen)]
 
     def _kanal_unter_punkt(self, pt, ausser=None):
         tol = 8 / self.view["zoom"]
