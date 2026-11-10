@@ -1,6 +1,7 @@
 # Änderungen
 
 ## 1.1.6
+- Änderung: **DXF/DWG-Import mit leerem Modellbereich:** Liegt der Inhalt einer Datei nur in einem Layout (Papierbereich), wird das Layout mit dem meisten Inhalt importiert (Ansichtsfenster werden nicht übernommen). Gibt es dennoch nichts zu importieren, nennt die Meldung, wie viele Objekte Modellbereich und Layouts enthalten
 - Änderung: **Schnelleres Zeichnen großer Zeichnungen:** Ab 800 Elementen werden einfache Elemente (Linien, Kreise, Bögen, Polylinien, Schraffuren, Texte), die komplett außerhalb des sichtbaren Bereichs liegen, sowie Linien, Kreise, Bögen und Polylinien kleiner als ein halber Pixel nicht mehr gezeichnet. Wände, Kabelkanäle, Geräte, Bemaßungen u. a. werden immer gezeichnet. Auf dem Testprojekt (12 539 Elemente) wurde das Zeichnen beim Hineinzoomen vorher langsamer, weil alle Elemente verarbeitet wurden
 - Neu: **Zeichengeschwindigkeit anzeigen** (Einstellungen › Zeichengeschwindigkeit anzeigen): zeigt in der Statuszeile (und in der Konsole) nach jedem Neuzeichnen, wie lange Modellberechnung, Elemente und Raster brauchen sowie die Zahl der Elemente und Canvas-Objekte. Gedacht zum Finden von Bremsen bei großen Zeichnungen; wird nicht gespeichert
 - Fix: **DXF-Import:** Beim Import einer DXF-Datei erschien die Fehlermeldung „cannot access local variable '_r2007'“ (Fehler im neuen R2007-Hinweis, nur DXF betroffen)

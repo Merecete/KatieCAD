@@ -103,7 +103,7 @@ check(txt.startswith("ezdwg:") and "1 Elemente" in txt, "cad_import nutzt ezdwg"
 check(not hasattr(cad_import, "oda_verfuegbar"), "ODA entfernt")
 from katiecad.common import i18n
 for lang in ("de", "en", "es"):
-    check(all(k in i18n.TEXTE[lang] for k in ("msg.dwg.bericht", "menu.datei.import", "menu.datei.export", "menu.datei.export_projekt", "dlg.import.alle", "dlg.import.unbekannt", "msg.dwgp.fertig", "dlg.importziel.titel", "dlg.importziel.frage", "dlg.importziel.neu", "dlg.importziel.einfuegen")), "i18n DWG " + lang)
+    check(all(k in i18n.TEXTE[lang] for k in ("msg.dwg.bericht", "menu.datei.import", "menu.datei.export", "menu.datei.export_projekt", "dlg.import.alle", "menu.einst.leistung", "msg.leistung", "dlg.import.unbekannt", "msg.dwgp.fertig", "dlg.importziel.titel", "dlg.importziel.frage", "dlg.importziel.neu", "dlg.importziel.einfuegen")), "i18n DWG " + lang)
 import tempfile
 with tempfile.TemporaryDirectory() as td:
     for kopf, erwartet in ((b"AC1021", "AC1021"), (b"AC1032", "AC1032"), (b"XXXXXX", "")):
@@ -131,4 +131,34 @@ try:
     check(r.quelle == "ezdxf", "DXF-Import ohne _r2007-Fehler")
 finally:
     cad_import.EZDXF_OK, cad_import.dxf_lesen, cad_import.DxfImporter = _alt
+
+# empty model space: fall back to the fullest layout and report what the file contains
+class _Lay:
+    def __init__(self, name, n, modell=False):
+        self.name = name; self._n = n; self.is_modelspace = modell
+    def __len__(self):
+        return self._n
+    def __iter__(self):
+        return iter(range(self._n))
+class _FakeImp2:
+    def __init__(self, doc, layers):
+        self.elemente = []; self.uebersprungen = {}; self.fehler = 0
+        self.neue_layer = []; self.faktor = 1000.0
+    def importiere(self, ents):
+        self.elemente += list(ents)
+class _FakeDoc2:
+    layouts = [_Lay("Model", 0, True), _Lay("Layout1", 3), _Lay("Layout2", 7)]
+    def modelspace(self):
+        return []
+cad_import.EZDXF_OK = True
+cad_import.dxf_lesen = lambda p: (_FakeDoc2(), [])
+cad_import.DxfImporter = _FakeImp2
+try:
+    r = cad_import.importiere_datei("y.dxf", {})
+    check(len(r.elemente) == 7, "Layout mit dem meisten Inhalt wird importiert")
+    check(any("Layout2" in h for h in r.hinweise) and any("Layout1 (3)" in h for h in r.hinweise), "Hinweise nennen Layouts")
+finally:
+    cad_import.EZDXF_OK, cad_import.dxf_lesen, cad_import.DxfImporter = _alt
+for lang in ("de", "en", "es"):
+    check("msg.import.inhalt" in i18n.TEXTE[lang] and "msg.import.papierbereich" in i18n.TEXTE[lang], "i18n Import-Inhalt " + lang)
 print(f"test_dwg_schreiben - OK ({ok} Pruefungen)")

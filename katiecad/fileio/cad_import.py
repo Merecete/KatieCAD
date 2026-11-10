@@ -551,6 +551,29 @@ def dwg_version(pfad):
         return ""
 
 
+def _papierbereich_nutzen(doc, imp, erg, n_modell):
+    """Nothing in the model space: many files keep their content in a layout (paper space).
+    Imports the fullest layout instead and tells what the file contains."""
+    from katiecad.common.i18n import tr
+    layouts = []
+    try:
+        for lay in doc.layouts:
+            if getattr(lay, "is_modelspace", False) or str(getattr(lay, "name", "")).lower() == "model":
+                continue
+            n = len(lay)
+            if n:
+                layouts.append((n, lay))
+    except Exception:
+        pass
+    inhalt = ", ".join(f"{getattr(l, 'name', '?')} ({n})" for n, l in layouts) or "-"
+    erg.hinweise.append(tr("msg.import.inhalt", modell=n_modell, layouts=inhalt))
+    if layouts:
+        n, lay = max(layouts, key=lambda t: t[0])
+        imp.importiere(list(lay))
+        if imp.elemente:
+            erg.hinweise.append(tr("msg.import.papierbereich", name=getattr(lay, "name", "?")))
+
+
 def importiere_datei(pfad, layers):
     """Reads .dxf or .dwg and returns an ImportErgebnis.
     'layers' (dict) is extended with new layers.
@@ -579,7 +602,10 @@ def importiere_datei(pfad, layers):
         erg.quelle = "ezdxf"
 
     imp = DxfImporter(doc, layers)
-    imp.importiere(list(doc.modelspace()))
+    modell = list(doc.modelspace())
+    imp.importiere(modell)
+    if not imp.elemente:
+        _papierbereich_nutzen(doc, imp, erg, len(modell))
     erg.elemente = imp.elemente
     erg.uebersprungen = imp.uebersprungen
     erg.fehler = imp.fehler
