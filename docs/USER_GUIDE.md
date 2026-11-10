@@ -204,7 +204,7 @@ A **project** is a folder with a project file (`*.katieprj`), one file per sheet
 - **Create project…**: choose a name and location. The first sheet is created.
 - **Open / save / close / rename… / delete project…**
 - **New sheet, duplicate sheet, sheet properties (F2: name and installation location), delete sheet**
-- **Print sheets / as PDF…**
+- **Print project…**
 - **Create / update documentation…** and **Export lists as CSV…** (see section 9)
 
 In the **side bar**, one click switches the sheet. The current sheet is saved
@@ -232,7 +232,7 @@ Without a project you work on a single drawing (**File** menu: New, Open, Save �
   `title_blocks/README.md`.
 - **Insert > Save drawing as title block template…** turns a drawing into a new
   template.
-- **File > Print** (Ctrl+P) and **Project > Print sheets / as PDF…** create a PDF
+- **File > Print** (Ctrl+P) and **Project > Print project…** create a PDF
   (several sheets in one file) or open the print preview.
 
 ## 7. Blocks and attributes

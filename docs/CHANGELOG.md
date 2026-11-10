@@ -1,6 +1,7 @@
 # Änderungen
 
 ## 1.1.6
+- Änderung: **Menüpunkt „Projekt drucken…“:** heißt jetzt so (vorher „Blätter drucken / als PDF…“), passend zu *Datei › Drucken*; der Zusatz „als PDF“ führte zu dem Eindruck, man könne nur PDFs drucken
 - Neu: **Ein Import und ein Export im Datei-Menü:** *Import…* liest DWG, DXF, PDF und Bilder (Format nach Dateiendung), *Export…* schreibt DXF oder DWG (Dateityp im Speichern-Dialog). Die getrennten Einträge für DXF, DWG, PDF, Bild entfallen; PDF-/Bildausgabe bleibt unter *Drucken*. Beim Import von DWG/DXF: Ist bereits etwas gezeichnet (oder ein Projekt offen), fragt KatieCAD, ob die Datei als *neue Zeichnung* geöffnet oder in die *aktuelle Zeichnung eingefügt* wird; bei „neu“ wird die aktuelle Zeichnung wie bei *Datei › Neu* geschlossen (mit Nachfrage zum Speichern)
 - Neu: **DWG-Export ohne Zusatzprogramm:** Export DWG (Format R2018, bei Bedarf R2000) nutzt den eingebauten Schreiber von `ezdwg` (MIT). Ellipsen, Splines und Bogenpolylinien werden als Linien/Bögen geschrieben, Schraffuren als Umriss, nicht darstellbare Elemente ausgelassen; nach dem Export meldet KatieCAD, was betroffen war. `ezdwg` mindestens 0.19.2 (requirements.txt), Testskript `tools/dwg_test.py`
 - Neu: **Projekt als DWG / DXF exportieren** (Projekt-Menü): ein Menüpunkt (vorher „Projekt als eine DXF exportieren…“), Dateityp im Speichern-Dialog; alle Blätter werden nebeneinander in eine Datei geschrieben

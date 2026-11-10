@@ -1,6 +1,7 @@
 # Changes
 
 ## 1.1.6
+- Change: **Menu item "Print project…":** renamed (formerly "Print sheets / export PDF…"), matching *File > Print*; the "PDF" suffix suggested that only PDFs could be printed
 - New: **One Import and one Export in the File menu:** *Import…* reads DWG, DXF, PDF and images (format by file extension), *Export…* writes DXF or DWG (file type in the save dialog). The separate entries for DXF, DWG, PDF and image are gone; PDF/image output stays under *Print*. When importing DWG/DXF: if something is already drawn (or a project is open), KatieCAD asks whether the file opens as a *new drawing* or is *inserted into the current drawing*; with "new" the current drawing is closed like *File > New* (asking about saving)
 - New: **DWG export without an extra program:** Export DWG (format R2018, R2000 if needed) uses the built-in writer of `ezdwg` (MIT). Ellipses, splines and bulge polylines are written as lines/arcs, hatches as outline, elements that cannot be represented are left out; after the export KatieCAD reports what was affected. `ezdwg` at least 0.19.2 (requirements.txt), test script `tools/dwg_test.py`
 - New: **Export project as DWG / DXF** (Project menu): one menu item (formerly "Export project as one DXF…"), file type in the save dialog; all sheets are written side by side into one file

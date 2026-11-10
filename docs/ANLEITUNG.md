@@ -203,7 +203,7 @@ Menü **Projekt**:
 - **Projekt erstellen…**: Name und Speicherort wählen. Das erste Blatt wird angelegt.
 - **Projekt öffnen… / speichern / schließen / umbenennen… / löschen…**
 - **Neues Blatt, Blatt duplizieren, Blatt-Eigenschaften (F2: Name und Einbauort), Blatt löschen**
-- **Blätter drucken / als PDF…**
+- **Projekt drucken…**
 - **Dokumentation erzeugen / aktualisieren…** und **Listen als CSV exportieren…**
   (siehe Abschnitt 9)
 
@@ -232,7 +232,7 @@ Ohne Projekt arbeitest du in einer einzelnen Zeichnung (Menü **Datei**: Neu,
   Feldnamen (z. B. `KUNDE`, `GEZEICHNET`, `REV1_STAND`) stehen in `title_blocks/README.md`.
 - **Einfügen > Zeichnung als Schriftkopf-Vorlage speichern…** legt aus einer
   Zeichnung eine neue Vorlage an.
-- **Datei > Drucken** (Strg+P) und **Projekt > Blätter drucken / als PDF…**
+- **Datei > Drucken** (Strg+P) und **Projekt > Projekt drucken…**
   erzeugen ein PDF (mehrere Blätter in einer Datei) oder öffnen die Druckvorschau.
 
 ## 7. Blöcke und Attribute
