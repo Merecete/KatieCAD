@@ -2843,36 +2843,33 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             # large screens (memory/CPU).
             while (w / step_px + 1) * (h / step_px + 1) > 6000:
                 step_px *= 5
-        haupt_step = step_px * 5
         ox = v["ox"]
         oy = v["oy"]
+        # Cell index counted from the origin (integers, no float drift): every 5th line is a
+        # major line, so a major cell always consists of 5 x 5 small cells at any zoom.
+        i0, i1 = math.floor(-ox / step_px), math.ceil((w - ox) / step_px)
+        j0, j1 = math.floor(-oy / step_px), math.ceil((h - oy) / step_px)
         if self.raster_punktiert.get():
-            x = ox - int(ox / step_px + 1) * step_px
-            while x < w:
-                y = oy - int(oy / step_px + 1) * step_px
-                while y < h:
+            for i in range(i0, i1 + 1):
+                x = round(ox + i * step_px)
+                for j in range(j0, j1 + 1):
+                    y = round(oy + j * step_px)
                     c.create_oval(x - 1.5, y - 1.5, x + 1.5, y + 1.5,
                                   fill=farbe_punkt, outline=rand_farbe,
                                   width=1, tags="raster")
-                    y += step_px
-                x += step_px
         else:
-            x = ox - int(ox / step_px + 1) * step_px
-            while x < w:
-                ist_haupt = abs((x - ox) % haupt_step) < 2
-                farbe = farbe_linie_gross if ist_haupt else farbe_linie_klein
-                breite = 2 if ist_haupt else 1
-                c.create_line(x, 0, x, h, fill=farbe, width=breite, tags="raster")
-                x += step_px
-            y = oy - int(oy / step_px + 1) * step_px
-            while y < h:
-                ist_haupt = abs((oy - y) % haupt_step) < 2
-                farbe = farbe_linie_gross if ist_haupt else farbe_linie_klein
-                breite = 2 if ist_haupt else 1
-                c.create_line(0, y, w, y, fill=farbe, width=breite, tags="raster")
-                y += step_px
-        c.create_line(0, oy, w, oy, fill=farbe_achse, width=2, tags="raster")
-        c.create_line(ox, 0, ox, h, fill=farbe_achse, width=2, tags="raster")
+            for i in range(i0, i1 + 1):
+                ist_haupt = i % 5 == 0
+                x = round(ox + i * step_px)
+                c.create_line(x, 0, x, h, width=2 if ist_haupt else 1, tags="raster",
+                              fill=farbe_linie_gross if ist_haupt else farbe_linie_klein)
+            for j in range(j0, j1 + 1):
+                ist_haupt = j % 5 == 0
+                y = round(oy + j * step_px)
+                c.create_line(0, y, w, y, width=2 if ist_haupt else 1, tags="raster",
+                              fill=farbe_linie_gross if ist_haupt else farbe_linie_klein)
+        c.create_line(0, round(oy), w, round(oy), fill=farbe_achse, width=2, tags="raster")
+        c.create_line(round(ox), 0, round(ox), h, fill=farbe_achse, width=2, tags="raster")
         c.tag_lower("raster")
 
     def _zeichne_blatt(self):

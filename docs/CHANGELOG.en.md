@@ -1,6 +1,7 @@
 # Changes
 
 ## 1.1.6
+- Fix: **Grid in the model area:** the heavier major lines sometimes fell on every fifth line and sometimes were missing, depending on zoom and pan (rounding error when detecting the major line). The grid is now counted from the origin in whole steps: every major cell always consists of 5 x 5 small cells at any zoom; lines sit on whole pixels and have the same weight everywhere
 - New: **Standard lettering:** new built-in single-stroke fonts "KatieCAD Normschrift" (upright) and "KatieCAD Normschrift kursiv" (15 degrees), modelled on ISO 3098 / DIN 6776 type B (capitals 10/10 h, lower case 7/10 h, stroke width 1/10 h). Selectable in the font list (toolbar, text dialog, properties, dimensions, rooms); nothing to install, screen and PDF look the same on every computer. Contains A-Z, a-z, 0-9, umlauts, sharp s, Ø ø Ω µ ° ± ² ³ € and common symbols. In the DXF export it stays a normal text
 
 ## 1.1.5

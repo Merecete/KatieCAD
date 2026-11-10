@@ -1,6 +1,7 @@
 # Änderungen
 
 ## 1.1.6
+- Fix: **Raster im Modellbereich:** Die kräftigeren Hauptlinien lagen je nach Zoom und Verschiebung mal auf jeder fünften Linie, mal fehlten sie (Rundungsfehler beim Erkennen der Hauptlinie). Jetzt zählt das Raster ab dem Nullpunkt ganzzahlig: jedes Hauptkästchen besteht immer aus 5 × 5 kleinen Kästchen, bei jedem Zoom; die Linien liegen auf ganzen Bildpunkten und sind überall gleich dick
 - New: **Normschrift:** neue eingebaute Strichschrift „KatieCAD Normschrift“ (aufrecht) und „KatieCAD Normschrift kursiv“ (15°) nach dem Vorbild von ISO 3098 / DIN 6776 Form B (Großbuchstaben 10/10 h, Kleinbuchstaben 7/10 h, Strichbreite 1/10 h). Auswählbar in der Schriftliste (Leiste, Text-Dialog, Eigenschaften, Bemaßung, Raum); keine Installation nötig, Bildschirm und PDF sehen auf jedem Rechner gleich aus. Enthalten: A–Z, a–z, 0–9, Umlaute, ß, Ø ø Ω µ ° ± ² ³ € und gängige Sonderzeichen. Im DXF-Export bleibt es ein normaler Text
 
 ## 1.1.5
