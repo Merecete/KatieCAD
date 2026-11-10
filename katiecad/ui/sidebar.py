@@ -158,7 +158,7 @@ class Seitenleiste(ttk.Frame):
         self.tree.column("nr", width=46, anchor=tk.CENTER, stretch=False)
         self.tree.heading("ort", text=tr("sb.spalte_ort"))
         self.tree.column("name", width=110, anchor=tk.W)
-        self.tree.column("ort", width=80, anchor=tk.W)
+        self.tree.column("ort", width=80, anchor=tk.CENTER)
         sb = ttk.Scrollbar(tf, orient=tk.VERTICAL, command=self.tree.yview)
         self.tree.configure(yscrollcommand=sb.set)
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
