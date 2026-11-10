@@ -19,7 +19,7 @@ from tkinter import ttk
 from katiecad.ui import meldung as messagebox
 
 from katiecad.common.i18n import tr
-from katiecad.model.core import (FARBEN, UI_SCHRIFT, Koerper3D, Gruppe3D, Skizze3D, kanal_rechteck, kanal_aus_koerper, kanal_formstueck, Bemassung3D, Text3D, Viewport,
+from katiecad.model.core import (FARBEN, UI_SCHRIFT, Koerper3D, Gruppe3D, Skizze3D, kanal_rechteck, kanal_kette, kanal_aus_koerper, kanal_formstueck, Bemassung3D, Text3D, Viewport,
                                  quader, zylinder, kegel, pyramide, kugel)
 from katiecad.model import geom3d as G
 from katiecad.model import szene3d as S
@@ -1458,17 +1458,22 @@ class Ansicht3D(tk.Frame):
             return
         if sk is None:
             self.app._kanal_layer_sicherstellen()
-            self._skiz = {"form": "kanal", "pts": [p], "maus": p}
+            self._skiz = {"form": "kanal", "pts": [p], "maus": p, "koerper": []}
             self.info_var.set(tr("d3.msg.kanal_weiter"))
         else:
             q = sk["pts"][-1]
             if math.hypot(p[0] - q[0], p[1] - q[1]) > 1e-6:
                 b, h = self._kanal_masse()
-                k = self._kanal_koerper(self._ebene(), kanal_rechteck(q, p, b), "gerade", b, h)
                 self.app._snapshot()
-                self.app.elemente.append(k)
-                self.app.auswahl = [k]
                 sk["pts"].append(p)
+                for alt in sk.get("koerper", []):          # chain is rebuilt: corners butt-joined
+                    if alt in self.app.elemente:
+                        self.app.elemente.remove(alt)
+                neu = [self._kanal_koerper(self._ebene(), kanal_rechteck(a, c, b), "gerade", b, h)
+                       for a, c in kanal_kette(sk["pts"], b)]
+                self.app.elemente.extend(neu)
+                sk["koerper"] = neu
+                self.app.auswahl = [neu[-1]]
                 self.app.redraw()
         self.zeichne()
 

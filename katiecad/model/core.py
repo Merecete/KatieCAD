@@ -1895,6 +1895,31 @@ def kanal_rechteck(p1, p2, breite):
             (p2[0] - nx, p2[1] - ny), (p1[0] - nx, p1[1] - ny)]
 
 
+def kanal_kette(punkte, breite, geschlossen=False):
+    """Segments [(a, b), ...] of a duct chain through the clicked points. At every corner both
+    pieces are lengthened by (width/2)*tan(turn/2), so their outer edges meet in the outer corner
+    (butt joint: the corner stays square, nothing overhangs)."""
+    pts = [(float(x), float(y)) for x, y in punkte]
+    n = len(pts)
+    seg = [[pts[i], pts[i + 1]] for i in range(n - 1) if math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]) > 1e-9]
+    if geschlossen and len(seg) > 2:
+        seg.append([seg[-1][1], seg[0][0]])
+    gelenke = [(i, i + 1) for i in range(len(seg) - 1)]
+    if geschlossen and len(seg) > 2:
+        gelenke[-1] = (len(seg) - 2, len(seg) - 1)
+        gelenke.append((len(seg) - 1, 0))
+    for i, j in gelenke:
+        a, b = seg[i], seg[j]
+        d1 = _kn_einheit(a[1][0] - a[0][0], a[1][1] - a[0][1])
+        d2 = _kn_einheit(b[1][0] - b[0][0], b[1][1] - b[0][1])
+        phi = math.atan2(d1[0] * d2[1] - d1[1] * d2[0], d1[0] * d2[0] + d1[1] * d2[1])
+        e = min(abs(math.tan(phi / 2.0)) * breite / 2.0, breite) if abs(phi) > 1e-6 else 0.0
+        c = a[1]
+        a[1] = (c[0] + d1[0] * e, c[1] + d1[1] * e)
+        b[0] = (c[0] - d2[0] * e, c[1] - d2[1] * e)
+    return [(tuple(a), tuple(b)) for a, b in seg]
+
+
 def _kn_schnitt(p, d, q, e):
     """Intersection of the lines p + t*d and q + s*e, or None (parallel)."""
     det = d[0] * e[1] - d[1] * e[0]

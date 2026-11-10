@@ -258,6 +258,30 @@ class ToolbarDockMixin:
             self._zone_reihen(pos, [n for n in LEISTEN if self._leiste(n) is not None
                                     and self.toolbar_position(n) == pos])
 
+    def _leiste_ablegen(self, name, px, py):
+        """Drop at screen point (px, py): the bar under it of the same area decides; left half =
+        before it, right half = behind it. True when handled."""
+        r = self.toolbar_reihenfolge()
+        pos = self.toolbar_position(name)
+        for n in LEISTEN:
+            tb = self._leiste(n)
+            if n == name or tb is None or self.toolbar_position(n) != pos:
+                continue
+            try:
+                x0, y0 = tb.winfo_rootx(), tb.winfo_rooty()
+                x1, y1 = x0 + tb.winfo_width(), y0 + tb.winfo_height()
+            except Exception:
+                continue
+            if x0 <= px <= x1 and y0 <= py <= y1:
+                if (px - x0) * 2 < (x1 - x0) if pos != "rechts" else (py - y0) * 2 < (y1 - y0):
+                    self.toolbar_vor(name, n)
+                else:
+                    r.remove(name)
+                    r.insert(r.index(n) + 1, name)
+                    self._toolbar_reihe_speichern()
+                return True
+        return False
+
     def _toolbar_griff_binden(self, griff, name="werkzeug"):
         """Drag the grip to an edge of the window and release."""
         def los(e):
@@ -273,7 +297,10 @@ class ToolbarDockMixin:
             if neu != self.toolbar_position(name):
                 self.toolbar_position_setzen(neu, name)
                 return
-            # same area: dropped on another bar -> take its place
+            # same area: dropped on another bar (found by its screen rectangle, so gaps,
+            # tooltips and the label do not matter) -> before / behind it
+            if self._leiste_ablegen(name, px, py):
+                return
             try:
                 unter = self.root.winfo_containing(px, py)
             except Exception:

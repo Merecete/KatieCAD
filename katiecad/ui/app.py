@@ -73,7 +73,7 @@ from katiecad.model.core import (
     BEFEHLE, PdfSeite, ist_dunkel,
     E_DEVICES, E_LINES, E_CABLE, E_CLAMPS, E_PIN, ELEKTRO_LAYER, FTEXT_LAYER,
     Layer, Layout, Element, Linie, Kreis, Bogen, Rechteck, Polylinie, Text,
-    Ellipse, Spline, Wand, Kabelkanal, KANAL_LAYER, KANAL_LAYER_FARBE, kanal_formstueck, kanal_aus_koerper, _variantenname, Oeffnung, Raum, RAUM_LAYER, RAUM_LAYER_FARBE, WAND_LAYER, WAND_LAYER_FARBE,
+    Ellipse, Spline, Wand, Kabelkanal, kanal_kette, KANAL_LAYER, KANAL_LAYER_FARBE, kanal_formstueck, kanal_aus_koerper, _variantenname, Oeffnung, Raum, RAUM_LAYER, RAUM_LAYER_FARBE, WAND_LAYER, WAND_LAYER_FARBE,
     wand_verknuepfen, wand_in_linien, wand_verbinden, wand_schliessen,
     Bemassung, Viewport, Schraffur, Bild, konturen_aus_elementen, bereich_an_punkt,
     AttributDefinition, Leitung, Verbindungspunkt, Querverweis,
@@ -4940,13 +4940,9 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
 
     def _kanal_stuecke(self, punkte, geschlossen=False):
         """Straight duct pieces, one per segment of the clicked points."""
-        pts = list(punkte) + ([punkte[0]] if geschlossen and len(punkte) > 2 else [])
-        out = []
-        for a, b in zip(pts, pts[1:]):
-            if math.hypot(b[0] - a[0], b[1] - a[1]) > 1e-9:
-                out.append(Kabelkanal([a, b], breite=self._kanal_breite, hoehe=self._kanal_hoehe,
-                                      **self._kanal_layer_daten()))
-        return out
+        return [Kabelkanal([a, b], breite=self._kanal_breite, hoehe=self._kanal_hoehe,
+                           **self._kanal_layer_daten())
+                for a, b in kanal_kette(punkte, self._kanal_breite, geschlossen)]
 
     def _kanal_unter_punkt(self, pt, ausser=None):
         tol = 8 / self.view["zoom"]
