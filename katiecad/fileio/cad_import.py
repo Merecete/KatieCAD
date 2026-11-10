@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 katiecad/fileio/cad_import.py - Robust DXF/DWG import for KatieCAD.
-Contains NO Tkinter. Called by CadApp.import_cad.
+Contains NO Tkinter. Called by CadApp._cad_import.
 
 Supported (DXF):
   LINE, CIRCLE, ARC, ELLIPSE, SPLINE, LWPOLYLINE, POLYLINE (2D/3D, with

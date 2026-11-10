@@ -381,11 +381,10 @@ changes in them are lost; your drawing sheets stay untouched.
 
 ## 10. Import and export
 
-- **File > Import DWG / DXF…** (one command for both formats, recognised by the file extension) reads foreign drawings, **Export DXF… / Export DWG…**
+- **File > Import…** reads foreign files: DWG, DXF, PDF and images. The program recognises the format by the file extension, you just pick the file. **File > Export…** writes the drawing as DXF or DWG; you choose the file type in the save dialog. (PDF and image output are under *Print*.)
   writes them. DXF works directly. DWG import works without extra software (built-in `ezdwg`). If a DWG file is not read cleanly,
   save it in the source program as DXF or as a newer DWG (R2013/R2018). KatieCAD never starts an external program by itself. **Export DWG** also works without extra software since 1.1.6 (built-in writer via `ezdwg`, MIT licensed, format R2018, R2000 if needed). The writer does not know every entity type: ellipses, splines and bulge polylines are written as lines/arcs, hatches only as outline, unsupported elements are left out - after the export KatieCAD shows what was affected. For important deliveries also export as DXF and check it in the target program. No external converter program is needed; only if you installed LibreDWG (`dwg2dxf`) yourself, KatieCAD uses it as a fallback when reading. **On import** KatieCAD asks whether the file should be opened as a *new drawing* or *inserted into the current drawing* (the question is skipped when the drawing is empty). Afterwards the view zooms to the drawing (Zoom Extents). To test with your own files: `python tools/dwg_test.py`.
-- **Which area is exported?** *Export DXF…* and *Export DWG…* take the area you are in: in the **model** view the model area, in a **layout** view the active layout as a sheet in mm (like the project DXF: sheet frame, title block, viewport content; the sheet name is placed above it). The status bar names the exported area.
-- **File > Export DXF…** writes the drawing as DXF.
+- **Which area is exported?** *Export…* takes the area you are in: in the **model** view the model area, in a **layout** view the active layout as a sheet in mm (like the project DXF: sheet frame, title block, viewport content; the sheet name is placed above it). The status bar names the exported area.
 - PDF: see section 6.
 
 ## 11. Keyboard shortcuts
@@ -448,7 +447,7 @@ Edit › Properties opens a window for the current selection, also mixed (lines,
 **Edit › Mirror** (command `MIRROR`/`MI`, also in the right-click menu): select objects, Enter, pick two points of the mirror line (live preview), then decide whether the originals are deleted. Texts stay readable (not mirrored); blocks including pins and labels are mirrored correctly and remain devices.
 
 ## Whole project as one DXF / DWG file
-**Project › Export project to DXF…** or **Export project to DWG…** evaluates all sheets like printing (layout with frame, title block and viewports) and places them side by side in one DXF file: 4 sheets per row, then a new row. Every sheet is on its own layer (`Blatt_01` ...), plus `Blattgrenze` and `Blattnamen`.
+**Project › Export project as DWG / DXF…** (file type in the save dialog) evaluates all sheets like printing (layout with frame, title block and viewports) and places them side by side in one DXF file: 4 sheets per row, then a new row. Every sheet is on its own layer (`Blatt_01` ...), plus `Blattgrenze` and `Blattnamen`.
 
 ## Info window and log
 Help › About shows the logo, version and license. **License** opens the license text; **Log** opens the log file (`katiecad-log.txt` in the KatieCAD settings folder) in your default text editor – useful for error reports. The previous session's log is kept as `katiecad-log.txt.old`.
@@ -469,9 +468,9 @@ The terminal diagram sheets are named after their terminal strip, e.g. "Klemmenp
 In **Sheet properties (F2)** you also set the **sheet type** (circuit diagram, panel layout, overview, layout or custom text) and a **description**. Both appear in the table of contents; without an entry the type is "Circuit diagram" and the description stays empty.
 
 ## Importing a PDF
-**File > Import PDF...** reads one page of a PDF as vector geometry (not as a picture). Choose the page and a **scale factor** (1 = paper size; enter 50 for a 1:50 plot). If the PDF contains layers (as written by AutoCAD or BricsCAD with "include layer information"), they become KatieCAD layers with the same names; layers hidden in the PDF stay hidden. Without layers everything goes onto layer "PDF". Imported: lines, polylines, rectangles, curves, circles, text and solid fills. Not imported: raster images (e.g. scanned PDFs), hatch patterns, dash line types and clipping. Text sometimes arrives in fragments. The import only uses freely licensed libraries (pypdf); KatieCAD stays MIT-licensed. To try it from source: `pip install pypdf` (also in `requirements.txt`).
+**File > Import…** (pick a PDF file) reads one page of a PDF as vector geometry (not as a picture). Choose the page and a **scale factor** (1 = paper size; enter 50 for a 1:50 plot). If the PDF contains layers (as written by AutoCAD or BricsCAD with "include layer information"), they become KatieCAD layers with the same names; layers hidden in the PDF stay hidden. Without layers everything goes onto layer "PDF". Imported: lines, polylines, rectangles, curves, circles, text and solid fills. Not imported: raster images (e.g. scanned PDFs), hatch patterns, dash line types and clipping. Text sometimes arrives in fragments. The import only uses freely licensed libraries (pypdf); KatieCAD stays MIT-licensed. To try it from source: `pip install pypdf` (also in `requirements.txt`).
 
 ## Importing an image
 
 Note: PDF export writes KatieCAD layers as PDF layers. You can toggle them in PDF viewers and re-import such a PDF into KatieCAD with the same layer names.
-**File > Import image...** inserts a photo or graphic (PNG, JPG, BMP, GIF, TIFF). The image is stored inside the drawing, so the original file is no longer needed. Resize with the yellow corner grip or **Scale**; move, rotate and mirror work as for other objects. Large images are reduced to at most 2400 pixels on the long side. Images appear in PDF output; on DXF export the image file is written next to the DXF file. Project DXF export does not include images.
+**File > Import…** (pick an image file) inserts a photo or graphic (PNG, JPG, BMP, GIF, TIFF). The image is stored inside the drawing, so the original file is no longer needed. Resize with the yellow corner grip or **Scale**; move, rotate and mirror work as for other objects. Large images are reduced to at most 2400 pixels on the long side. Images appear in PDF output; on DXF export the image file is written next to the DXF file. Project DXF export does not include images.

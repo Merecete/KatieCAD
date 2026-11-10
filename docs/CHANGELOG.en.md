@@ -1,9 +1,9 @@
 # Changes
 
 ## 1.1.6
-- New: **Import DWG / DXF in one command** (File > Import DWG / DXF…): the format is recognised by the extension. If something is already drawn (or a project is open), KatieCAD asks whether the file opens as a *new drawing* or is *inserted into the current drawing*; with "new" the current drawing is closed like *File > New* (asking about saving)
+- New: **One Import and one Export in the File menu:** *Import…* reads DWG, DXF, PDF and images (format by file extension), *Export…* writes DXF or DWG (file type in the save dialog). The separate entries for DXF, DWG, PDF and image are gone; PDF/image output stays under *Print*. When importing DWG/DXF: if something is already drawn (or a project is open), KatieCAD asks whether the file opens as a *new drawing* or is *inserted into the current drawing*; with "new" the current drawing is closed like *File > New* (asking about saving)
 - New: **DWG export without an extra program:** Export DWG (format R2018, R2000 if needed) uses the built-in writer of `ezdwg` (MIT). Ellipses, splines and bulge polylines are written as lines/arcs, hatches as outline, elements that cannot be represented are left out; after the export KatieCAD reports what was affected. `ezdwg` at least 0.19.2 (requirements.txt), test script `tools/dwg_test.py`
-- New: **Export project to DWG** (Project menu), like the DXF export of all sheets side by side. The menu item "Export project as one DXF…" is now "Export project to DXF…"
+- New: **Export project as DWG / DXF** (Project menu): one menu item (formerly "Export project as one DXF…"), file type in the save dialog; all sheets are written side by side into one file
 - Change: **Export DXF / DWG follows the view:** in a layout view the active layout is exported as a sheet (like the project DXF), in the model area the model area. The status bar names the exported area
 - Change: **ODA File Converter removed:** DWG import and export run only through the built-in `ezdwg`; LibreDWG (`dwg2dxf`) is used when reading only as a fallback if installed by the user. The *DWG converter* setting is gone
 - New: **Note for DWG files in R2007 format:** if elements were skipped or faulty during import, KatieCAD points out that the built-in reader reads this format only to a limited extent (saving as DXF / newer DWG is more accurate). Diagnosis script `tools/dwg_diagnose.py`

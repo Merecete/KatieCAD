@@ -1122,11 +1122,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         m_datei.add_command(label=tr("menu.datei.speichern"), command=self.speichern,
                             accelerator=tr("txt.0254"))
         m_datei.add_separator()
-        m_datei.add_command(label=tr("menu.datei.import_cad"), command=self.import_cad)
-        m_datei.add_command(label=tr("menu.datei.import_pdf"), command=self.import_pdf)
-        m_datei.add_command(label=tr("menu.datei.import_bild"), command=self.import_bild)
-        m_datei.add_command(label=tr("menu.datei.export_dxf"), command=self.export_dxf)
-        m_datei.add_command(label=tr("menu.datei.export_dwg"), command=self.export_dwg)
+        m_datei.add_command(label=tr("menu.datei.import"), command=self.import_datei)
+        m_datei.add_command(label=tr("menu.datei.export"), command=self.export_datei)
         m_datei.add_separator()
         m_datei.add_command(label=tr("menu.datei.drucken"), command=self.drucken)
         m_datei.add_separator()
@@ -1166,10 +1163,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         m_projekt.add_separator()
         m_projekt.add_command(label=tr("menu.projekt.drucken"),
                               command=self.projekt_drucken)
-        m_projekt.add_command(label=tr("menu.datei.export_projekt_dxf"),
+        m_projekt.add_command(label=tr("menu.datei.export_projekt"),
                               command=self.projekt_dxf_exportieren)
-        m_projekt.add_command(label=tr("menu.datei.export_projekt_dwg"),
-                              command=lambda: self.projekt_dxf_exportieren("dwg"))
         m_projekt.add_separator()
         m_projekt.add_command(label=tr("menu.projekt.nummerieren"),
                               command=self.geraete_nummerieren)
@@ -5622,7 +5617,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         msp.add_image(d, insert=(el.x, el.y), size_in_units=(el.breite, el.hoehe),
                       rotation=0, dxfattribs=attribs)
 
-    def import_bild(self):
+    def import_bild(self, pfad=None):
         """Inserts a raster image (PNG, JPG, ...) as a scalable element."""
         titel = tr("txt.0002")
         try:
@@ -5636,9 +5631,10 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         if self._ist_layout():
             self.status.set(tr("txt.0095"))
             return
-        pfad = filedialog.askopenfilename(
-            filetypes=[((tr("txt.0197")), bild_import.ENDUNGEN),
-                       ((tr("txt.0198")), "*.*")])
+        if not pfad:
+            pfad = filedialog.askopenfilename(
+                filetypes=[((tr("txt.0197")), bild_import.ENDUNGEN),
+                           ((tr("txt.0198")), "*.*")])
         if not pfad:
             return
         try:
@@ -6490,24 +6486,25 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         _dp.dxf_projekt_schreiben(doc, seiten, spalten=1)
         return doc
 
-    def export_dxf(self):
-        self._export_cad("dxf")
+    def export_datei(self):
+        """One export for DXF and DWG: the file type chosen in the dialog decides."""
+        self._export_cad()
 
-    def export_dwg(self):
-        self._export_cad("dwg")
-
-    def _export_cad(self, art):
-        titel = art.upper()
+    def _export_cad(self):
+        titel = "DWG / DXF"
         if not EZDXF_VERFUEGBAR:
             messagebox.showwarning(titel,
                 (tr("txt.0101")))
             return
         pfad = filedialog.asksaveasfilename(
-            defaultextension="." + art,
-            filetypes=[((titel + tr("txt.0280")), "*." + art),
-                       (tr("txt.0198"), "*.*")])
+            defaultextension=".dxf",
+            filetypes=[((tr("txt.0200")), "*.dxf"), ((tr("txt.0201")), "*.dwg")])
         if not pfad:
             return
+        art = "dwg" if pfad.lower().endswith(".dwg") else "dxf"
+        titel = art.upper()
+        if not pfad.lower().endswith("." + art):
+            pfad += "." + art
         try:
             self._export_ziel = pfad            # images are written next to it
             im_layout = self._ist_layout()            # layout view -> the sheet, model view -> the model
@@ -6673,7 +6670,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                 pass
         t.set_placement((x, y))
 
-    def _cad_import(self):
+    def _cad_import(self, pfad=None):
         """One import for DXF and DWG (by file extension). Asks whether the drawing opens as a
         NEW drawing or is added to the current one."""
         titel = "DWG / DXF"
@@ -6681,11 +6678,6 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             messagebox.showwarning(titel,
                 (tr("txt.0103")))
             return
-        pfad = filedialog.askopenfilename(
-            filetypes=[("DXF / DWG", "*.dxf *.dwg"),
-                       ((tr("txt.0200")), "*.dxf"),
-                       ((tr("txt.0201")), "*.dwg"),
-                       ((tr("txt.0198")), "*.*")])
         if not pfad:
             return
         if self._ist_layout():
@@ -6751,10 +6743,33 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         z += erg.hinweise
         return "\n".join(z)
 
-    def import_cad(self):
-        self._cad_import()
+    def import_datei(self):
+        """One import for everything: DWG / DXF, PDF and images are recognised by the extension."""
+        try:
+            from katiecad.fileio import bild_import
+            bilder = bild_import.ENDUNGEN
+        except Exception:
+            bilder = "*.png *.jpg *.jpeg"
+        pfad = filedialog.askopenfilename(
+            filetypes=[(tr("dlg.import.alle"), "*.dwg *.dxf *.pdf " + bilder),
+                       ("DXF / DWG", "*.dxf *.dwg"),
+                       ((tr("txt.0203")), "*.pdf"),
+                       ((tr("txt.0197")), bilder),
+                       ((tr("txt.0198")), "*.*")])
+        if not pfad:
+            return
+        ext = os.path.splitext(pfad)[1].lower()
+        if ext in (".dxf", ".dwg"):
+            self._cad_import(pfad)
+        elif ext == ".pdf":
+            self.import_pdf(pfad)
+        elif ("*" + ext) in bilder.split():
+            self.import_bild(pfad)
+        else:
+            messagebox.showwarning(tr("menu.datei.import"),
+                                   tr("dlg.import.unbekannt", ext=ext or "?"), parent=self.root)
 
-    def import_pdf(self):
+    def import_pdf(self, pfad=None):
         """Imports one page of a PDF as vector geometry; PDF layers (optional
         content groups) become KatieCAD layers."""
         titel = "PDF"
@@ -6769,9 +6784,10 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         if self._ist_layout():
             self.status.set(tr("txt.0095"))
             return
-        pfad = filedialog.askopenfilename(
-            filetypes=[((tr("txt.0203")), "*.pdf"),
-                       ((tr("txt.0198")), "*.*")])
+        if not pfad:
+            pfad = filedialog.askopenfilename(
+                filetypes=[((tr("txt.0203")), "*.pdf"),
+                           ((tr("txt.0198")), "*.*")])
         if not pfad:
             return
         try:
@@ -10923,9 +10939,10 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                                   TB.make_info(p, i, SPRACHE["aktuell"], lay.format))
         return kontexte, nicht_lesbar
 
-    def projekt_dxf_exportieren(self, art="dxf"):
-        """The whole project as ONE DXF or DWG file (sheets side by side, 4 per row)."""
-        titel = art.upper()
+    def projekt_dxf_exportieren(self):
+        """The whole project as ONE DXF or DWG file (sheets side by side, 4 per row);
+        the file type chosen in the dialog decides."""
+        titel = "DWG / DXF"
         p = self.projekt
         if p is None:
             self.status.set(tr("msg.projekt.kein_projekt"))
@@ -10934,11 +10951,15 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             messagebox.showwarning(titel, (tr("txt.0101")))
             return
         pfad = filedialog.asksaveasfilename(
-            parent=self.root, defaultextension="." + art, initialdir=p.ordner,
-            initialfile=p.name + "." + art,
-            filetypes=[(titel, "*." + art)])
+            parent=self.root, defaultextension=".dxf", initialdir=p.ordner,
+            initialfile=p.name + ".dxf",
+            filetypes=[((tr("txt.0200")), "*.dxf"), ((tr("txt.0201")), "*.dwg")])
         if not pfad:
             return
+        art = "dwg" if pfad.lower().endswith(".dwg") else "dxf"
+        titel = art.upper()
+        if not pfad.lower().endswith("." + art):
+            pfad += "." + art
         try:
             from katiecad.fileio.dxf_projekt import (seiten_sammeln,
                                                      dxf_projekt_schreiben)

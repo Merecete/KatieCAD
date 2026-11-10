@@ -103,7 +103,7 @@ check(txt.startswith("ezdwg:") and "1 Elemente" in txt, "cad_import nutzt ezdwg"
 check(not hasattr(cad_import, "oda_verfuegbar"), "ODA entfernt")
 from katiecad.common import i18n
 for lang in ("de", "en", "es"):
-    check(all(k in i18n.TEXTE[lang] for k in ("msg.dwg.bericht", "menu.datei.import_cad", "menu.datei.export_projekt_dwg", "msg.dwgp.fertig", "dlg.importziel.titel", "dlg.importziel.frage", "dlg.importziel.neu", "dlg.importziel.einfuegen")), "i18n DWG " + lang)
+    check(all(k in i18n.TEXTE[lang] for k in ("msg.dwg.bericht", "menu.datei.import", "menu.datei.export", "menu.datei.export_projekt", "dlg.import.alle", "dlg.import.unbekannt", "msg.dwgp.fertig", "dlg.importziel.titel", "dlg.importziel.frage", "dlg.importziel.neu", "dlg.importziel.einfuegen")), "i18n DWG " + lang)
 import tempfile
 with tempfile.TemporaryDirectory() as td:
     for kopf, erwartet in ((b"AC1021", "AC1021"), (b"AC1032", "AC1032"), (b"XXXXXX", "")):
