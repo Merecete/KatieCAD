@@ -110,6 +110,8 @@ und Farbe, Linienart und Linienstärke in der Werkzeugleiste.
 
 **Rasterfarbe (Einstellungen › Rasterfarbe… / Rasterfarbe zurücksetzen; ab 1.1.6):** stellt die Farbe des Rasters im Modellbereich ein. In der Leiste unten neben *Hintergrund* gibt es dazu das Farbfeld *Raster:* und eine Auswahlliste (Standard, Violett, Grau, Blau, Grün, Rot, Orange, Weiß, Schwarz); *Standard* kehrt zur ursprünglichen Rasterfarbe zurück. Punkte sowie kleine und große Linien werden aus der gewählten Farbe und dem Hintergrund gemischt, so bleibt das Raster auf hellem und dunklem Hintergrund dezent. Die Wahl wird im Programm gemerkt und gilt für alle Zeichnungen.
 
+**Zeichengeschwindigkeit anzeigen (Einstellungen; ab 1.1.6):** zeigt nach jedem Neuzeichnen in der Statuszeile, wie lange Modellberechnung, Elemente und Raster gebraucht haben, dazu die Zahl der Elemente und Objekte. Nützlich, um bei großen Zeichnungen Bremsen zu finden; wird nicht gespeichert.
+
 **Versatz (Bearbeiten › Versatz, Befehle `VERSATZ` / `O`):** Abstand eingeben, Objekt anklicken, dann die Seite anklicken, auf der die Kopie entstehen soll. Funktioniert mit Linien, Kreisen, Bögen, Rechtecken und Polylinien (Ecken mit Gehrung). Ist der Abstand zu groß (nach innen), meldet KatieCAD „nicht möglich“.
 
 **Länge ändern (Bearbeiten › Länge ändern, Werkzeugleiste, Befehl `LAENGE`):** Linie nahe an dem Ende anklicken, das sich ändern soll. Dann entweder das neue Ende anklicken (es wird auf die Linienrichtung projiziert, Objektfang darf benutzt werden) oder die Änderung in die Eingabezeile tippen: `+5` verlängert um 5, `-5` kürzt um 5, `=50` setzt die Länge auf 50 (Einheit wie im Projekt). Danach die nächste Linie anklicken oder ESC.
@@ -253,6 +255,18 @@ Symbol). Menü **Blöcke**:
   **Attribute bearbeiten (ATTEDIT)** ändert sie später. Bei Geräten mit sehr vielen Anschlüssen (z. B. SPS-Baugruppen mit 16 Kanälen) wird die Liste im Fenster **scrollbar** (Mausrad oder Leiste rechts), OK und Abbrechen bleiben immer sichtbar.
 - **Lesbare Texte beim Drehen:** Texte und Attribute im Block stehen nie auf dem Kopf. Wird der Block so gedreht (z. B. 180°), dass ein Text umgekehrt stünde, dreht KatieCAD den Text um 180° zurück und spiegelt seinen Ankerpunkt – er bleibt lesbar und auf derselben Seite des Symbols. Senkrechte Texte (90° / 270°) bleiben möglich. Dafür ist keine Einstellung nötig; so lassen sich Symbole für Gebäudepläne beliebig drehen, ohne dass Funktionstexte (z. B. das „E“ im Quadrat) unleserlich werden.
 - **Varianten (wie in EPLAN):** Ein Block/Gerät kann mehrere Varianten haben – z. B. eine Steckdose in vier Ausrichtungen, jeweils mit passend platzierten Funktionstexten. **Anlegen:** Block mit der ersten Variante erzeugen. Eine weitere Zeichnung (gleicher Basispunkt-Bezug, mit Attribut-Texten wie `IND`) markieren › *Blöcke › Variante zu Block hinzufügen…* › Basispunkt klicken › die **Blockdatei** (`.katieblock`) wählen, zu der die Variante gehört › Variantennamen eingeben (Vorschlag A, B, C …). Gleicher Name ersetzt die Variante. KatieCAD ergänzt die Datei selbst – alle Varianten stehen danach zusammen in dieser einen Datei. **Wählen:** Beim Einfügen und später per Doppelklick bzw. *Attribute bearbeiten* steht oben das Feld **Variante**. Attributwerte, Geräteeinstellungen und Verknüpfungen bleiben beim Wechsel erhalten; frei verschobene Textpositionen der alten Variante werden zurückgesetzt. Zusätzliches Drehen bleibt möglich (Texte nie auf dem Kopf). Bereits platzierte Geräte übernehmen später hinzugefügte Varianten, sobald du ihren Dialog (Doppelklick) öffnest, sofern der Block in der Bibliothek geladen ist (z. B. nach dem Anlegen der Variante oder erneutem Einfügen aus dem Blockbrowser).
+
+### Externe Referenzen (XREF)
+
+Mit einer **Referenz** legst du eine andere Zeichnung unter die aktuelle (z. B. einen Grundriss unter einen Installationsplan), ohne sie zu kopieren. Menü **Blöcke › Externe Referenzen (XREF)…** oder Befehl `XREF` öffnet das Fenster mit allen Referenzen der Zeichnung.
+
+- **Hinzufügen…** (oder `XATTACH`): eine Datei wählen (`*.cadjson`, außerdem `*.dxf` und `*.dwg`) und den Einfügepunkt klicken oder eintippen, wie bei einem Block. Mit Drehen, Skalieren und Verschieben des Objekts passt du Lage und Maßstab an.
+- **Ein / Aus** (oder Doppelklick auf die Zeile): schaltet die Referenz an oder aus. Aus = nicht gezeichnet und nicht fangbar.
+- **Aktualisieren** liest die Datei neu. Ändert sich die Quelldatei, aktualisiert sich die Referenz auch von selbst.
+- **Pfad ändern…** zeigt auf eine andere Datei (z. B. nach dem Verschieben). **Entfernen** löscht die Referenz.
+- Die Referenz wird **nur angezeigt und nicht bearbeitet**, aber der Objektfang rastet an ihr ein. Sie lässt sich nicht auflösen. Ausgeblendete Layer der Quelldatei werden nicht übernommen. Wände, Türen, Fenster, Räume und Maße erscheinen so wie in der Quelle.
+- Gespeichert wird nur der Pfad (relativ zum Projektordner bzw. zur Datei, wenn möglich; sonst absolut). Fehlt die Datei, steht im Fenster „Datei fehlt“, und du kannst den Pfad ändern. Eine Zeichnung kann sich nicht selbst referenzieren; Referenzen in Referenzen werden bis zu fünf Ebenen tief gelesen.
+- Referenzen gibt es im Modellbereich; im Layout erscheinen sie in den Ansichtsfenstern. Sie nehmen nicht an der Elektro-Auswertung (Geräteliste, Querverweise) teil und erscheinen in DXF/DWG und PDF als normale Geometrie.
 
 ## 8. Elektro: einen Schaltplan zeichnen
 

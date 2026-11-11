@@ -109,6 +109,8 @@ line weight in the toolbar.
 
 **Grid colour (Settings > Grid colour... / Reset grid colour; since 1.1.6):** sets the colour of the grid in the model area. In the bottom bar next to *Background* there is the colour field *Grid:* and a list (Default, Violet, Grey, Blue, Green, Red, Orange, White, Black); *Default* returns to the original grid colour. Dots and minor and major lines are mixed from the chosen colour and the background, so the grid stays subtle on light and dark backgrounds. The choice is remembered in the program and applies to all drawings.
 
+**Show drawing speed (Settings; since 1.1.6):** after every redraw the status bar shows how long model calculation, elements and grid took, plus the number of elements and objects. Useful for finding bottlenecks in large drawings; not saved.
+
 **Toolbar:** the tools are icons (drawing purple, electrical red). Rest the mouse on an icon to see its name. The active tool has a lighter background.
 
 **Offset (Edit > Offset, commands `OFFSET` / `O`):** enter the distance, click an object, then click the side where the copy is to be created. Works with lines, circles, arcs, rectangles and polylines (corners are mitred). If the distance is too large (inwards), KatieCAD says "not possible".
@@ -252,6 +254,18 @@ A **block** is a reusable group of objects (for example a symbol). **Blocks** me
   changes them later. For devices with very many pins (e.g. 16-channel PLC modules) the list in the window is **scrollable** (mouse wheel or bar on the right); OK and Cancel always stay visible.
 - **Readable texts when rotating:** texts and attributes in a block are never upside down. If the block is rotated (e.g. 180 degrees) so that a text would be reversed, KatieCAD turns the text back by 180 degrees and mirrors its anchor - it stays readable and on the same side of the symbol. Vertical texts (90 / 270 degrees) remain possible. No setting needed; symbols for building plans can be rotated freely without function texts (e.g. the "E" in the square) becoming unreadable.
 - **Variants (like EPLAN):** a block / device can have several variants - e.g. a socket in four orientations, each with suitably placed function texts. **Create:** create the block with the first variant. Select a further drawing (same base point reference, with attribute texts such as `IND`) > *Blocks > Add variant to block...* > click the base point > choose the **block file** (`.katieblock`) the variant belongs to > enter the variant name (suggestion A, B, C ...). The same name replaces the variant. KatieCAD adds it to the file itself - all variants are then together in this one file. **Choose:** when inserting and later via double-click or *Edit attributes* the field **Variant** is at the top. Attribute values, device settings and links are kept when switching; freely moved text positions of the old variant are reset. Additional rotation stays possible (texts never upside down). Devices already placed take over variants added later as soon as you open their dialog (double-click), provided the block is loaded in the library (e.g. after adding the variant or inserting it again from the block browser).
+
+### External references (XREF)
+
+A **reference** puts another drawing under the current one (e.g. a floor plan under an installation plan) without copying it. Menu **Blocks > External references (XREF)...** or the command `XREF` opens the window with all references of the drawing.
+
+- **Add...** (or `XATTACH`): choose a file (`*.cadjson`, also `*.dxf` and `*.dwg`) and click or type the insertion point, as with a block. Rotate, scale and move the object to adjust position and scale.
+- **On / Off** (or double-click the row): switches the reference on or off. Off = not drawn and not snappable.
+- **Update** reads the file again. If the source file changes, the reference also updates by itself.
+- **Change path...** points to another file (e.g. after moving it). **Remove** deletes the reference.
+- The reference is **display-only and cannot be edited**, but object snap works on it. It cannot be exploded. Hidden layers of the source file are not taken over. Walls, doors, windows, rooms and dimensions appear as in the source.
+- Only the path is saved (relative to the project folder or the file where possible, otherwise absolute). If the file is missing, the window says "File missing" and you can change the path. A drawing cannot reference itself; references inside references are read up to five levels deep.
+- References exist in the model area; in a layout they appear in the viewports. They take no part in the electrical evaluation (device list, cross references) and appear in DXF/DWG and PDF as plain geometry.
 
 ## 8. Electrical: drawing a schematic
 

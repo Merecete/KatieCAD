@@ -13,7 +13,7 @@ NEW (electrical base): AttributDefinition + BlockReferenz.attribute
      (function texts such as name, device type, power ...).
 """
 
-import math, sys, zlib
+import math, os, sys, time, zlib
 from copy import deepcopy
 
 from katiecad.common.i18n import tr, SPRACHE
@@ -725,6 +725,9 @@ BEFEHLE = {
     # --- NEW: explode block (EXPLODE) ---
     "EXPLODE": "block:explode", "X": "block:explode",
     "AUFLOESEN": "block:explode", "BLOCKAUFLOESEN": "block:explode",
+    # --- external references ---
+    "XREF": "xref:verwalten", "XR": "xref:verwalten", "REFERENZ": "xref:verwalten",
+    "REFERENZEN": "xref:verwalten", "XREFHINZU": "xref:hinzufuegen", "XATTACH": "xref:hinzufuegen",
 }
 
 
@@ -3580,6 +3583,154 @@ class BlockReferenz(Element):
 # ============================================================
 # NEW: global block library (blocks.json)
 # ============================================================
+# ============================================================
+# External references (XREF): another drawing placed like a block, read-only
+# ============================================================
+# Hooks that the application sets:
+#   XREF_LADER(abs_path) -> list of ready-to-draw 2D elements in the coordinate system of the
+#                           referenced file (hidden layers left out, colours already resolved)
+#   XREF_BASIS()         -> folder that relative paths refer to (project folder), or None
+XREF_LADER = None
+XREF_BASIS = None
+XREF_BASIS_STACK = []          # folders of files that are being read (nested references)
+_XREF_CACHE = {}               # abs path -> (mtime, elements)
+XREF_PRUEFSEKUNDEN = 1.0       # how often the file date is looked at (seconds)
+XREF_TIEFE_MAX = 5
+
+
+def xref_pfad_aufloesen(pfad, pfad_abs=""):
+    """Absolute path of a reference: relative paths are taken from the folder of the drawing /
+    project (or of the file that contains the reference); if that does not exist, the absolute
+    path stored last is tried."""
+    if pfad and os.path.isabs(pfad):
+        return os.path.normpath(pfad)
+    basis = XREF_BASIS_STACK[-1] if XREF_BASIS_STACK else (XREF_BASIS() if XREF_BASIS else None)
+    kand = os.path.normpath(os.path.join(basis, pfad)) if (basis and pfad) else None
+    if kand and os.path.exists(kand):
+        return kand
+    if pfad_abs and os.path.exists(pfad_abs):
+        return os.path.normpath(pfad_abs)
+    return kand or os.path.normpath(pfad_abs or pfad or "")
+
+
+def xref_cache_leeren(pfad=None):
+    if pfad is None:
+        _XREF_CACHE.clear()
+    else:
+        _XREF_CACHE.pop(os.path.normpath(pfad), None)
+
+
+class XrefElement(BlockReferenz):
+    """A reference to another drawing (.cadjson, .dxf, .dwg). Inserted like a block (position,
+    rotation, scale) but READ-ONLY: only the path is saved, the content is read from the file
+    when it is needed and is updated when the file changes. Hidden layers of the referenced file
+    are left out. Takes no part in the electrical evaluation (device list, cross references, ...).
+    `sichtbar` switches the whole reference on and off."""
+
+    def __init__(self, x, y, pfad, name=None, skalierung=1.0, winkel=0.0, sichtbar=True,
+                 pfad_abs="", **kw):
+        for k in ("block_name", "elemente", "varianten", "variante", "attribute", "ausgeblendet",
+                  "gespiegelt", "sp_dx", "sp_dy", "text_versatz", "typ"):
+            kw.pop(k, None)
+        self.pfad = str(pfad or "")
+        self.pfad_abs = str(pfad_abs or "")
+        self.xname = str(name or os.path.splitext(os.path.basename(self.pfad))[0] or "XREF")
+        self.sichtbar = bool(sichtbar)
+        self.fehler = ""             # runtime: "" = ok, otherwise a short reason
+        self._geladen_mtime = None
+        self._geprueft = 0.0
+        super().__init__(float(x), float(y), self.xname, [], skalierung=skalierung,
+                         winkel=winkel, **kw)
+        self.typ = "xref"
+
+    # ---- loading -------------------------------------------------------------
+    def abs_pfad(self):
+        return xref_pfad_aufloesen(self.pfad, self.pfad_abs)
+
+    def _laden(self, erzwingen=False):
+        """Reads the file if it is new or changed (looked at most once per second)."""
+        jetzt = time.monotonic()
+        if not erzwingen and self._geladen_mtime is not None \
+                and jetzt - self._geprueft < XREF_PRUEFSEKUNDEN:
+            return
+        self._geprueft = jetzt
+        ap = self.abs_pfad()
+        try:
+            mt = os.path.getmtime(ap)
+        except OSError:
+            if self.fehler != "fehlt":
+                self.elemente, self._cache = [], None
+            self.fehler = "fehlt"
+            self._geladen_mtime = -1.0
+            return
+        if not erzwingen and mt == self._geladen_mtime and not self.fehler:
+            return
+        if len(XREF_BASIS_STACK) >= XREF_TIEFE_MAX:
+            self.elemente, self.fehler, self._cache = [], "zu tief", None
+            return
+        ent = _XREF_CACHE.get(ap)
+        try:
+            if erzwingen or ent is None or ent[0] != mt:
+                if XREF_LADER is None:
+                    raise RuntimeError("kein Lader")
+                ent = (mt, XREF_LADER(ap))
+                _XREF_CACHE[ap] = ent
+            self.elemente = ent[1]
+            self.fehler = ""
+        except Exception as ex:
+            print(f"[KatieCAD] Referenz {ap}: {type(ex).__name__}: {ex}")
+            self.elemente, self.fehler = [], "fehler"
+        self._geladen_mtime = mt
+        self._cache = None
+        if not self.fehler:
+            self.pfad_abs = ap
+
+    def neu_laden(self):
+        """Reads the file again (button "Update")."""
+        xref_cache_leeren(self.abs_pfad())
+        self._laden(erzwingen=True)
+
+    def anzahl(self):
+        self._laden()
+        return len(self.elemente)
+
+    # ---- read-only: no attributes, no device ------------------------------------
+    def attribut_definitionen(self):
+        return []
+
+    def geraet_maske(self):
+        return None
+
+    def setze_variante(self, index):
+        return False
+
+    # ---- Element API ----------------------------------------------------------
+    def aufgeloest(self):
+        if not self.sichtbar:
+            return []
+        self._laden()
+        return super().aufgeloest()
+
+    def bbox(self):
+        if not self.sichtbar:
+            return (self.x, self.y, self.x, self.y)
+        self._laden()
+        return super().bbox()
+
+    def griffe(self):
+        return [("p", self.x, self.y)]
+
+    def sprengen(self):
+        return [self]                # a reference cannot be exploded (the app does not offer it)
+
+    def to_dict(self):
+        d = {"typ": "xref", "pfad": self.pfad, "pfad_abs": self.pfad_abs, "name": self.xname,
+             "x": self.x, "y": self.y, "skalierung": self.skalierung, "winkel": self.winkel,
+             "sichtbar": self.sichtbar, "layer": self.layer, "farbe": self.farbe,
+             "linientyp": self.linientyp, "eig_farbe": self.eig_farbe, "staerke": self.staerke}
+        return d
+
+
 class BlockBibliothek:
     """Block library shared across drawings.
 

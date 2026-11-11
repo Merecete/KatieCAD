@@ -85,6 +85,8 @@ BESCHREIBUNG = {
     "block:explode": "Descomponer bloque",
     "block:laden": "Cargar bloque desde archivo",
     "block:liste": "Abrir la selección de bloques",
+    "xref:verwalten": "Gestionar referencias externas (XREF)",
+    "xref:hinzufuegen": "Adjuntar referencia externa",
     "block:neu": "Crear bloque",
     "block:speichern": "Guardar bloque en archivo",
     "copy": "Copiar",

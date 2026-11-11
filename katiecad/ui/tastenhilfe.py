@@ -95,6 +95,8 @@ BESCHREIBUNG = {
     "block:explode": ("Block auflösen", "Explode block"),
     "block:laden": ("Block aus Datei laden", "Load block from file"),
     "block:liste": ("Blockauswahl öffnen", "Open block selection"),
+    "xref:verwalten": ("Externe Referenzen verwalten (XREF)", "Manage external references (XREF)"),
+    "xref:hinzufuegen": ("Externe Referenz anhängen", "Attach external reference"),
     "block:neu": ("Block erzeugen", "Create block"),
     "block:speichern": ("Block als Datei speichern", "Save block to file"),
     "copy": ("Kopieren (verschieben + Kopie)", "Copy"),

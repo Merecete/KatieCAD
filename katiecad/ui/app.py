@@ -80,7 +80,7 @@ from katiecad.model.core import (
     Verbindung, ElektroMaske, Klemme, Kabel, Koordinatenfeld, ZUSAMMENGESETZT,
     Koerper3D, Gruppe3D, Skizze3D, Bemassung3D, Text3D,
     vp_tags_eindeutig, LEITUNG_FARBE, UI_SCHRIFT,
-    BlockDefinition, BlockReferenz, BlockBibliothek,
+    BlockDefinition, BlockReferenz, BlockBibliothek, XrefElement,
     bogen_sweep, bogen_punkte, winkel_im_bogen, bogen_aus_3_punkten,
     bogen_mitte_start_ende, abstand_punkt_segment, naechster_punkt_segment,
     clip_polyline, gedrehtes_rechteck, punkt_in_gedrehtem_rechteck,
@@ -96,7 +96,7 @@ from katiecad.ui.dialogs import (
     _LayoutNameDialog, BlattEigenschaftenDialog, PropertiesDialog, ViewportDialog,
     LayerDialog, LayerEditDialog, TextDialog, ArrayDialog, SchraffurDialog, DruckDialog,
     _BlockNameDialog, _BlockAuswahlDialog, BlockBrowserDialog,
-    BlockSpeichernDialog, ImportZielDialog,
+    BlockSpeichernDialog, ImportZielDialog, XrefDialog,
     ProjektNeuDialog, AttributDefinitionDialog, BlockAttributeDialog,
     MasstextDialog, WandDialog, KanalDialog, OeffnungDialog, RaumDialog, BauteilkatalogDialog, SchnellauswahlDialog, SuchenErsetzenDialog, QuerverweisDialog, PruefungDialog, EigenschaftenPalette, VerbindungspunkteDialog, ProjektDruckDialog,
     VerbindungspunktDialog, VerbindungDialog, FestMaskeDialog,
@@ -441,6 +441,11 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self._bem_end_anzeige = tk.StringVar(value=tr("dlg.eig.end.pfeil"))
         self.bem_dez = tk.IntVar(value=2)
         self.dezimalkomma = tk.BooleanVar(value=(SPRACHE["aktuell"] != "en"))
+        self._datei_pfad = None            # file of the open single drawing (base of relative paths)
+        self._xref_dlg = None
+        self._xref_neu_pfad = None
+        core.XREF_LADER = self._xref_datei_laden
+        core.XREF_BASIS = self._xref_basis
         self.leistung_var = tk.BooleanVar(value=False)       # shows redraw times (not saved)
         self.dxf_iso_var = tk.StringVar(
             value="linien" if lade_konfiguration().get("dxf_iso") == "linien" else "text")
@@ -1419,6 +1424,9 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         m_bloecke.add_separator()
         m_bloecke.add_command(label=tr("menu.einfuegen.block_aufloesen"),
                               command=self.block_aufloesen)
+        m_bloecke.add_separator()
+        m_bloecke.add_command(label=tr("menu.bloecke.xref"), command=self.xref_verwalten)
+        m_bloecke.add_command(label=tr("menu.bloecke.xref_hinzu"), command=self.xref_hinzufuegen)
         menubar.add_cascade(label=tr("menu.bloecke"), menu=m_bloecke)
 
         # Electrical
@@ -3840,9 +3848,259 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             f"({self._zahl(self.fang_mm, 5):g})   "
             f"Ortho: {'AN' if self.ortho.get() else 'AUS'}" + modus_info)
 
+    # ---- external references (XREF) -------------------------------------------
+    def _xref_basis(self):
+        """Folder that relative reference paths refer to: project folder or the folder of the
+        open single drawing (None while the drawing has not been saved)."""
+        if self.projekt is not None:
+            return self.projekt.ordner
+        return os.path.dirname(self._datei_pfad) if self._datei_pfad else None
+
+    def _xref_pfad_speichern(self, pfad):
+        """Path as it is stored: relative to the drawing / project if possible."""
+        basis = self._xref_basis()
+        pfad = os.path.abspath(pfad)
+        if basis:
+            try:
+                return os.path.relpath(pfad, basis)
+            except ValueError:                        # other drive (Windows)
+                pass
+        return pfad
+
+    def _xref_datei_laden(self, pfad):
+        """Reads a referenced file and returns READY-TO-DRAW 2D elements in the coordinates of
+        that file: hidden layers are left out, blocks and nested references are resolved,
+        colour and line weight of the layers are taken over (the layers of the file do not
+        exist here), walls / doors / windows / rooms / dimensions become plain geometry."""
+        ext = os.path.splitext(pfad)[1].lower()
+        core.XREF_BASIS_STACK.append(os.path.dirname(pfad))
+        try:
+            layers = {}
+            if ext == ".cadjson":
+                with open(pfad, "r", encoding="utf-8") as f:
+                    daten = json.load(f)
+                for ld in daten.get("layers", []):
+                    try:
+                        layers[ld["name"]] = Layer(ld["name"], ld.get("farbe", "#c29bff"),
+                                                   ld.get("staerke", 0.35), ld.get("sichtbar", True))
+                    except Exception:
+                        pass
+                elems = [e for e in (self._dict_zu_element(d) for d in daten.get("elemente", []))
+                         if e is not None]
+            elif ext in (".dxf", ".dwg"):
+                erg = cadimport.importiere_datei(pfad, layers)
+                elems = list(erg.elemente)
+            else:
+                raise ValueError(ext)
+            return self._xref_backen(elems, layers)
+        finally:
+            core.XREF_BASIS_STACK.pop()
+
+    def _xref_backen(self, elems, layers):
+        wand_verknuepfen(elems)                       # door gaps in the walls
+        out = []
+
+        def sichtbar(el):
+            l = layers.get(el.layer)
+            return l is None or l.sichtbar
+
+        def sammle(el, tiefe=0):
+            if not sichtbar(el):
+                return
+            if isinstance(el, (Koerper3D, Gruppe3D, Skizze3D, Bemassung3D, Text3D, Viewport,
+                               Bild, AttributDefinition, Verbindungspunkt)):
+                return
+            if isinstance(el, ZUSAMMENGESETZT):
+                if tiefe < 6:
+                    kinder = (el.aufgeloest(platzhalter=False)
+                              if isinstance(el, (ElektroMaske, Klemme, Kabel)) else el.aufgeloest())
+                    for k in kinder:
+                        sammle(k, tiefe + 1)
+                return
+            out.extend(self._xref_geometrie(el, layers))
+
+        for el in elems:
+            sammle(el)
+        return out
+
+    def _xref_geometrie(self, el, layers):
+        l = layers.get(el.layer)
+        farbe = el.farbe if (el.eig_farbe or l is None) else l.farbe
+        if getattr(el, "staerke", None) is not None:
+            st = el.staerke
+        else:
+            basis = l.staerke if l else 0.35
+            st = max(basis * 2, 0.7) if "breit" in (el.linientyp or "") else basis
+        kw = dict(layer=el.layer, farbe=farbe, eig_farbe=True, staerke=st,
+                  linientyp=el.linientyp)
+
+        def fest(k):
+            k.layer, k.farbe, k.eig_farbe, k.staerke = el.layer, farbe, True, st
+            return k
+
+        if type(el) in (Linie, Kreis, Bogen, Rechteck, Polylinie, Ellipse, Spline, Text,
+                        Schraffur):
+            return [fest(deepcopy(el))]
+        if isinstance(el, (Wand, Oeffnung, Kabelkanal, Raum, Bemassung, Polylinie)):
+            res = []
+            for p in self._prims(el, 50.0):
+                if p[0] == "l" and len(p[1]) >= 2:
+                    res.append(Polylinie(list(p[1]), geschlossen=bool(p[2]), **kw))
+                elif p[0] == "f" and len(p[1]) >= 3:
+                    res.append(Schraffur(list(p[1]), muster="solid", **kw))
+                elif p[0] == "p":
+                    _, x, y, ang, L = p
+                    ux, uy = math.cos(ang), math.sin(ang)
+                    bx, by = x - ux * L, y - uy * L
+                    hw = L / 6.0
+                    res.append(Schraffur([(x, y), (bx - uy * hw, by + ux * hw),
+                                          (bx + uy * hw, by - ux * hw)], muster="solid", **kw))
+                elif p[0] == "t":
+                    res.append(Text(p[1], p[2], p[3], hoehe=p[4], winkel=p[5],
+                                    schriftart=p[6],
+                                    einfuegepunkt=p[7] if len(p) > 7 else None, **kw))
+            return res
+        return []
+
+    def _xref_vorschau(self, pt):
+        pfad = self._xref_neu_pfad
+        if not pfad:
+            return
+        ref = XrefElement(pt[0], pt[1], pfad, layer=self.aktiver_layer.get())
+        stil = {"farbe": FARBEN["gruen"], "w": 1, "dash": (5, 3)}
+        tf, sk = self._ctx_zu_px, self._ctx_skala()
+        for kind in ref.aufgeloest():
+            self._zeichne_element(kind, tags=("vorschau",), tf=tf, skala=sk, stil=stil)
+        px, py = self._ctx_zu_px(pt[0], pt[1])
+        self.canvas.create_oval(px - 5, py - 5, px + 5, py + 5, outline=FARBEN["orange"],
+                                width=2, tags="vorschau")
+
+    def xref_hinzufuegen(self, pfad=None):
+        """Attach a drawing as an external reference: choose the file, then click the insertion
+        point (like a block)."""
+        if self._ist_layout():
+            self.status.set(tr("msg.xref.layout"))
+            return
+        if not pfad:
+            pfad = filedialog.askopenfilename(
+                parent=self.root,
+                filetypes=[(tr("dlg.xref.dateityp"), "*.cadjson *.dxf *.dwg"),
+                           ("KatieCAD", "*.cadjson"), ("DXF / DWG", "*.dxf *.dwg"),
+                           (tr("txt.0198"), "*.*")])
+        if not pfad:
+            return
+        eigene = self._datei_pfad
+        if eigene and os.path.normcase(os.path.abspath(eigene)) == os.path.normcase(os.path.abspath(pfad)):
+            messagebox.showwarning("XREF", tr("msg.xref.selbst"), parent=self.root)
+            return
+        self._xref_neu_pfad = pfad
+        self._block_einfuege_name = "__xref__"
+        self._warte_auf_blockpunkt = True
+        self.letzter_punkt = None
+        self._update_eingabe_hinweis()
+        self.status.set(tr("msg.xref.einfuegepunkt", name=os.path.basename(pfad)))
+        self.entry_eingabe.focus_set()
+
+    def _xref_einfuegen_an(self, x, y):
+        pfad = self._xref_neu_pfad
+        self._block_einfuege_name = None
+        self._xref_neu_pfad = None
+        self._warte_auf_blockpunkt = False
+        if not pfad:
+            return
+        self._snapshot()
+        ref = XrefElement(x, y, self._xref_pfad_speichern(pfad), pfad_abs=os.path.abspath(pfad),
+                          layer=self.aktiver_layer.get(), farbe=self.zeichenfarbe,
+                          linientyp=self.linientyp.get(), eig_farbe=self.eigene_farbe.get(),
+                          staerke=self._staerke_neu())
+        ref._laden(erzwingen=True)
+        self._ziel_liste().append(ref)
+        self._einrasten([ref])
+        self.auswahl = [ref]
+        self._clear_temp()
+        self.redraw()
+        self._update_eingabe_hinweis()
+        if ref.fehler:
+            messagebox.showwarning("XREF", tr("msg.xref.lesefehler", pfad=pfad), parent=self.root)
+        self.status.set(tr("msg.xref.eingefuegt", name=ref.xname, n=len(ref.elemente)))
+
+    def xref_liste(self):
+        return [e for e in self.elemente if isinstance(e, XrefElement)]
+
+    def xref_verwalten(self):
+        """XREF: window with all references of this drawing."""
+        if self._ist_layout():
+            self.status.set(tr("msg.xref.layout"))
+            return
+        d = self._xref_dlg
+        try:
+            if d is not None and d.winfo_exists():
+                d.lift()
+                d.aktualisieren()
+                return
+        except Exception:
+            pass
+        self._xref_dlg = XrefDialog(self.root, self)
+
+    def _xref_dialog_aktualisieren(self):
+        d = getattr(self, "_xref_dlg", None)
+        if d is None:
+            return
+        try:
+            if d.winfo_exists():
+                d.aktualisieren()
+            else:
+                self._xref_dlg = None
+        except Exception:
+            self._xref_dlg = None
+
+    def xref_umschalten(self, refs, an=None):
+        refs = [r for r in refs if r in self.elemente]
+        if not refs:
+            return
+        self._snapshot()
+        for r in refs:
+            r.sichtbar = (not r.sichtbar) if an is None else bool(an)
+            r._cache = None
+        self.auswahl = [e for e in self.auswahl if e not in refs or e.sichtbar]
+        self.redraw()
+
+    def xref_entfernen(self, refs):
+        refs = [r for r in refs if r in self.elemente]
+        if not refs:
+            return
+        self._snapshot()
+        for r in refs:
+            self.elemente.remove(r)
+        self.auswahl = [e for e in self.auswahl if e not in refs]
+        self.redraw()
+        self.status.set(tr("msg.xref.entfernt", n=len(refs)))
+
+    def xref_neu_laden(self, refs=None):
+        refs = refs if refs is not None else self.xref_liste()
+        for r in refs:
+            r.neu_laden()
+        self.redraw()
+
+    def xref_pfad_aendern(self, ref):
+        pfad = filedialog.askopenfilename(
+            parent=self.root,
+            filetypes=[(tr("dlg.xref.dateityp"), "*.cadjson *.dxf *.dwg"), (tr("txt.0198"), "*.*")])
+        if not pfad or ref not in self.elemente:
+            return
+        self._snapshot()
+        ref.pfad = self._xref_pfad_speichern(pfad)
+        ref.pfad_abs = os.path.abspath(pfad)
+        ref.xname = os.path.splitext(os.path.basename(pfad))[0]
+        ref.neu_laden()
+        self.redraw()
+
     def _block_vorschau(self, pt):
         self._clear_temp()
         if not self._block_einfuege_name:
+            return
+        if self._block_einfuege_name == "__xref__":
+            self._xref_vorschau(pt)
             return
         d = self.block_bibliothek.get(self._block_einfuege_name)
         if d is None:
@@ -5479,6 +5737,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             c.tag_lower("blatt")
         self._vorschau_neu()
         c.tag_raise("snapmarker")
+        self._xref_dialog_aktualisieren()
         if getattr(self, "leistung_var", None) is not None and self.leistung_var.get():
             self._leistung_melden(_t1 - _t0, time.perf_counter() - _t1 - _t_raster, _t_raster)
 
@@ -6364,6 +6623,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                 if bestaetigen and not messagebox.askyesno(titel, frage, default=messagebox.NO, parent=self.root):
                     return False
             self._projekt_zuruecksetzen()
+            self._datei_pfad = None
             self.status.set(tr("msg.projekt.geschlossen"))
             return True
         if self._dirty:
@@ -6407,6 +6667,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self.redraw()
         self._zeichne_raster()
         self._viewport_modus_anzeige_aktualisieren()
+        self._datei_pfad = None
         return True
 
     def speichern(self):
@@ -6426,6 +6687,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             messagebox.showerror(tr("msg.speichern_fehlgeschlagen"), str(e))
             return False
         self._mark_clean()
+        self._datei_pfad = pfad
         self.status.set((tr("txt.0029", p0=pfad)))
         return True
 
@@ -6455,6 +6717,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             messagebox.showerror(tr("msg.oeffnen_fehlgeschlagen"), str(e))
             return
         self._projekt_fuer_einzeldatei_schliessen()
+        self._datei_pfad = pfad
         self._zeichnung_anwenden(daten)
         self._undo_reset()
         self.status.set((tr("txt.0030", p0=pfad)))
@@ -6504,6 +6767,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             if typ == "skizze3d":   return Skizze3D(**d)
             if typ == "bemassung3d": return Bemassung3D(**d)
             if typ == "text3d":     return Text3D(**d)
+            if typ == "xref":       return XrefElement(**d)
             if typ == "block":
                 kinder_dicts = d.pop("elemente", [])
                 kinder = []
@@ -8955,6 +9219,10 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             self.block_liste()
         elif cmd == "block:explode":
             self.block_aufloesen()
+        elif cmd == "xref:verwalten":
+            self.xref_verwalten()
+        elif cmd == "xref:hinzufuegen":
+            self.xref_hinzufuegen()
         elif cmd.startswith("bem:"):
             self._bem_art_starten(cmd[4:])
         elif cmd.startswith("tool:"):
@@ -9023,7 +9291,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                 m.add_command(label=tr("menu.bloecke.attedit"),
                               command=self.attribute_bearbeiten)
             # NEW: explode block if a block is in the selection
-            if any(isinstance(e, BlockReferenz) for e in self.auswahl):
+            if any(isinstance(e, BlockReferenz) and not isinstance(e, XrefElement)
+                   for e in self.auswahl):
                 m.add_command(label=tr("menu.einfuegen.block_aufloesen"),
                               command=self.block_aufloesen)
             if any(isinstance(e, Bemassung) for e in self.auswahl):
@@ -11724,6 +11993,9 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
     def _block_einfuegen_an(self, x, y):
         if not self._block_einfuege_name:
             return
+        if self._block_einfuege_name == "__xref__":
+            self._xref_einfuegen_an(x, y)
+            return
         d = self.block_bibliothek.get(self._block_einfuege_name)
         if d is None:
             self._warte_auf_blockpunkt = False
@@ -11770,9 +12042,12 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             self.status.set(tr("msg.explode.keine_auswahl"))
             return
 
-        bloecke = [e for e in self.auswahl if isinstance(e, BlockReferenz)]
+        bloecke = [e for e in self.auswahl
+                   if isinstance(e, BlockReferenz) and not isinstance(e, XrefElement)]
         if not bloecke:
-            self.status.set(tr("msg.explode.keine_bloecke"))
+            self.status.set(tr("msg.xref.nicht_sprengen")
+                            if any(isinstance(e, XrefElement) for e in self.auswahl)
+                            else tr("msg.explode.keine_bloecke"))
             return
 
         self._snapshot()
@@ -11782,7 +12057,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
 
         # other selected elements stay selected
         for el in self.auswahl:
-            if not isinstance(el, BlockReferenz):
+            if el not in bloecke:
                 neue_auswahl.append(el)
 
         for ref in bloecke:

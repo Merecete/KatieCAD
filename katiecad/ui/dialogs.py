@@ -219,6 +219,98 @@ class _LayoutNameDialog(tk.Toplevel):
         self.destroy()
 
 
+class XrefDialog(tk.Toplevel):
+    """XREF: all external references of the drawing (not modal - the drawing stays usable).
+    Add, switch on / off, update, change path, remove."""
+
+    def __init__(self, parent, app):
+        super().__init__(parent)
+        self.app = app
+        self._refs = {}
+        self.title(tr("dlg.xref.titel"))
+        self.geometry("760x380")
+        self.transient(parent)
+        self.configure(bg=FARBEN["bg_mittel"])
+        ttk.Label(self, text=tr("dlg.xref.titel"), style="Title.TLabel").pack(pady=(8, 2))
+        ttk.Label(self, text=tr("dlg.xref.hinweis"), wraplength=720,
+                  justify=tk.LEFT).pack(anchor=tk.W, padx=10, pady=(0, 6))
+        cols = ("name", "an", "status", "datei")
+        self.tree = ttk.Treeview(self, columns=cols, show="headings", height=9,
+                                 selectmode="extended")
+        for c, w, t in (("name", 150, "dlg.xref.name"), ("an", 60, "dlg.xref.sichtbar"),
+                        ("status", 120, "dlg.xref.status"), ("datei", 400, "dlg.xref.datei")):
+            self.tree.heading(c, text=tr(t))
+            self.tree.column(c, width=w, anchor=tk.CENTER if c == "an" else tk.W)
+        self.tree.pack(fill=tk.BOTH, expand=True, padx=8)
+        self.tree.bind("<Double-1>", lambda e: self.umschalten())
+        self.leer = ttk.Label(self, text="")
+        self.leer.pack(pady=2)
+        bf = ttk.Frame(self)
+        bf.pack(fill=tk.X, padx=8, pady=6)
+        for key, cmd in (("dlg.xref.hinzufuegen", self.hinzufuegen),
+                         ("dlg.xref.umschalten", self.umschalten),
+                         ("dlg.xref.aktualisieren", self.aktualisieren_dateien),
+                         ("dlg.xref.pfad", self.pfad),
+                         ("dlg.xref.entfernen", self.entfernen)):
+            ttk.Button(bf, text=tr(key), command=cmd).pack(side=tk.LEFT, padx=2)
+        ttk.Button(bf, text=tr("dlg.schliessen"), command=self.destroy).pack(side=tk.RIGHT, padx=2)
+        self.bind("<Escape>", lambda e: self.destroy())
+        self.aktualisieren()
+
+    def aktualisieren(self):
+        """Fills the list again (keeps the selection)."""
+        auswahl = {id(self._refs.get(i)) for i in self.tree.selection()}
+        self.tree.delete(*self.tree.get_children())
+        self._refs = {}
+        for i, r in enumerate(self.app.xref_liste()):
+            if not r.sichtbar:
+                status = tr("dlg.xref.status.aus")
+            elif r.fehler == "fehlt":
+                status = tr("dlg.xref.status.fehlt")
+            elif r.fehler == "zu tief":
+                status = tr("dlg.xref.status.zutief")
+            elif r.fehler:
+                status = tr("dlg.xref.status.fehler")
+            else:
+                status = tr("dlg.xref.status.ok")
+            iid = f"x{i}"
+            self._refs[iid] = r
+            self.tree.insert("", tk.END, iid=iid, values=(
+                r.xname, "\u2714" if r.sichtbar else "\u2013", status, r.abs_pfad()))
+            if id(r) in auswahl:
+                self.tree.selection_add(iid)
+        self.leer.config(text="" if self._refs else tr("dlg.xref.leer"))
+
+    def _gewaehlt(self):
+        return [self._refs[i] for i in self.tree.selection() if i in self._refs]
+
+    def hinzufuegen(self):
+        self.app.xref_hinzufuegen()
+
+    def umschalten(self):
+        refs = self._gewaehlt()
+        if refs:
+            self.app.xref_umschalten(refs)
+            self.aktualisieren()
+
+    def aktualisieren_dateien(self):
+        refs = self._gewaehlt() or None
+        self.app.xref_neu_laden(refs)
+        self.aktualisieren()
+
+    def pfad(self):
+        refs = self._gewaehlt()
+        if len(refs) == 1:
+            self.app.xref_pfad_aendern(refs[0])
+            self.aktualisieren()
+
+    def entfernen(self):
+        refs = self._gewaehlt()
+        if refs:
+            self.app.xref_entfernen(refs)
+            self.aktualisieren()
+
+
 class ImportZielDialog(tk.Toplevel):
     """Asks where an imported DXF / DWG goes. result = "neu" | "einfuegen" | None."""
 
