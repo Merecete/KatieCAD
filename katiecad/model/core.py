@@ -1648,6 +1648,8 @@ class Wand(Polylinie):
                 proj = [x * nx + y * ny for x, y in quad]
                 k0 = math.ceil(min(proj) / d - 1e-9)
                 k1 = math.floor(max(proj) / d + 1e-9)
+                if k1 - k0 > 20000:   # absurdly dense / huge: skip (DoS protection)
+                    continue
                 for k in range(int(k0), int(k1) + 1):
                     c = k * d
                     treffer = []

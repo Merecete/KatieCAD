@@ -6,6 +6,8 @@
 - Fix: **Sicherheit – XREF:** Referenzen auf Netzwerkpfade (`\\Server\Freigabe`, `//Server/…`) werden nicht geöffnet (Status „blockiert“), damit das Öffnen fremder Projekte keine Verbindung zu fremden Servern aufbaut. Zugeordnete Laufwerksbuchstaben funktionieren weiter
 - Fix: **Sicherheit – CSV-Export:** Zellen, die mit `=`, `+`, `-` oder `@` beginnen, werden mit vorangestelltem Apostroph geschrieben, damit Excel sie nicht als Formel ausführt (reine Zahlen bleiben unverändert)
 - Fix: **Sicherheit – Überlastung:** Schraffuren mit unsinnig großen Mustern (Millionen Linien) und Schriftdateien mit überdimensionierter Zeichentabelle werden abgefangen statt das Programm einzufrieren
+- Fix: **Sicherheit – Wand-Schraffur:** Wände mit riesigen Maßen und sehr engem Schraffurabstand werden nicht mehr in Millionen Linien zerlegt (gleiche Begrenzung wie bei Schraffuren)
+- Änderung: **AppImage-Build:** `appimagetool` wird in einer festen Version (1.9.0) geladen und per SHA-256 geprüft statt als „continuous“-Build ungeprüft
 - Änderung: **Mindestversionen** in `requirements.txt` für Pillow (10.3.0) und pypdf (5.0.0), wegen bekannter Sicherheitslücken in älteren Versionen
 
 ## 1.1.6

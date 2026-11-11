@@ -6,6 +6,8 @@
 - Fix: **Security – XREF:** references to network paths (`\\server\share`, `//server/...`) are not opened (status "blocked"), so opening a foreign project does not connect to foreign servers. Mapped drive letters keep working
 - Fix: **Security – CSV export:** cells starting with `=`, `+`, `-` or `@` are written with a leading apostrophe so Excel does not run them as a formula (plain numbers stay unchanged)
 - Fix: **Security – overload:** hatches with absurdly large patterns (millions of lines) and font files with an oversized character table are caught instead of freezing the program
+- Fix: **Security – wall hatching:** walls with huge dimensions and a very small hatch spacing are no longer split into millions of lines (same limit as for hatches)
+- Change: **AppImage build:** `appimagetool` is downloaded in a fixed version (1.9.0) and checked by SHA-256 instead of the unchecked "continuous" build
 - Change: **Minimum versions** in `requirements.txt` for Pillow (10.3.0) and pypdf (5.0.0), because of known vulnerabilities in older versions
 
 ## 1.1.6

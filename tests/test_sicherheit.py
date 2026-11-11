@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import stub  # noqa: F401
 from katiecad.model.project import Projekt, ProjektFehler, blattdatei_sicher, FORMAT_KENNUNG
-from katiecad.model.core import polygon_schraffur
+from katiecad.model.core import polygon_schraffur, Wand
 from katiecad.reports.anwenden import csv_sicher, csv_schreiben
 
 ok = 0
@@ -50,4 +50,13 @@ check(inhalt == ["Name", "'=cmd()", "Q1"], "CSV-Datei enthaelt keine Formel")
 gross = [(0, 0), (1e9, 0), (1e9, 1e9), (0, 1e9)]
 check(polygon_schraffur(gross, [45], 5.0) == [], "extrem dichte Schraffur wird abgebrochen")
 check(len(polygon_schraffur([(0, 0), (100, 0), (100, 100), (0, 100)], [45], 10.0)) > 5, "normale Schraffur")
+
+# ---- wall hatching: huge wall + tiny spacing does not hang --------------------------------
+import time
+w = Wand([(0, 0), (1e9, 1e9)], False, schraffur="kreuz", schraffur_abstand=5.0)
+t0 = time.time()
+w.prims()
+check(time.time() - t0 < 5, "Wand-Schraffur mit Riesenmass bricht ab")
+w2 = Wand([(0, 0), (2000, 0)], False, schraffur="schraeg", schraffur_abstand=100.0)
+check(len(w2._schraffurlinien()) > 3, "normale Wand-Schraffur")
 print(f"test_sicherheit - OK ({ok} Pruefungen)")
