@@ -9831,6 +9831,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         except ProjektFehler as e:
             code = str(e)
             msg = (tr("msg.projekt.keine_projektdatei") if code == "kein_projekt"
+                   else tr("msg.projekt.unsichere_datei") if code == "unsichere_datei"
                    else tr("msg.projekt.fehler", fehler=code))
             messagebox.showerror(tr("msg.projekt.titel"), msg,
                                  parent=self.root)

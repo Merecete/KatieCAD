@@ -121,10 +121,17 @@ keys = ["menu.bloecke.xref", "menu.bloecke.xref_hinzu", "dlg.xref.titel", "dlg.x
         "dlg.xref.name", "dlg.xref.sichtbar", "dlg.xref.status", "dlg.xref.datei", "dlg.xref.leer",
         "dlg.xref.hinzufuegen", "dlg.xref.umschalten", "dlg.xref.aktualisieren", "dlg.xref.pfad",
         "dlg.xref.entfernen", "dlg.xref.status.ok", "dlg.xref.status.aus", "dlg.xref.status.fehlt",
-        "dlg.xref.status.fehler", "dlg.xref.status.zutief", "dlg.xref.dateityp",
+        "dlg.xref.status.fehler", "dlg.xref.status.zutief", "dlg.xref.status.blockiert", "dlg.xref.dateityp",
         "msg.xref.einfuegepunkt", "msg.xref.eingefuegt", "msg.xref.entfernt", "msg.xref.selbst",
         "msg.xref.layout", "msg.xref.nicht_sprengen", "msg.xref.lesefehler"]
 for lang in ("de", "en", "es"):
     for k_ in keys:
         check(k_ in i18n.TEXTE[lang], f"i18n {lang} {k_}")
+# ---- security: network paths are never opened -----------------------------------------------
+check(C.xref_netzpfad("\\\\server\\share\\a.cadjson") and C.xref_netzpfad("//server/share/a.cadjson"), "UNC erkannt")
+check(not C.xref_netzpfad("C:\\Plaene\\a.cadjson") and not C.xref_netzpfad("plaene/a.cadjson"), "normale Pfade ok")
+netz = XrefElement(0, 0, "\\\\server\\share\\a.cadjson")
+check(netz.aufgeloest() == [] and netz.fehler == "blockiert", "Netzwerkpfad wird nicht geoeffnet")
+netz2 = XrefElement(0, 0, "a.cadjson", pfad_abs="//server/share/a.cadjson")
+check(netz2.aufgeloest() == [] and netz2.fehler == "blockiert", "Netzwerkpfad als Ersatzpfad")
 print(f"test_xref - OK ({ok} Pruefungen)")

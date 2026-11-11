@@ -159,8 +159,10 @@ class TTF:
             ng = struct.unpack(">I", d[p + 12:p + 16])[0]
             for g in range(ng):
                 s, e, gid = struct.unpack(">III", d[p + 16 + 12 * g:p + 28 + 12 * g])
-                if e - s > 70000:
+                if e - s > 70000 or s > 0x10FFFF:
                     continue
+                if len(self._cmap) > 400000:            # manipulated font: do not fill the memory
+                    break
                 for c in range(s, e + 1):
                     self._cmap[c] = gid + (c - s)
         else:

@@ -48,6 +48,15 @@ def name_pruefen(name):
     return None
 
 
+def blattdatei_sicher(datei):
+    """A sheet file name must be a plain file name in the project folder (no folders, no drive,
+    no '..'), otherwise a manipulated project file could make KatieCAD read, overwrite or
+    delete files elsewhere."""
+    return (isinstance(datei, str) and datei not in (".", "..")
+            and not _UNGUELTIG.search(datei) and datei.lower().endswith(BLATT_ENDUNG)
+            and len(datei) <= 200)
+
+
 def _json_schreiben(pfad, daten):
     tmp = pfad + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
@@ -109,6 +118,8 @@ class Projekt:
     def blatt_pfad(self, blatt_oder_index):
         b = (self.blaetter[blatt_oder_index]
              if isinstance(blatt_oder_index, int) else blatt_oder_index)
+        if not blattdatei_sicher(b.datei):
+            raise ProjektFehler("unsichere_datei")
         return os.path.join(self.ordner, b.datei)
 
     @staticmethod
@@ -152,6 +163,8 @@ class Projekt:
         blaetter = []
         for bd in d.get("blaetter", []):
             if isinstance(bd, dict) and bd.get("datei"):
+                if not blattdatei_sicher(bd["datei"]):
+                    raise ProjektFehler("unsichere_datei")
                 blaetter.append(Blatt(bd.get("name") or bd["datei"],
                                       bd["datei"], bd.get("bericht") or None,
                                       bd.get("einbauort") or "",
@@ -252,7 +265,7 @@ class Projekt:
         for b in weg:
             self.blaetter.remove(b)
             try:
-                os.remove(os.path.join(self.ordner, b.datei))
+                os.remove(self.blatt_pfad(b))
             except OSError:
                 pass
         if self.aktiv >= len(self.blaetter):
@@ -307,7 +320,7 @@ class Projekt:
         b = self.blaetter.pop(index)
         if datei_loeschen:
             try:
-                os.remove(os.path.join(self.ordner, b.datei))
+                os.remove(self.blatt_pfad(b))
             except OSError:
                 pass
         if self.aktiv >= len(self.blaetter):

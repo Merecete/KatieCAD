@@ -267,6 +267,8 @@ class XrefDialog(tk.Toplevel):
                 status = tr("dlg.xref.status.aus")
             elif r.fehler == "fehlt":
                 status = tr("dlg.xref.status.fehlt")
+            elif r.fehler == "blockiert":
+                status = tr("dlg.xref.status.blockiert")
             elif r.fehler == "zu tief":
                 status = tr("dlg.xref.status.zutief")
             elif r.fehler:

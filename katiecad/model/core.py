@@ -1928,6 +1928,8 @@ def polygon_schraffur(poly, winkel_liste, d):
         dx, dy = math.cos(a), math.sin(a)
         nx, ny = -dy, dx
         proj = [x * nx + y * ny for x, y in poly]
+        if (max(proj) - min(proj)) / d > 20000:         # absurdly dense hatching (e.g. manipulated file)
+            continue
         for k in range(int(math.ceil(min(proj) / d - 1e-9)), int(math.floor(max(proj) / d + 1e-9)) + 1):
             c = k * d
             t = []
@@ -3598,6 +3600,14 @@ XREF_PRUEFSEKUNDEN = 1.0       # how often the file date is looked at (seconds)
 XREF_TIEFE_MAX = 5
 
 
+def xref_netzpfad(pfad):
+    """True for network paths (UNC, \\\\server\\share or //server/share). They are never opened:
+    on Windows merely touching such a path sends the user's login data to the server, so a
+    manipulated drawing could use a reference to spy on it."""
+    p = str(pfad or "").replace("/", "\\")
+    return p.startswith("\\\\")
+
+
 def xref_pfad_aufloesen(pfad, pfad_abs=""):
     """Absolute path of a reference: relative paths are taken from the folder of the drawing /
     project (or of the file that contains the reference); if that does not exist, the absolute
@@ -3654,7 +3664,15 @@ class XrefElement(BlockReferenz):
                 and jetzt - self._geprueft < XREF_PRUEFSEKUNDEN:
             return
         self._geprueft = jetzt
+        if xref_netzpfad(self.pfad) or xref_netzpfad(self.pfad_abs):
+            self.elemente, self.fehler, self._cache = [], "blockiert", None
+            self._geladen_mtime = -1.0
+            return
         ap = self.abs_pfad()
+        if xref_netzpfad(ap):
+            self.elemente, self.fehler, self._cache = [], "blockiert", None
+            self._geladen_mtime = -1.0
+            return
         try:
             mt = os.path.getmtime(ap)
         except OSError:

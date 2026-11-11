@@ -6,6 +6,7 @@ export lists (NO Tkinter).
 
 import csv
 import os
+import re
 
 from katiecad.model.core import Layout
 from katiecad.reports.seiten import FORMAT
@@ -61,13 +62,22 @@ def zelle(wert):
     return "" if wert is None else str(wert)
 
 
+def csv_sicher(text):
+    """Protects against CSV / formula injection: a text that starts with = + - @ (or a tab /
+    carriage return) would be run as a formula by Excel. Such texts get an apostrophe in
+    front; plain numbers stay as they are."""
+    if text and text[0] in "=+-@\t\r" and not re.fullmatch(r"[+-]?\d+([.,]\d+)?", text):
+        return "'" + text
+    return text
+
+
 def csv_schreiben(pfad, spalten, zeilen):
     """CSV for Excel (semicolon, UTF-8 with BOM)."""
     with open(pfad, "w", encoding="utf-8-sig", newline="") as f:
         w = csv.writer(f, delimiter=";")
-        w.writerow([s.titel for s in spalten])
+        w.writerow([csv_sicher(s.titel) for s in spalten])
         for z in zeilen:
-            w.writerow([zelle(z.get(s.key, "")) for s in spalten])
+            w.writerow([csv_sicher(zelle(z.get(s.key, ""))) for s in spalten])
 
 
 def csv_exportieren(ordner, tabellen, namen):
