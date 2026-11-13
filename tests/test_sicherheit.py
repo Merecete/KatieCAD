@@ -59,4 +59,17 @@ w.prims()
 check(time.time() - t0 < 5, "Wand-Schraffur mit Riesenmass bricht ab")
 w2 = Wand([(0, 0), (2000, 0)], False, schraffur="schraeg", schraffur_abstand=100.0)
 check(len(w2._schraffurlinien()) > 3, "normale Wand-Schraffur")
+
+# ---- pictures: memory bomb in a manipulated drawing ----------------------------------------
+import io, base64
+from PIL import Image
+from katiecad.fileio import bild_import as BI
+buf = io.BytesIO(); Image.new("RGB", (9000, 9000)).save(buf, "PNG")      # 81 million pixels
+try:
+    BI.pil_bild(base64.b64encode(buf.getvalue()).decode("ascii"))
+    check(False, "zu grosses Bild muss abgelehnt werden")
+except Exception:
+    check(True, "zu grosses Bild abgelehnt")
+buf = io.BytesIO(); Image.new("RGB", (200, 100)).save(buf, "PNG")
+check(BI.pil_bild(base64.b64encode(buf.getvalue()).decode("ascii")).size == (200, 100), "normales Bild")
 print(f"test_sicherheit - OK ({ok} Pruefungen)")

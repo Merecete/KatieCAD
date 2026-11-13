@@ -8,6 +8,7 @@
 - Fix: **Security – project files:** sheet file names in `projekt.json` are validated; names with path parts (`..`, `/`, `\`) or without `.cadjson` are rejected with an error message, so a manipulated project file cannot read, overwrite or delete files outside the project folder
 - Fix: **Security – XREF:** references to network paths (`\\server\share`, `//server/...`) are not opened (status "blocked"), so opening a foreign project does not connect to foreign servers. Mapped drive letters keep working
 - Fix: **Security – CSV export:** cells starting with `=`, `+`, `-` or `@` are written with a leading apostrophe so Excel does not run them as a formula (plain numbers stay unchanged)
+- Fix: **Security – pictures:** pictures with more than 64 million pixels (embedded in drawing files or imported) are refused, so a manipulated file cannot use up all the memory. The call of LibreDWG (`dwg2dxf`) always gets an absolute file path
 - Fix: **Security – overload:** hatches with absurdly large patterns (millions of lines) and font files with an oversized character table are caught instead of freezing the program
 - Fix: **Security – wall hatching:** walls with huge dimensions and a very small hatch spacing are no longer split into millions of lines (same limit as for hatches)
 - Change: **AppImage build:** `appimagetool` is downloaded in a fixed version (1.9.0) and checked by SHA-256 instead of the unchecked "continuous" build

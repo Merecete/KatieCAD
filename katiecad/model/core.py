@@ -914,7 +914,11 @@ def _pdf_bild_objekte(daten, format, pw, ph):
                  b"/Length %d >>\nstream\n" % (pw, ph, len(roh))) + roh + b"\nendstream"]
     import io
     from PIL import Image
-    im = Image.open(io.BytesIO(roh)).convert("RGBA")
+    Image.MAX_IMAGE_PIXELS = 64_000_000          # memory bomb in a manipulated drawing
+    im = Image.open(io.BytesIO(roh))
+    if im.size[0] * im.size[1] > 64_000_000:
+        raise ValueError("image too large")
+    im = im.convert("RGBA")
     rgb = zlib.compress(im.convert("RGB").tobytes())
     alpha = zlib.compress(im.getchannel("A").tobytes())
     return [(b"<< /Type /XObject /Subtype /Image /Width %d /Height %d "

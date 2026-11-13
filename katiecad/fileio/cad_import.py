@@ -506,7 +506,7 @@ def dwg_zu_dxf_doc(pfad):
         try:
             with tempfile.TemporaryDirectory() as td:
                 ziel = os.path.join(td, "out.dxf")
-                subprocess.run([exe, "-y", "-o", ziel, pfad], check=True,
+                subprocess.run([exe, "-y", "-o", ziel, os.path.abspath(pfad)], check=True,
                                capture_output=True, timeout=300)
                 return dxf_lesen(ziel)[0], "LibreDWG"
         except Exception as ex:

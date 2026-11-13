@@ -20,6 +20,14 @@ except ImportError:                                    # pragma: no cover
     PIL_OK = False
 
 MAX_SEITE = 2400
+MAX_PIXEL = 64_000_000          # larger pictures are refused (memory bomb in a manipulated file)
+if PIL_OK:
+    Image.MAX_IMAGE_PIXELS = MAX_PIXEL
+
+
+def _groesse_pruefen(im):
+    if im.size[0] * im.size[1] > MAX_PIXEL:
+        raise RuntimeError("The image is too large (more than %d million pixels)" % (MAX_PIXEL // 1000000))
 ENDUNGEN = "*.png *.jpg *.jpeg *.bmp *.gif *.tif *.tiff *.webp"
 
 
@@ -29,6 +37,7 @@ def lade_bild(pfad, max_seite=MAX_SEITE):
         raise RuntimeError("Pillow is not installed:  pip install Pillow")
     try:
         im = Image.open(pfad)
+        _groesse_pruefen(im)
         im.load()
     except Exception as e:
         raise RuntimeError(f"The image could not be read: {e}")
@@ -52,5 +61,6 @@ def lade_bild(pfad, max_seite=MAX_SEITE):
 def pil_bild(daten):
     """Decoded PIL image (RGB/RGBA) of the stored data."""
     im = Image.open(io.BytesIO(base64.b64decode(daten)))
+    _groesse_pruefen(im)
     im.load()
     return im
