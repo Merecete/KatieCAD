@@ -110,4 +110,4 @@ python3 main.py
 
 ## License
 
-KatieCAD is released under the [MIT License](LICENSE).
+KatieCAD is released under the [BSD-3-Clause license](LICENSE).
