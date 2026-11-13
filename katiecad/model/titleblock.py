@@ -18,6 +18,10 @@ Rules for a template drawing
         FORMAT paper format (e.g. A3)
     Aliases (German / other templates): SEITE = PAGE, SEITEN = PAGES,
     SIZE / BLATTFORMAT / PAPIERFORMAT = FORMAT.
+    Spanish: PAGINA, PAGINAS, HOJA, PROYECTO, FECHA, ESCALA, FORMATO, UBICACION,
+    DIBUJADO(_FECHA), REVISADO(_FECHA), NUMEROPLANO, EMPRESA, CLIENTE, PEDIDO,
+    INSTALACION, TITULO / TITULO1..3, revision table REV1_INDICE/MODIFICACION/
+    NOMBRE/FECHA or ESTADO1, MODIFICACION1(_NOMBRE/_FECHA) ...
     EINBAUORT / PLACE   installation location of the sheet (Sheet properties)
     From Project > Project properties (on every sheet):
         GEZEICHNET / DRAWN (+ _DATUM / _DATE), GEPRUEFT / VERIFIED (+ _DATUM),
@@ -47,25 +51,26 @@ FOLDER_NAME = "title_blocks"
 # Project properties); an empty value clears the field again. Without a
 # project nothing is touched.
 DATA_TAGS = {
-    "gezeichnet": ("GEZEICHNET", "DRAWN"),
-    "gezeichnet_datum": ("GEZEICHNET_DATUM", "DRAWN_DATE"),
-    "geprueft": ("GEPRUEFT", "VERIFIED"),
-    "geprueft_datum": ("GEPRUEFT_DATUM", "VERIFIED_DATE"),
-    "zeichnungsnummer": ("ZEICHNUNGSNUMMER", "DRAWINGNUMBER"),
-    "firma": ("FIRMA", "COMPANY"),
-    "kunde": ("KUNDE", "CUSTOMER"),
-    "auftrag": ("AUFTRAG", "ORDER"),
-    "anlage": ("ANLAGE", "PLANT"),
+    "gezeichnet": ("GEZEICHNET", "DRAWN", "DIBUJADO"),
+    "gezeichnet_datum": ("GEZEICHNET_DATUM", "DRAWN_DATE", "DIBUJADO_FECHA"),
+    "geprueft": ("GEPRUEFT", "VERIFIED", "REVISADO"),
+    "geprueft_datum": ("GEPRUEFT_DATUM", "VERIFIED_DATE", "REVISADO_FECHA"),
+    "zeichnungsnummer": ("ZEICHNUNGSNUMMER", "DRAWINGNUMBER", "NUMEROPLANO"),
+    "firma": ("FIRMA", "COMPANY", "EMPRESA"),
+    "kunde": ("KUNDE", "CUSTOMER", "CLIENTE"),
+    "auftrag": ("AUFTRAG", "ORDER", "PEDIDO"),
+    "anlage": ("ANLAGE", "PLANT", "INSTALACION"),
     "revision": ("REVISION",),
 }
 REV_ROWS = 4                                   # rows of the revision table
-REV_FIELDS = (("stand", ("STAND", "INDEX")),   # project key -> tag suffixes
-              ("aenderung", ("AENDERUNG", "CHANGE")),
-              ("name", ("NAME",)),
-              ("datum", ("DATUM", "DATE")))
-FORMAT_TAGS = ("FORMAT", "SIZE", "BLATTFORMAT", "PAPIERFORMAT", "PAPER")
-TITLE_TAGS = ("TITLE", "TITEL")                # kunde - project - sheet
-TITLE_PARTS = (("TITEL1", "TITLE1"), ("TITEL2", "TITLE2"), ("TITEL3", "TITLE3"))   # (German alias, English)
+REV_FIELDS = (("stand", ("STAND", "INDEX", "INDICE")),   # project key -> tag suffixes
+              ("aenderung", ("AENDERUNG", "CHANGE", "MODIFICACION")),
+              ("name", ("NAME", "NOMBRE")),
+              ("datum", ("DATUM", "DATE", "FECHA")))
+FORMAT_TAGS = ("FORMAT", "SIZE", "BLATTFORMAT", "PAPIERFORMAT", "PAPER", "FORMATO")
+TITLE_TAGS = ("TITLE", "TITEL", "TITULO")      # kunde - project - sheet
+TITLE_PARTS = (("TITEL1", "TITLE1", "TITULO1"), ("TITEL2", "TITLE2", "TITULO2"),
+               ("TITEL3", "TITLE3", "TITULO3"))   # (German, English, Spanish)
 TITLE_SEPARATOR = " - "
 
 
@@ -87,9 +92,10 @@ def _alle_data_tags():
     return out
 
 
-PLACE_TAGS = ("EINBAUORT", "PLACE")
+PLACE_TAGS = ("EINBAUORT", "PLACE", "UBICACION")
 _BASIS = {"PAGE", "PAGES", "SHEET", "PROJECT", "DATE", "SCALE", "SEITE",
-          "SEITEN"} | set(PLACE_TAGS) | set(FORMAT_TAGS)
+          "SEITEN", "PAGINA", "PAGINAS", "HOJA", "PROYECTO", "FECHA",
+          "ESCALA"} | set(PLACE_TAGS) | set(FORMAT_TAGS)
 _TITEL = set(TITLE_TAGS) | {t for pair in TITLE_PARTS for t in pair}
 DATA_ONLY = frozenset(_alle_data_tags())        # empty value = keep as is
 RESERVED = tuple(sorted(_BASIS | _TITEL | DATA_ONLY))
@@ -106,16 +112,17 @@ def norm_tag(tag):
 
 # Accepted words for the four revision columns (compared after norm_tag)
 _REV_WOERTER = {
-    "stand": {"STAND", "STATUS", "INDEX", "IDX", "REV", "REVISION", "ST",
+    "stand": {"STAND", "STATUS", "INDEX", "IDX", "REV", "REVISION", "ST", "ESTADO", "INDICE",
               "AENDERUNGSINDEX", "AENDERUNGSSTAND", "AENDINDEX", "REVINDEX",
               "REVSTAND"},
     "aenderung": {"AENDERUNG", "AENDERUNGEN", "AENDERUNGSTEXT", "AEND",
                   "CHANGE", "CHANGES", "DESCRIPTION", "BESCHREIBUNG",
-                  "BEZEICHNUNG", "REVCHANGE", "REVAENDERUNG"},
-    "name": {"NAME", "NAM", "BEARBEITER", "BEARB", "AUTHOR", "BY", "REVNAME"},
-    "datum": {"DATUM", "DATE", "DAT", "REVDATUM", "REVDATE"},
+                  "BEZEICHNUNG", "REVCHANGE", "REVAENDERUNG", "MODIFICACION",
+                  "CAMBIO", "DESCRIPCION"},
+    "name": {"NAME", "NAM", "BEARBEITER", "BEARB", "AUTHOR", "BY", "REVNAME", "NOMBRE"},
+    "datum": {"DATUM", "DATE", "DAT", "REVDATUM", "REVDATE", "FECHA"},
 }
-_REV_VORSILBEN = ("REVISIONSTABELLE", "AENDERUNGSTABELLE", "AENDERUNGSINDEX",
+_REV_VORSILBEN = ("REVISIONSTABELLE", "AENDERUNGSTABELLE", "AENDERUNGSINDEX", "MODIFICACION", "ESTADO",
                   "AENDERUNGS", "AENDERUNG", "REVISION", "CHANGE", "TABELLE",
                   "ZEILE", "INDEX", "STAND", "ROW", "REV", "AEND", "BEARB",
                   "Z", "R")
@@ -334,8 +341,9 @@ def daten_werte(daten, projekt, sheet, lang="en", today=None):
     kunde = str(d.get("kunde", "") or "")
     proj = str(d.get("anlage", "") or projekt or "")
     teile = [kunde, proj, sheet or ""]
-    for (de, en), v in zip(TITLE_PARTS, teile):
-        out[de] = out[en] = v
+    for namen, v in zip(TITLE_PARTS, teile):
+        for t in namen:
+            out[t] = v
     kombi = TITLE_SEPARATOR.join(t for t in teile if t)
     for t in TITLE_TAGS:
         out[t] = kombi
@@ -351,7 +359,9 @@ def info_values(nr, total, sheet, project, lang="en", paper_format="", today=Non
     out = daten_werte(daten, project, sheet, lang, today)
     out.update({"PAGE": str(nr), "PAGES": str(total), "SHEET": sheet,
                 "PROJECT": project, "DATE": date,
-                "SEITE": str(nr), "SEITEN": str(total)})
+                "SEITE": str(nr), "SEITEN": str(total),
+                "PAGINA": str(nr), "PAGINAS": str(total), "HOJA": sheet,
+                "PROYECTO": project, "FECHA": date})
     for t in FORMAT_TAGS:
         out[t] = short
     if einbauort is not None:           # None = no project: leave fields alone
@@ -400,6 +410,7 @@ def refresh_fields(layout_elements, info, fallback_scale=""):
     scale = massstab_text(vps[0].zoom) if vps else fallback_scale
     values = dict(info)
     values["SCALE"] = scale
+    values["ESCALA"] = scale
     norm = {}
     for k, v in values.items():
         norm[norm_tag(k)] = (k, v)

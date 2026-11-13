@@ -1,6 +1,7 @@
 # Änderungen
 
 ## 1.1.7
+- Neu: **Schriftköpfe auf Spanisch:** Feldnamen wie `DIBUJADO`, `REVISADO`, `NUMEROPLANO`, `PAGINA`, `FORMATO`, `TITULO1`–`3`, `ESTADO1`, `MODIFICACION1` (mit `_NOMBRE`/`_FECHA`) werden wie die deutschen und englischen Namen automatisch gefüllt. Dazu neue Vorlagen `title_block_A4_es`, `_A3_es` und `_A2-A0_es`
 - Neu: **Klemmen als Rechteck:** Im Klemmendialog gibt es unter *Darstellung* neben dem **Kreis** jetzt das **Rechteck mit Nummer** (5 × 8 mm, NUM in der Mitte, Anschlüsse oben/unten). Nebeneinander gesetzte Klemmen liegen bündig und bilden eine Klemmleiste; beide Darstellungen lassen sich mischen, alte Zeichnungen bleiben unverändert
 - Änderung: **Lizenz:** KatieCAD steht ab dieser Version unter der **BSD-3-Clause-Lizenz** statt unter der MIT-Lizenz (`LICENSE`, Lizenzfenster, Infocenter, Installer, Linux-Paket). Frühere Versionen bleiben unter MIT
 - Neu: **Externe Referenzen (XREF):** Eine andere Zeichnung (`.cadjson`, auch `.dxf`/`.dwg`) lässt sich wie ein Block einfügen, ohne sie zu kopieren. Menü *Blöcke › Externe Referenzen (XREF)…* oder Befehl `XREF`: Fenster mit allen Referenzen (hinzufügen, ein-/ausschalten, aktualisieren, Pfad ändern, entfernen). Referenzen werden nur angezeigt und nicht bearbeitet, der Objektfang funktioniert, ausgeblendete Layer der Quelle bleiben draußen, Wände/Türen/Fenster/Räume/Maße erscheinen wie in der Quelle. Gespeichert wird nur der Pfad (relativ, wenn möglich); die Referenz aktualisiert sich bei Änderungen der Quelldatei. Befehle `XREF`, `XATTACH`

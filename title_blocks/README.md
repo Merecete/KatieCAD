@@ -38,6 +38,12 @@ How to make your own:
    | `TITLE1`, `TITLE2`, `TITLE3` (German alias `TITEL1`..`3`) | the three parts alone: customer, project name, sheet name |
    | `REV1_STAND`, `REV1_AENDERUNG`, `REV1_NAME`, `REV1_DATUM` (English: `REV1_INDEX`, `REV1_CHANGE`, `REV1_NAME`, `REV1_DATE`) | revision table, rows `REV1` to `REV4` |
 
+   Spanish spellings (all of the above work with these names as well): `PAGINA`, `PAGINAS`, `HOJA`,
+   `PROYECTO`, `FECHA`, `ESCALA`, `FORMATO`, `UBICACION`, `DIBUJADO` / `DIBUJADO_FECHA`,
+   `REVISADO` / `REVISADO_FECHA`, `NUMEROPLANO`, `EMPRESA`, `CLIENTE`, `PEDIDO`, `INSTALACION`,
+   `TITULO` / `TITULO1` to `TITULO3`, revision table `REV1_INDICE`, `REV1_MODIFICACION`, `REV1_NOMBRE`,
+   `REV1_FECHA` (or `ESTADO1`, `MODIFICACION1`, `MODIFICACION1_NOMBRE`, `MODIFICACION1_FECHA` ...).
+
    Spelling is tolerant: case, underscores, hyphens and umlauts do not matter
    (`Geprüft_Datum` = `GEPRUEFT_DATUM`), and the revision fields are also found as
    `STAND1`, `AENDERUNG1`, `NAME1`, `DATUM1` (row 1 to 4). The checked-by date

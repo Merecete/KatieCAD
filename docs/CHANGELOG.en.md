@@ -1,6 +1,7 @@
 # Changes
 
 ## 1.1.7
+- New: **Spanish title blocks:** field names such as `DIBUJADO`, `REVISADO`, `NUMEROPLANO`, `PAGINA`, `FORMATO`, `TITULO1`-`3`, `ESTADO1`, `MODIFICACION1` (with `_NOMBRE`/`_FECHA`) are filled in automatically like the German and English names. New templates `title_block_A4_es`, `_A3_es` and `_A2-A0_es`
 - New: **Terminals as a rectangle:** the terminal dialog has an *Appearance* option: besides the **circle** there is now the **rectangle with number** (5 x 8 mm, NUM in the middle, connections at the top/bottom). Terminals placed side by side sit flush and form a terminal strip; both appearances can be mixed, old drawings stay unchanged
 - Change: **Licence:** from this version on KatieCAD is released under the **BSD 3-Clause License** instead of the MIT License (`LICENSE`, licence window, info centre, installer, Linux package). Earlier versions stay under MIT
 - New: **External references (XREF):** another drawing (`.cadjson`, also `.dxf`/`.dwg`) can be inserted like a block without copying it. Menu *Blocks > External references (XREF)...* or the command `XREF`: window with all references (add, switch on/off, update, change path, remove). References are display-only and cannot be edited, object snap works, hidden layers of the source stay out, walls/doors/windows/rooms/dimensions appear as in the source. Only the path is saved (relative where possible); the reference updates when the source file changes. Commands `XREF`, `XATTACH`
