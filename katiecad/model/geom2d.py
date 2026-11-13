@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-katiecad/model/geom2d.py - Pure 2D geometry helpers (MIT, no Tk).
+katiecad/model/geom2d.py - Pure 2D geometry helpers (BSD-3-Clause, no Tk).
 
 measure, fillet, chamfer, ellipse and spline point generation.
 """

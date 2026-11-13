@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-katiecad/ui/toolbar_dock.py - Dockable symbol toolbar (mixin of CadApp, MIT).
+katiecad/ui/toolbar_dock.py - Dockable symbol toolbar (mixin of CadApp, BSD-3-Clause).
 
 There is one symbol toolbar per department (tools, electrical, 3D). Each can
 sit on top, at the bottom or at the right edge of the window, independently

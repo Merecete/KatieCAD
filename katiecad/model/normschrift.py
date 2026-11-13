@@ -1,4 +1,4 @@
-"""KatieCAD Normschrift: single-stroke lettering for drawings (own design, MIT).
+"""KatieCAD Normschrift: single-stroke lettering for drawings (own design, BSD-3-Clause).
 
 Proportions follow ISO 3098 / DIN 6776 type B: cap height h = 10 units, lower case 7/10 h
 (ascenders 10/10 h, descenders 3/10 h), stroke width 1/10 h, letter gap 2/10 h, word gap

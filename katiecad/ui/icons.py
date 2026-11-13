@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-katiecad/ui/icons.py - Toolbar icons drawn by code (MIT).
+katiecad/ui/icons.py - Toolbar icons drawn by code (BSD-3-Clause).
 
 Simple line pictograms, rendered with Pillow at 8x size and scaled down
 (smooth edges, no image files needed). `icon_png(name, farbe)` returns

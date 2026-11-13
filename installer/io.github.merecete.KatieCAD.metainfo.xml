@@ -8,14 +8,14 @@
   <icon type="stock">katiecad</icon>
   <summary>2D/3D CAD for electrical engineering</summary>
   <metadata_license>CC0-1.0</metadata_license>
-  <project_license>MIT</project_license>
+  <project_license>BSD-3-Clause</project_license>
   <developer id="io.github.merecete">
     <name>Merecete</name>
   </developer>
   <description>
     <p>KatieCAD is a free and open-source 2D/3D CAD program for electrical engineering: switchgear construction, distribution boards and building installation.</p>
     <p>Wires, devices, cross references, terminals and cables, projects with several sheets, a symbol library, automatic documentation (device list, terminal plan, cable plan, parts list) and simple 3D modelling of control cabinets with layout views and PDF output.</p>
-    <p>Open source under the MIT license. German and English user interface.</p>
+    <p>Open source under the BSD 3-Clause license. German and English user interface.</p>
   </description>
   <categories>
     <category>Graphics</category>

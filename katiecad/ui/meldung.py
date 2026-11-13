@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-katiecad/ui/meldung.py - Message boxes in the design of the program (MIT).
+katiecad/ui/meldung.py - Message boxes in the design of the program (BSD-3-Clause).
 
 Drop-in replacement for the functions of tkinter.messagebox that KatieCAD uses
 (showinfo, showwarning, showerror, askyesno, askyesnocancel, askokcancel). The

@@ -94,33 +94,40 @@ def _modal(dlg):
 
 
 # ============================================================
-# MIT licence text (for the separate licence window)
+# Licence text (for the separate licence window)
 # ============================================================
-MIT_LICENSE_TEXT = """MIT License
+LICENSE_TEXT = """BSD 3-Clause License
 
 Copyright (c) 2026 Merecete
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE."""
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its
+   contributors may be used to endorse or promote products derived from
+   this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
 
 
 def zeige_lizenz_fenster(parent):
-    """Shows the MIT licence in a separate, scrollable window."""
+    """Shows the licence in a separate, scrollable window."""
     alt = getattr(zeige_lizenz_fenster, "_fenster", None)
     try:
         if alt is not None and alt.winfo_exists():       # only one at a time
@@ -145,7 +152,7 @@ def zeige_lizenz_fenster(parent):
 
     header = tk.Frame(win, bg=FARBEN["bg_mittel"], padx=20, pady=14)
     header.pack(side="top", fill="x")
-    tk.Label(header, text="MIT LICENSE",
+    tk.Label(header, text="BSD 3-CLAUSE LICENSE",
              font=("Helvetica", 12, "bold"),
              bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"]).pack(anchor="w")
 
@@ -173,7 +180,7 @@ def zeige_lizenz_fenster(parent):
     sb.pack(side="right", fill="y")
     txt.config(yscrollcommand=sb.set)
 
-    txt.insert("1.0", MIT_LICENSE_TEXT)
+    txt.insert("1.0", LICENSE_TEXT)
     txt.config(state="disabled")
 
     win.bind("<Escape>", lambda e: win.destroy())

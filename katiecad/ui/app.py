@@ -92,7 +92,7 @@ from katiecad.model.core import (
 )
 from katiecad.ui.dialogs import (
     farbe_waehlen, VON_LAYER,
-    MIT_LICENSE_TEXT, zeige_lizenz_fenster,
+    LICENSE_TEXT, zeige_lizenz_fenster,
     _LayoutNameDialog, BlattEigenschaftenDialog, PropertiesDialog, ViewportDialog,
     LayerDialog, LayerEditDialog, TextDialog, ArrayDialog, SchraffurDialog, DruckDialog,
     _BlockNameDialog, _BlockAuswahlDialog, BlockBrowserDialog,

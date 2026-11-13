@@ -1,6 +1,7 @@
 # Changes
 
 ## 1.1.7
+- Change: **Licence:** from this version on KatieCAD is released under the **BSD 3-Clause License** instead of the MIT License (`LICENSE`, licence window, info centre, installer, Linux package). Earlier versions stay under MIT
 - New: **External references (XREF):** another drawing (`.cadjson`, also `.dxf`/`.dwg`) can be inserted like a block without copying it. Menu *Blocks > External references (XREF)...* or the command `XREF`: window with all references (add, switch on/off, update, change path, remove). References are display-only and cannot be edited, object snap works, hidden layers of the source stay out, walls/doors/windows/rooms/dimensions appear as in the source. Only the path is saved (relative where possible); the reference updates when the source file changes. Commands `XREF`, `XATTACH`
 - Fix: **Security – project files:** sheet file names in `projekt.json` are validated; names with path parts (`..`, `/`, `\`) or without `.cadjson` are rejected with an error message, so a manipulated project file cannot read, overwrite or delete files outside the project folder
 - Fix: **Security – XREF:** references to network paths (`\\server\share`, `//server/...`) are not opened (status "blocked"), so opening a foreign project does not connect to foreign servers. Mapped drive letters keep working

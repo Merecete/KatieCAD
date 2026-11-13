@@ -4,7 +4,7 @@ katiecad/fileio/pdf_import.py - Own PDF reader (vector import, NO Tkinter).
 
 Reads the drawing commands of a PDF page and turns them into KatieCAD
 elements. Only the BSD-licensed `pypdf` is used (no AGPL code), so KatieCAD
-stays MIT-licensed.
+stays BSD-licensed.
 
 What is recognised
   * Layers: "optional content groups" (OCG) as written by AutoCAD, BricsCAD,

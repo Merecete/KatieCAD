@@ -37,9 +37,9 @@ Source: https://github.com/Merecete/KatieCAD
 
 Files: *
 Copyright: 2026 Merecete
-License: MIT
+License: BSD-3-Clause
 COPY
-sed -n '/^Permission is hereby granted/,$p' "$ROOT/LICENSE" | sed -e 's/^$/./' -e 's/^/ /' \
+sed -n '/^Redistribution and use/,$p' "$ROOT/LICENSE" | sed -e 's/^$/./' -e 's/^/ /' \
     >> "$PKG/usr/share/doc/katiecad/copyright"
 SIZE_KB=$(du -sk "$PKG" | cut -f1)        # shown as "installed size" by software centres
 cat > "$PKG/DEBIAN/control" <<CTRL
@@ -51,7 +51,7 @@ Architecture: $ARCH
 Installed-Size: $SIZE_KB
 Maintainer: Merecete <noreply@github.com>
 Homepage: https://github.com/Merecete/KatieCAD
-Description: 2D/3D CAD for electrical engineering (open source, MIT)
+Description: 2D/3D CAD for electrical engineering (open source, BSD-3-Clause)
  KatieCAD is a free and open-source 2D/3D CAD program for electrical
  engineering: switchgear construction, distribution boards and building
  installation.
@@ -59,7 +59,7 @@ Description: 2D/3D CAD for electrical engineering (open source, MIT)
  Wires, devices, cross references, terminals and cables, projects with
  several sheets, a symbol library, automatic documentation (device list,
  terminal plan, cable plan, parts list) and simple 3D modelling of control
- cabinets. Licensed under the MIT license.
+ cabinets. Licensed under the BSD 3-Clause license.
 CTRL
 # refresh the software-centre catalogue after (un)installing, so licence and description show up at once
 for T in postinst postrm; do

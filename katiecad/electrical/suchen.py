@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-katiecad/electrical/suchen.py - Find and replace texts (MIT).
+katiecad/electrical/suchen.py - Find and replace texts (BSD-3-Clause).
 
 Works on element objects (the open sheet) AND on the plain dicts of the
 JSON sheet files (all other sheets of the project): the field names of the

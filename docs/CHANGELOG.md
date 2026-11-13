@@ -1,6 +1,7 @@
 # Änderungen
 
 ## 1.1.7
+- Änderung: **Lizenz:** KatieCAD steht ab dieser Version unter der **BSD-3-Clause-Lizenz** statt unter der MIT-Lizenz (`LICENSE`, Lizenzfenster, Infocenter, Installer, Linux-Paket). Frühere Versionen bleiben unter MIT
 - Neu: **Externe Referenzen (XREF):** Eine andere Zeichnung (`.cadjson`, auch `.dxf`/`.dwg`) lässt sich wie ein Block einfügen, ohne sie zu kopieren. Menü *Blöcke › Externe Referenzen (XREF)…* oder Befehl `XREF`: Fenster mit allen Referenzen (hinzufügen, ein-/ausschalten, aktualisieren, Pfad ändern, entfernen). Referenzen werden nur angezeigt und nicht bearbeitet, der Objektfang funktioniert, ausgeblendete Layer der Quelle bleiben draußen, Wände/Türen/Fenster/Räume/Maße erscheinen wie in der Quelle. Gespeichert wird nur der Pfad (relativ, wenn möglich); die Referenz aktualisiert sich bei Änderungen der Quelldatei. Befehle `XREF`, `XATTACH`
 - Fix: **Sicherheit – Projektdateien:** Blattdateinamen in `projekt.json` werden geprüft; Namen mit Pfadanteilen (`..`, `/`, `\`) oder ohne `.cadjson` lehnt KatieCAD mit einer Fehlermeldung ab, damit eine manipulierte Projektdatei keine Dateien außerhalb des Projektordners lesen, überschreiben oder löschen kann
 - Fix: **Sicherheit – XREF:** Referenzen auf Netzwerkpfade (`\\Server\Freigabe`, `//Server/…`) werden nicht geöffnet (Status „blockiert“), damit das Öffnen fremder Projekte keine Verbindung zu fremden Servern aufbaut. Zugeordnete Laufwerksbuchstaben funktionieren weiter

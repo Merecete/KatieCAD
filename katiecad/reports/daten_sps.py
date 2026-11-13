@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-katiecad/reports/daten_sps.py - PLC (SPS) I/O list (NO Tkinter, MIT).
+katiecad/reports/daten_sps.py - PLC (SPS) I/O list (NO Tkinter, BSD-3-Clause).
 
 A device is a PLC module if its block carries the attribute `SPS` with one
 of CPU / DI / DO / AI / AO (the symbols of the category "10 PLC" do).

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-katiecad/model/geom3d.py - 3D geometry for the wireframe view (NO Tkinter, MIT).
+katiecad/model/geom3d.py - 3D geometry for the wireframe view (NO Tkinter, BSD-3-Clause).
 
 * Kamera: orbit camera (parallel or perspective), Z axis up.
 * Netz: wireframe + faces of a body (faces only for hidden-line removal).

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-katiecad/model/auswahl.py - Quick select: filter elements by properties (MIT).
+katiecad/model/auswahl.py - Quick select: filter elements by properties (BSD-3-Clause).
 """
 
 

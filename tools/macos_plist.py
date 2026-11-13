@@ -11,7 +11,7 @@ pl["CFBundleShortVersionString"] = ver
 pl["CFBundleVersion"] = ver
 pl["CFBundleName"] = "KatieCAD"
 pl["CFBundleDisplayName"] = "KatieCAD"
-pl["NSHumanReadableCopyright"] = "MIT License - Merecete"
+pl["NSHumanReadableCopyright"] = "BSD 3-Clause License - Merecete"
 with open(pfad, "wb") as f:
     plistlib.dump(pl, f)
 subprocess.run(["codesign", "--force", "--deep", "-s", "-", app], check=False)

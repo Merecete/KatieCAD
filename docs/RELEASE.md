@@ -18,5 +18,5 @@ Hinweise
   Trotzdem ausführen), macOS verlangt Rechtsklick > Öffnen beim ersten Start.
 - Das Logo kommt aus `KatieCAD.ico` und `KatieCAD.png` im Hauptordner des Repos.
   Beide Dateien müssen dort liegen. Die `.icns`-Datei für den Mac wird beim Bauen aus der PNG erzeugt.
-- Der Windows-Installer zeigt vor der Installation die MIT-Lizenz (Datei `LICENSE`) zur Zustimmung.
+- Der Windows-Installer zeigt vor der Installation die BSD-3-Clause-Lizenz (Datei `LICENSE`) zur Zustimmung.
 - Der macOS-Build ist für Apple Silicon (arm64).

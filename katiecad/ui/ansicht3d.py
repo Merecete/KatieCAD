@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-katiecad/ui/ansicht3d.py - 3D wireframe view inside the main window (MIT).
+katiecad/ui/ansicht3d.py - 3D wireframe view inside the main window (BSD-3-Clause).
 
 The 3D view replaces the 2D canvas (same window, same undo, same layer /
 colour / weight toolbar). The flat 2D drawing lies on the ground plane

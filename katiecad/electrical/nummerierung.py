@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-katiecad/electrical/nummerierung.py - Automatic device numbering (MIT, no Tk).
+katiecad/electrical/nummerierung.py - Automatic device numbering (BSD-3-Clause, no Tk).
 
 Devices whose designation (IND) is only a prefix without a number
 ('-K', 'K', '-K?') get the next free number: -K1, -K2 ... The numbers

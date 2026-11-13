@@ -12,7 +12,7 @@ AppPublisher=KatieCAD
 AppPublisherURL=https://github.com/Merecete/KatieCAD
 AppSupportURL=https://github.com/Merecete/KatieCAD/issues
 AppUpdatesURL=https://github.com/Merecete/KatieCAD/releases
-AppCopyright=MIT License
+AppCopyright=BSD 3-Clause License
 DefaultDirName={autopf}\KatieCAD
 DefaultGroupName=KatieCAD
 UninstallDisplayIcon={app}\KatieCAD.exe
@@ -35,9 +35,9 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 
 [Messages]
-german.WelcomeLabel2=Dieser Assistent installiert [name/ver] auf Ihrem Computer.%n%nKatieCAD ist ein 2D-CAD-Programm mit Elektro-CAD, Schaltschrank-Planung und einfachem 3D – kostenlos und quelloffen (MIT-Lizenz).%n%nSchließen Sie vor dem Fortfahren bitte alle anderen Anwendungen.
-spanish.WelcomeLabel2=Este asistente instalará [name/ver] en su equipo.%n%nKatieCAD es un programa de CAD 2D con CAD eléctrico, planificación de armarios y 3D sencillo: gratuito y de código abierto (licencia MIT).%n%nAntes de continuar, cierre las demás aplicaciones.
-english.WelcomeLabel2=This wizard installs [name/ver] on your computer.%n%nKatieCAD is a 2D CAD program with electrical CAD, cabinet planning and simple 3D - free and open source (MIT license).%n%nPlease close all other applications before you continue.
+german.WelcomeLabel2=Dieser Assistent installiert [name/ver] auf Ihrem Computer.%n%nKatieCAD ist ein 2D-CAD-Programm mit Elektro-CAD, Schaltschrank-Planung und einfachem 3D – kostenlos und quelloffen (BSD-3-Clause-Lizenz).%n%nSchließen Sie vor dem Fortfahren bitte alle anderen Anwendungen.
+spanish.WelcomeLabel2=Este asistente instalará [name/ver] en su equipo.%n%nKatieCAD es un programa de CAD 2D con CAD eléctrico, planificación de armarios y 3D sencillo: gratuito y de código abierto (licencia BSD de 3 cláusulas).%n%nAntes de continuar, cierre las demás aplicaciones.
+english.WelcomeLabel2=This wizard installs [name/ver] on your computer.%n%nKatieCAD is a 2D CAD program with electrical CAD, cabinet planning and simple 3D - free and open source (BSD 3-Clause license).%n%nPlease close all other applications before you continue.
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; Flags: unchecked

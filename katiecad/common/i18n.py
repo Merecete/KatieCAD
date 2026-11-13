@@ -1395,7 +1395,7 @@ TEXTE = {
         "menu.einst.dxfiso.text": "Als Text (Schriftstil ISO)",
         "menu.einst.dxfiso.linien": "Als Linien (sieht überall gleich aus)",
         "dlg.doku.schrift": "Schriftart der Dokumente:",
-        "info.lizenz": "Veröffentlicht unter der MIT-Lizenz.",
+        "info.lizenz": "Veröffentlicht unter der BSD-3-Clause-Lizenz.",
         "info.btn_log": "Log",
         "info.btn_lizenz": "Lizenz",
         # --- former hard-coded texts (txt.*) ---
@@ -3086,7 +3086,7 @@ TEXTE = {
         "menu.einst.dxfiso.text": "As text (ISO text style)",
         "menu.einst.dxfiso.linien": "As lines (looks the same everywhere)",
         "dlg.doku.schrift": "Font of the documents:",
-        "info.lizenz": "Released under the MIT License.",
+        "info.lizenz": "Released under the BSD 3-Clause License.",
         "info.btn_log": "Log",
         "info.btn_lizenz": "License",
         # --- former hard-coded texts (txt.*) ---
@@ -4780,7 +4780,7 @@ TEXTE = {
         "menu.einst.dxfiso.text": "Como texto (estilo de texto ISO)",
         "menu.einst.dxfiso.linien": "Como líneas (se ve igual en todas partes)",
         "dlg.doku.schrift": "Fuente de los documentos:",
-        "info.lizenz": "Publicado bajo la licencia MIT.",
+        "info.lizenz": "Publicado bajo la licencia BSD de 3 cláusulas.",
         "info.btn_log": "Registro",
         "info.btn_lizenz": "Licencia",
         # --- former hard-coded texts (txt.*) ---

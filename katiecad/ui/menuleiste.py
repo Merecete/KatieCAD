@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-katiecad/ui/menuleiste.py - Own menu bar for Linux/X11 and Windows (MIT).
+katiecad/ui/menuleiste.py - Own menu bar for Linux/X11 and Windows (BSD-3-Clause).
 
 Why: the native Tk menu bar grabs mouse and keyboard. On X11/XWayland
 (GNOME) this grab is not honoured: after switching to another application

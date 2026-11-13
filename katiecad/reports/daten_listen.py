@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-katiecad/reports/daten_listen.py - Further lists (NO Tkinter, MIT).
+katiecad/reports/daten_listen.py - Further lists (NO Tkinter, BSD-3-Clause).
 
 connection list, parts list (with parts catalogue), cross reference list,
 potential overview, connector overview, label list, revision overview.
