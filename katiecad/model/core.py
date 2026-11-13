@@ -5085,12 +5085,31 @@ class Klemme(_FestMaske):
               ("PER", -3.0, -5.5, 1.5, "mitte_rechts"),
               ("NUM", 2.0, 0.0, 1.75, "mitte_links"))
 
-    def __init__(self, x, y, werte=None, **kw):
+    # Second representation "kasten": a rectangle with the number (NUM) in the middle, so that
+    # terminals placed side by side (distance KASTEN_B) form a terminal strip.
+    DARSTELLUNGEN = ("kreis", "kasten")
+    KASTEN_B = 5.0
+    KASTEN_H = 8.0
+    KASTEN_NUM = 2.5
+
+    def __init__(self, x, y, werte=None, darstellung="kreis", **kw):
         super().__init__("klemme", x, y, werte, **kw)
+        self.darstellung = darstellung if darstellung in self.DARSTELLUNGEN else "kreis"
+
+    def to_dict(self):
+        d = super().to_dict()
+        if self.darstellung == "kreis":
+            d.pop("darstellung", None)          # old files / circle: nothing to save
+        return d
+
+    def _hoehe(self):
+        return self.KASTEN_H if self.darstellung == "kasten" else self.DURCHMESSER
 
     def _zeilen(self):
         """IND at the circle; MAN (only when filled in), TYP and PER below it, one line each.
         Hidden fields leave no gap: the visible ones move up."""
+        if self.darstellung == "kasten":
+            return self._zeilen_kasten()
         out = [z for z in self.ZEILEN if z[0] == "IND"]
         y = -3.0
         for tag in ("MAN", "TYP", "PER"):
@@ -5105,13 +5124,34 @@ class Klemme(_FestMaske):
         # Empty fields stay empty (terminals should be able to sit close together)
         return _FestMaske.aufgeloest(self, False)
 
+    def _zeilen_kasten(self):
+        """Rectangle variant: IND left of the box (at its middle), TYP/PER below IND,
+        NUM centred in the box."""
+        b2 = self.KASTEN_B / 2.0
+        out = [("IND", -b2 - 1.0, 0.0, 2.5, "mitte_rechts")]
+        y = -3.0
+        for tag in ("MAN", "TYP", "PER"):
+            if tag in self.ausgeblendet or (tag == "MAN" and not self.werte.get("MAN", "")):
+                continue
+            out.append((tag, -b2 - 1.0, y, 1.5, "mitte_rechts"))
+            y -= 2.5
+        out.append(("NUM", 0.0, 0.0, self.KASTEN_NUM, "mitte_zentriert"))
+        return out
+
     def anschluss_oben(self):
-        return (self.x, self.y + self.DURCHMESSER / 2.0)
+        return (self.x, self.y + self._hoehe() / 2.0)
 
     def anschluss_unten(self):
-        return (self.x, self.y - self.DURCHMESSER / 2.0)
+        return (self.x, self.y - self._hoehe() / 2.0)
+
+    def kasten_ecken(self):
+        b2, h2 = self.KASTEN_B / 2.0, self.KASTEN_H / 2.0
+        return [(self.x - b2, self.y - h2), (self.x + b2, self.y - h2),
+                (self.x + b2, self.y + h2), (self.x - b2, self.y + h2)]
 
     def _zusatz(self, ph, st):
+        if self.darstellung == "kasten":
+            return [Polylinie(self.kasten_ecken(), True, staerke=0.25, **st)]
         return [Kreis(self.x, self.y, self.DURCHMESSER / 2.0,
                       staerke=0.25, **st)]
 

@@ -3599,7 +3599,8 @@ class FestMaskeDialog(tk.Toplevel):
     result: {'werte': {...}, 'rolle': ...} or None."""
 
     def __init__(self, parent, titel, felder, werte=None, rolle=None, hinweis="",
-                 zusatz=(), spiegel=None, ausgeblendet=None, einpolig=None, pole=None):
+                 zusatz=(), spiegel=None, ausgeblendet=None, einpolig=None, pole=None,
+                 darstellung=None):
         super().__init__(parent)
         self.result = None
         werte = werte or {}
@@ -3645,6 +3646,17 @@ class FestMaskeDialog(tk.Toplevel):
             for w in ElektroMaske.SPIEGEL:
                 ttk.Radiobutton(sf, text=tr("dlg.maske.spiegel." + w), value=w,
                                 variable=self.v_spiegel).pack(anchor=tk.W)
+            row += 1
+        self.v_darst = tk.StringVar(value=darstellung or "kreis")
+        self._darst = darstellung is not None
+        if self._darst:                      # terminal: circle or box
+            ttk.Label(f, text=tr("dlg.klemme.darstellung")).grid(
+                row=row, column=0, sticky=tk.NW, pady=(6, 2))
+            df = ttk.Frame(f)
+            df.grid(row=row, column=1, sticky=tk.W, pady=(6, 2))
+            for w in ("kreis", "kasten"):
+                ttk.Radiobutton(df, text=tr("dlg.klemme.darstellung." + w), value=w,
+                                variable=self.v_darst).pack(anchor=tk.W)
             row += 1
         self.v_einpolig = tk.BooleanVar(value=bool(einpolig))
         self._einpolig = einpolig is not None
@@ -3696,6 +3708,7 @@ class FestMaskeDialog(tk.Toplevel):
                        "rolle": self.v_rolle.get() if self._rolle else None,
                        "spiegel": self.v_spiegel.get() if self._spiegel else None,
                        "einpolig": bool(self.v_einpolig.get()) if self._einpolig else None,
+                       "darstellung": self.v_darst.get() if self._darst else None,
                        "pole": self.v_pole.get().strip() if self._pole else None,
                        "zusatz": {k: v.get().strip() for k, v in self._zvars.items()},
                        "ausgeblendet": {t for t, v in self._sicht.items() if not v.get()}}
