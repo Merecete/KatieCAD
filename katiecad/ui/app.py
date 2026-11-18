@@ -45,7 +45,8 @@ except ImportError:
 
 from katiecad.common.i18n import tr, SPRACHE, setze_sprache, TEXTE, datum_text
 from katiecad.common.config import (lade_konfiguration, speichere_sprache,
-                             speichere_konfiguration)
+                             speichere_konfiguration, konfig_ordner)
+from katiecad.fileio import sicherung as SICH
 from katiecad.model import titleblock as TB
 from katiecad.model.project import (Projekt, ProjektFehler, PROJEKT_ENDUNG,
                               BLOCK_ENDUNG)
@@ -443,6 +444,10 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self.bem_dez = tk.IntVar(value=2)
         self.dezimalkomma = tk.BooleanVar(value=(SPRACHE["aktuell"] != "en"))
         self._datei_pfad = None            # file of the open single drawing (base of relative paths)
+        self.bak_var = tk.BooleanVar(
+            value=lade_konfiguration().get("bak_anlegen") is not False)
+        self.root.after(800, self._autosave_wiederherstellen)
+        self.root.after(30000, self._autosave_tick)
         self._xref_dlg = None
         self._xref_neu_pfad = None
         core.XREF_LADER = self._xref_datei_laden
@@ -579,6 +584,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
 
     def _mark_clean(self):
         self._dirty = False
+        SICH.loeschen(konfig_ordner(), os.getpid())      # nothing unsaved any more
         self._update_titel()
 
     def _update_titel(self):
@@ -602,6 +608,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             if antwort:
                 if not self.speichern():
                     return
+        SICH.loeschen(konfig_ordner(), os.getpid())      # normal exit: no recovery needed
         self.root.destroy()
 
     # --------------------------------------------------------
@@ -1136,6 +1143,9 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         m_datei.add_command(label=tr("menu.datei.oeffnen"), command=self.oeffnen)
         m_datei.add_command(label=tr("menu.datei.speichern"), command=self.speichern,
                             accelerator=tr("txt.0254"))
+        m_datei.add_checkbutton(label=tr("menu.datei.bak"), variable=self.bak_var,
+                                command=self._bak_umschalten)
+        m_datei.add_command(label=tr("menu.datei.autosave"), command=self._autosave_einstellen)
         m_datei.add_separator()
         m_datei.add_command(label=tr("menu.datei.import"), command=self.import_datei)
         m_datei.add_command(label=tr("menu.datei.export"), command=self.export_datei)
@@ -6692,6 +6702,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             return False
         daten = self._zeichnung_daten()
         try:
+            if self.bak_var.get():
+                SICH.bak_anlegen(pfad)
             with open(pfad, "w", encoding="utf-8") as f:
                 json.dump(daten, f, indent=2, ensure_ascii=False)
         except Exception as e:
@@ -9688,7 +9700,88 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         tmp = pfad + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(daten, f, indent=2, ensure_ascii=False)
+        if lade_konfiguration().get("bak_anlegen") is not False:
+            SICH.bak_anlegen(pfad)                       # previous version -> <file>.bak
         os.replace(tmp, pfad)
+
+    # --------------------------------------------------------
+    # Backup files and automatic saving
+    # --------------------------------------------------------
+    def _bak_umschalten(self):
+        daten = lade_konfiguration()
+        daten["bak_anlegen"] = bool(self.bak_var.get())
+        speichere_konfiguration(daten)
+        self.status.set(tr("msg.bak.an" if self.bak_var.get() else "msg.bak.aus"))
+
+    def _autosave_einstellen(self):
+        daten = lade_konfiguration()
+        aktuell = SICH.minuten_pruefen(daten.get("autosave_min"))
+        neu = simpledialog.askinteger(
+            tr("menu.datei.autosave"), tr("msg.autosave.minuten", max=SICH.MAX_MINUTEN),
+            initialvalue=aktuell, minvalue=0, maxvalue=SICH.MAX_MINUTEN, parent=self.root)
+        if neu is None:
+            return
+        daten["autosave_min"] = int(neu)
+        speichere_konfiguration(daten)
+        self._autosave_letzte = time.time()
+        self.status.set(tr("msg.autosave.an", n=neu) if neu else tr("msg.autosave.aus"))
+
+    def _autosave_quelle(self):
+        p = getattr(self, "projekt", None)
+        try:
+            if p is not None and p.blaetter:
+                return p.blatt_pfad(p.aktiv)
+        except Exception:
+            pass
+        return self._datei_pfad
+
+    def _autosave_tick(self):
+        """Every 30 s: if there are unsaved changes and the interval has passed, writes the
+        autosave (never over the original file)."""
+        try:
+            minuten = SICH.minuten_pruefen(lade_konfiguration().get("autosave_min"))
+            jetzt = time.time()
+            letzte = getattr(self, "_autosave_letzte", None)
+            if letzte is None:
+                letzte = self._autosave_letzte = jetzt
+            if minuten and self._dirty and jetzt - letzte >= minuten * 60:
+                SICH.schreiben(konfig_ordner(), os.getpid(), self._zeichnung_daten(),
+                               self._autosave_quelle())
+                self._autosave_letzte = jetzt
+            elif not self._dirty:
+                self._autosave_letzte = jetzt
+        except Exception as e:
+            print(f"[KatieCAD] Autospeichern: {e}")
+        try:
+            self.root.after(30000, self._autosave_tick)
+        except tk.TclError:
+            pass
+
+    def _autosave_wiederherstellen(self):
+        """At start: offers the autosave of a crashed session (the newest one)."""
+        try:
+            alle = SICH.verwaiste(konfig_ordner())
+            if not alle or self._dirty or self.elemente:
+                return
+            pfad, zeit, quelle, daten = alle[0]
+            wann = time.strftime("%d.%m.%Y %H:%M", time.localtime(zeit))
+            antwort = messagebox.askyesnocancel(
+                tr("msg.autosave.titel"),
+                tr("msg.autosave.frage", zeit=wann,
+                   quelle=quelle or tr("msg.autosave.unbenannt")),
+                parent=self.root)
+            if antwort is None:
+                return                                   # later: stays for the next start
+            if antwort:
+                self._projekt_fuer_einzeldatei_schliessen()
+                self._datei_pfad = None
+                self._zeichnung_anwenden(daten)
+                self._undo_reset()
+                self._mark_dirty()
+                self.status.set(tr("msg.autosave.wiederhergestellt"))
+            SICH.datei_entfernen(pfad)
+        except Exception as e:
+            print(f"[KatieCAD] Wiederherstellung: {e}")
 
     def _zeichnung_in_datei(self, pfad):
         """Writes the current drawing (raises OSError on errors)."""

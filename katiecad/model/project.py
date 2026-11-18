@@ -264,10 +264,11 @@ class Projekt:
         weg = [b for b in self.blaetter if b.bericht]
         for b in weg:
             self.blaetter.remove(b)
-            try:
-                os.remove(self.blatt_pfad(b))
-            except OSError:
-                pass
+            for z in (self.blatt_pfad(b), self.blatt_pfad(b) + ".bak"):
+                try:
+                    os.remove(z)
+                except OSError:
+                    pass
         if self.aktiv >= len(self.blaetter):
             self.aktiv = max(0, len(self.blaetter) - 1)
         return len(weg)
@@ -319,10 +320,11 @@ class Projekt:
     def blatt_entfernen(self, index, datei_loeschen=True):
         b = self.blaetter.pop(index)
         if datei_loeschen:
-            try:
-                os.remove(self.blatt_pfad(b))
-            except OSError:
-                pass
+            for z in (self.blatt_pfad(b), self.blatt_pfad(b) + ".bak"):
+                try:
+                    os.remove(z)
+                except OSError:
+                    pass
         if self.aktiv >= len(self.blaetter):
             self.aktiv = max(0, len(self.blaetter) - 1)
         return b
@@ -345,6 +347,7 @@ class Projekt:
         Returns: (folder_removed: bool, remaining: list[str])"""
         ziele = [self.projektdatei, self.projektdatei + ".tmp"]
         ziele += [self.blatt_pfad(b) for b in self.blaetter]
+        ziele += [z + ".bak" for z in ziele[2:]]          # backup files of the sheets
         for z in ziele:
             try:
                 os.remove(z)

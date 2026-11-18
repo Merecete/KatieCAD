@@ -1,6 +1,7 @@
 # Änderungen
 
 ## 1.1.8
+- Neu: **Sicherungsdatei und Autospeichern:** Beim Speichern bleibt die vorherige Version als `<Datei>.bak` erhalten (Datei › Sicherungsdatei, standardmäßig an; gilt auch für Projektblätter). Datei › Automatisch speichern… sichert bei ungespeicherten Änderungen alle 10 Minuten (einstellbar, 0 = aus) in den Konfigurationsordner, ohne die Originaldatei anzufassen; nach einem Absturz wird die Sicherung beim nächsten Start zur Wiederherstellung angeboten. Beim Löschen eines Projekts werden die `.bak`-Dateien der Blätter mit entfernt
 - Änderung: **Menüs öffnen schneller (Linux):** Jedes Menü besteht jetzt aus einer einzigen Zeichenfläche statt aus ca. 160 Einzel-Widgets (unter X11/XWayland ist jedes Widget ein eigenes Fenster, das war die Ursache der Verzögerung). Aussehen und Bedienung (Hover, Tastatur, Untermenüs) bleiben gleich. Untermenüs werden außerdem im Hintergrund vorbereitet, das Menü erscheint erst fertig aufgebaut
 - Änderung: **Projekt-Seitenleiste breiter:** Die Seitenleiste ist standardmäßig breiter (320 statt 230 px; beim Start wurde sie bisher unbeabsichtigt auf das Minimum von 170 px begrenzt), sodass auch längere Blattnamen und Einbauorte lesbar sind. Sie lässt sich weiterhin per Ziehen schmaler oder breiter machen, die eigene Breite wird gemerkt
 - Änderung: **Einbauort zentriert:** In der Blattliste der Seitenleiste stehen die Einbauorte wieder mittig in ihrer Spalte

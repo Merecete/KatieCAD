@@ -1,6 +1,7 @@
 # Changes
 
 ## 1.1.8
+- New: **Backup file and autosave:** when saving, the previous version is kept as `<file>.bak` (File › Keep backup file, on by default; also for project sheets). File › Autosave… backs up unsaved changes every 10 minutes (adjustable, 0 = off) to the configuration folder without touching the original file; after a crash the backup is offered for restoring at the next start. Deleting a project also removes the sheets' `.bak` files
 - Change: **Faster menus (Linux):** every menu is now a single canvas instead of about 160 separate widgets (on X11/XWayland each widget is a window of its own, which caused the delay). Look and behaviour (hover, keyboard, sub-menus) are unchanged. Sub-menus are also prepared in the background and the menu appears fully built
 - Change: **Wider project sidebar:** the sidebar is wider by default (320 instead of 230 px; at start-up it was unintentionally cut down to the 170 px minimum), so longer sheet names and places are readable. It can still be dragged narrower or wider, your own width is remembered
 - Change: **Place centred:** in the sheet list of the sidebar the places are centred in their column again
