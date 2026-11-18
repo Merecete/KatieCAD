@@ -1,6 +1,8 @@
 # Änderungen
 
 ## 1.1.8
+- Neu: **Layer einer Auswahl in einem Klick ändern:** Objekte markieren und in der Layer-Liste der Werkzeugleiste einen Layer wählen – alle markierten Objekte wechseln auf diesen Layer (rückgängig machbar); der aktuelle Layer für neue Objekte bleibt unverändert
+- Fix: **CURSORSIZE:** Beide Arme des Fadenkreuzes sind jetzt gleich lang (bei Werten unter 100 war der horizontale länger als der vertikale)
 - Neu: **Dateizuordnung:** `.cadjson` und `.katieprj` lassen sich per Doppelklick mit KatieCAD öffnen (Windows-Installer: Aufgabe „Dateizuordnung“, standardmäßig an; Linux: MIME-Typen + `MimeType` im Starter; macOS: Dokumenttypen in der App). Auch `katiecad Datei.cadjson` auf der Kommandozeile funktioniert; Projekte öffnen als Projekt
 - Neu: **Befehl `CURSORSIZE` (auch `FADENKREUZ`):** Größe des Fadenkreuzes 1–100 % der Zeichenfläche, Standard 100 (über die ganze Fläche); der Wert wird gemerkt
 - Änderung: **Manipulator besser sichtbar:** dickere Achsen (4 px) mit dunklem Rand, größere Pfeilspitzen und Mittelquadrat mit Kontur; Länge und Klickbereiche sind unverändert, das Zeichnen wird nicht stärker verdeckt

@@ -1,6 +1,8 @@
 # Changes
 
 ## 1.1.8
+- New: **Change the layer of a selection with one click:** select objects and pick a layer in the layer list of the toolbar - all selected objects move to that layer (undoable); the current layer for new objects is unchanged
+- Fix: **CURSORSIZE:** both arms of the cross-hair are now equally long (below 100 the horizontal one was longer than the vertical one)
 - New: **File association:** `.cadjson` and `.katieprj` open with KatieCAD by double click (Windows installer: task "file association", on by default; Linux: MIME types + `MimeType` in the launcher; macOS: document types in the app). `katiecad file.cadjson` on the command line works too; projects open as projects
 - New: **Command `CURSORSIZE` (also `FADENKREUZ`):** cross-hair size 1-100 % of the drawing area, default 100 (across the whole area); the value is remembered
 - Change: **Manipulator easier to see:** thicker axes (4 px) with a dark edge, larger arrow heads and centre square with outline; length and click zones are unchanged, so drawing is not covered more

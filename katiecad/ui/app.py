@@ -299,6 +299,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
 
         self.layers = self._standard_layers(vorlage=True)
         self.aktiver_layer = tk.StringVar(value="0")
+        self._layer_aktuell = "0"          # current layer for new objects (toolbar list)
 
         self.elemente = []
 
@@ -2626,6 +2627,25 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             self._bg_setzen("layout" if self._ist_layout() else "modell", hexf)
 
     def _layer_gewechselt(self, event=None):
+        """Layer list of the toolbar. With a selection the chosen layer is given to the
+        selected objects (like in AutoCAD) and the current layer for new objects stays;
+        without a selection it becomes the current layer."""
+        neu = self.aktiver_layer.get()
+        ziele = [e for e in self.auswahl
+                 if not isinstance(e, Viewport) and hasattr(e, "layer")]
+        if ziele and neu in self.layers:
+            aktuell = getattr(self, "_layer_aktuell", None)
+            if aktuell in self.layers:
+                self.aktiver_layer.set(aktuell)        # current layer stays
+            self._snapshot()
+            for el in ziele:
+                el.layer = neu
+            self._mark_dirty()
+            self.redraw()
+            self._layer_info_aktualisieren()
+            self.status.set(tr("msg.layer.zugewiesen", layer=neu, n=len(ziele)))
+            return
+        self._layer_aktuell = neu
         self._layer_info_aktualisieren()
 
     def _layer_info_aktualisieren(self):
@@ -3815,7 +3835,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         if n >= 100:                                   # across the whole drawing area
             x0, x1, y0, y1 = 0, w, 0, h
         else:                                          # n % of the area, centred on the cursor
-            hx, hy = max(3.0, w * n / 200.0), max(3.0, h * n / 200.0)
+            hx = hy = max(3.0, min(w, h) * n / 200.0)   # same length in both directions
             x0, x1, y0, y1 = x_px - hx, x_px + hx, y_px - hy, y_px + hy
         c.create_line(x0, y_px, x1, y_px, fill=FARBEN["cyan"], dash=(3, 5),
                       tags="fadenkreuz")
@@ -9517,6 +9537,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self.layer_cb.config(values=list(self.layers.keys()))
         if self.aktiver_layer.get() not in self.layers:
             self.aktiver_layer.set("0")
+            self._layer_aktuell = "0"
         self.elemente = []
         for d in daten.get("elemente", []):
             el = self._dict_zu_element(d)

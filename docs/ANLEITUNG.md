@@ -471,6 +471,8 @@ gleichem Kennzeichen ermittelt; Schließer/Öffner/Wechsler aus den Pin-Bezeichn
 ## Eigenschaften (Strg+1)
 **Von Layer (Farbe und Stärke):** In der Leiste „Farbe“ gibt es neben dem Farbfeld den Haken **Von Layer**, und im Farbdialog den Knopf **Von Layer**: Neue Objekte übernehmen dann die Farbe des aktuellen Layers (das Farbfeld zeigt sie an). In der Auswahlliste **Stärke** steht **Von Layer** als erster Eintrag: Die Linienstärke kommt dann vom Layer und ändert sich mit ihm. Auswahl markieren und Stärke/Farbe ändern wirkt auch auf vorhandene Objekte; im Eigenschaften-Fenster (Doppelklick) und in der Eigenschaftenpalette (Strg+1) gibt es dieselbe Auswahl „Von Layer“.
 
+**Layer einer Auswahl ändern:** Objekte markieren und in der Layer-Liste der Werkzeugleiste (neben „Layer verwalten“) einen Layer wählen: Alle markierten Objekte wechseln mit einem Klick auf diesen Layer. Der aktuelle Layer für neue Objekte bleibt dabei unverändert (wie in AutoCAD); ohne Auswahl setzt die Liste den aktuellen Layer. Rückgängig mit Strg+Z.
+
 Neue Objekte starten standardmäßig mit **Von Layer** – ändert man die Farbe eines Layers, ändern sich alle Objekte darauf mit. Nur wenn du im Farbfeld bewusst eine eigene Farbe wählst, behalten neue Objekte diese. Bereits gezeichnete Objekte mit eigener Farbe stellst du über Auswahl › Eigenschaften › Farbe › „Von Layer“ um.
 
 Bearbeiten › Eigenschaften öffnet ein Fenster für die aktuelle Auswahl – auch gemischt (Linien, Texte, Symbole …): Layer, Farbe (oder „Von Layer“), Linientyp, Linienstärke und – sobald Texte dabei sind – Texthöhe, Winkel und Schriftart. Unterschiedliche Werte zeigt das Feld als *VERSCHIEDEN*; eine Änderung gilt sofort für alle gewählten Objekte.

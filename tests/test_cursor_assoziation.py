@@ -30,7 +30,8 @@ def kreuz(n, x=300, y=200):
     return c.linien
 check(kreuz(100) == [(0, 200, 1000, 200), (300, 0, 300, 600)], "100 = ueber die ganze Flaeche")
 l = kreuz(10)
-check(l[0] == (250.0, 200, 350.0, 200) and l[1] == (300, 170.0, 300, 230.0), "10 % = 10 % der Flaeche, um den Cursor")
+check(l[0] == (270.0, 200, 330.0, 200) and l[1] == (300, 170.0, 300, 230.0), "10 %: Kreuz um den Cursor, beide Arme gleich lang")
+check(l[0][2] - l[0][0] == l[1][3] - l[1][1], "horizontal = vertikal")
 check(kreuz(1)[0][2] - kreuz(1)[0][0] >= 6, "Mindestlaenge")
 
 check(A.CadApp._cursor_prozent_lesen.__func__ if hasattr(A.CadApp._cursor_prozent_lesen, "__func__") else A.CadApp._cursor_prozent_lesen, "lesen vorhanden")
@@ -52,4 +53,19 @@ check("%F" in lies("installer/build_deb.sh"), "Exec mit %F")
 check("CFBundleDocumentTypes" in lies("tools/macos_plist.py"), "macOS")
 check("datei_von_aussen_oeffnen" in lies("katiecad/ui/app.py") and "sys.argv[1:]" in lies("katiecad/ui/app.py"), "Start mit Dateiargument")
 check(re.search(r'eigene_farbe = tk\.BooleanVar\(value=False\)', lies("katiecad/ui/app.py")), "Standard: Farbe von Layer")
+# layer list with a selection: objects move, current layer stays
+class Var:
+    def __init__(s, v): s.v = v
+    def get(s): return s.v
+    def set(s, v): s.v = v
+e1, e2 = NS(layer="0"), NS(layer="0")
+st = NS(auswahl=[e1, e2], layers={"0": 1, "Rot": 2}, aktiver_layer=Var("Rot"), _layer_aktuell="0",
+        _snapshot=lambda: None, _mark_dirty=lambda: None, redraw=lambda: None,
+        _layer_info_aktualisieren=lambda: None, status=NS(set=lambda t: None))
+A.CadApp._layer_gewechselt(st)
+check(e1.layer == "Rot" and e2.layer == "Rot" and st.aktiver_layer.get() == "0", "Auswahl -> Layer, aktueller Layer bleibt")
+st2 = NS(auswahl=[], layers={"0": 1, "Rot": 2}, aktiver_layer=Var("Rot"), _layer_aktuell="0",
+         _layer_info_aktualisieren=lambda: None)
+A.CadApp._layer_gewechselt(st2)
+check(st2._layer_aktuell == "Rot" and st2.aktiver_layer.get() == "Rot", "ohne Auswahl: wird aktueller Layer")
 print("OK     test_cursor_assoziation - OK (%d Pruefungen)" % ok)
