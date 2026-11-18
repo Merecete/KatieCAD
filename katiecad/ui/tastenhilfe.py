@@ -101,6 +101,7 @@ BESCHREIBUNG = {
     "block:speichern": ("Block als Datei speichern", "Save block to file"),
     "copy": ("Kopieren (verschieben + Kopie)", "Copy"),
     "copybase": ("Kopieren mit Basispunkt", "Copy with base point"),
+    "cursorsize": ("Fadenkreuz-Größe 1-100 (CURSORSIZE)", "Cross-hair size 1-100 (CURSORSIZE)"),
     "delete": ("Löschen", "Delete"),
     "druck": ("Drucken", "Print"),
     "fang": ("Rasterfang ein/aus", "Grid snap on/off"),

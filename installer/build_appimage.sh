@@ -28,6 +28,7 @@ Icon=katiecad
 Terminal=false
 Categories=Graphics;Engineering;Electronics;
 Keywords=CAD;electrical;schematic;switchgear;DXF;
+MimeType=application/x-katiecad;application/x-katiecad-project;
 StartupWMClass=KatieCAD
 DESK
 mkdir -p "$APPDIR/usr/share/metainfo"
@@ -35,6 +36,8 @@ sed -e "s/@VERSION@/$VER/" -e "s/@DATE@/$(date -u +%Y-%m-%d)/" \
     "$ROOT/installer/io.github.merecete.KatieCAD.metainfo.xml" \
     > "$APPDIR/usr/share/metainfo/io.github.merecete.KatieCAD.appdata.xml"
 cp "$APPDIR/katiecad.desktop" "$APPDIR/usr/share/applications/katiecad.desktop"
+mkdir -p "$APPDIR/usr/share/mime/packages"
+cp "$ROOT/installer/katiecad-mime.xml" "$APPDIR/usr/share/mime/packages/katiecad.xml"
 cat > "$APPDIR/AppRun" <<'RUN'
 #!/bin/sh
 HERE="$(dirname "$(readlink -f "$0")")"

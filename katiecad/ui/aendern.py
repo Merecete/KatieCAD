@@ -388,19 +388,24 @@ class AendernMixin:
         px, py = self.mm_to_px(*z)
         c = self.canvas
         rot, gruen, gelb = "#ff4d4d", "#3ddc84", FARBEN["gelb"]
-        c.create_line(px - ARM_PX, py, px + ARM_PX, py, fill=rot, width=2, tags="manip")
-        c.create_polygon(px + ARM_PX, py, px + ARM_PX - 9, py - 5, px + ARM_PX - 9, py + 5,
-                         fill=rot, outline=rot, tags="manip")
-        c.create_line(px, py - ARM_PX, px, py + ARM_PX, fill=gruen, width=2, tags="manip")
-        c.create_polygon(px, py - ARM_PX, px - 5, py - ARM_PX + 9, px + 5, py - ARM_PX + 9,
-                         fill=gruen, outline=gruen, tags="manip")
+        dunkel = FARBEN["bg_dunkel"]
+        # dark halo below the coloured parts: visible on light and dark drawings;
+        # arm length and click zones are unchanged
+        c.create_line(px - ARM_PX, py, px + ARM_PX - 6, py, fill=dunkel, width=7, tags="manip")
+        c.create_line(px, py - ARM_PX + 6, px, py + ARM_PX, fill=dunkel, width=7, tags="manip")
+        c.create_line(px - ARM_PX, py, px + ARM_PX - 6, py, fill=rot, width=4, tags="manip")
+        c.create_polygon(px + ARM_PX, py, px + ARM_PX - 14, py - 8, px + ARM_PX - 14, py + 8,
+                         fill=rot, outline=dunkel, width=1, tags="manip")
+        c.create_line(px, py - ARM_PX + 6, px, py + ARM_PX, fill=gruen, width=4, tags="manip")
+        c.create_polygon(px, py - ARM_PX, px - 8, py - ARM_PX + 14, px + 8, py - ARM_PX + 14,
+                         fill=gruen, outline=dunkel, width=1, tags="manip")
         c.create_rectangle(px - MITTE_PX, py - MITTE_PX, px + MITTE_PX, py + MITTE_PX,
-                           fill=gelb, outline=FARBEN["bg_dunkel"], tags="manip")
+                           fill=gelb, outline=dunkel, width=2, tags="manip")
         # pivot handle: click it, then click the new origin
         hx, hy = px + PIVOT_DX, py + PIVOT_DY
-        c.create_oval(hx - 6, hy - 6, hx + 6, hy + 6, outline=FARBEN["orange"], width=2, tags="manip")
-        c.create_line(hx - 3, hy, hx + 3, hy, fill=FARBEN["orange"], tags="manip")
-        c.create_line(hx, hy - 3, hx, hy + 3, fill=FARBEN["orange"], tags="manip")
+        c.create_oval(hx - 7, hy - 7, hx + 7, hy + 7, outline=FARBEN["orange"], width=3, tags="manip")
+        c.create_line(hx - 3, hy, hx + 3, hy, fill=FARBEN["orange"], width=2, tags="manip")
+        c.create_line(hx, hy - 3, hx, hy + 3, fill=FARBEN["orange"], width=2, tags="manip")
 
     def _manip_treffer(self, event):
         """'frei' (centre), 'x', 'y' or None for a click at event."""

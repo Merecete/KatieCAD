@@ -316,7 +316,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self.linientyp = tk.StringVar(value="Volllinie (schmal)")
         self.linienstaerke = tk.StringVar(value="0.35")      # number or "By layer"
         self.zeichenfarbe = FARBEN["cyan"]
-        self.eigene_farbe = tk.BooleanVar(value=True)
+        self.eigene_farbe = tk.BooleanVar(value=False)    # default "By layer" (colour follows the layer)
 
         self.kreis_modus = tk.StringVar(value="radius")
 
@@ -444,6 +444,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self.bem_dez = tk.IntVar(value=2)
         self.dezimalkomma = tk.BooleanVar(value=(SPRACHE["aktuell"] != "en"))
         self._datei_pfad = None            # file of the open single drawing (base of relative paths)
+        self.cursor_prozent = self._cursor_prozent_lesen()
         self.bak_var = tk.BooleanVar(
             value=lade_konfiguration().get("bak_anlegen") is not False)
         self.root.after(800, self._autosave_wiederherstellen)
@@ -3768,14 +3769,57 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self.canvas.delete("snapmarker")
         self._snap_punkt_aktuell = None
 
+    @staticmethod
+    def _cursor_prozent_lesen():
+        try:
+            return max(1, min(100, int(lade_konfiguration().get("cursorsize", 100))))
+        except (TypeError, ValueError):
+            return 100
+
+    def _cmd_cursorsize(self, arg):
+        """CURSORSIZE: size of the cross-hair in per cent of the drawing area (1-100,
+        100 = the lines run across the whole area). Remembered in the program settings."""
+        def setze(text):
+            t = text.strip().replace("%", "")
+            try:
+                n = int(round(float(t.replace(",", "."))))
+            except ValueError:
+                raise ValueError(tr("msg.cursorsize.fehler"))
+            if not 1 <= n <= 100:
+                raise ValueError(tr("msg.cursorsize.fehler"))
+            self.cursor_prozent = n
+            daten = lade_konfiguration()
+            daten["cursorsize"] = n
+            speichere_konfiguration(daten)
+            self.canvas.delete("fadenkreuz")
+            self.status.set(tr("msg.cursorsize.gesetzt", n=n))
+
+        if arg:
+            try:
+                setze(arg)
+            except Exception as ex:
+                messagebox.showerror("CURSORSIZE", str(ex), parent=self.root)
+        else:
+            self._cmd_pending = setze
+            txt = tr("msg.cursorsize.frage", n=self.cursor_prozent)
+            self.lbl_hinweis.config(text=txt)
+            self.status.set(txt)
+            self.entry_eingabe.focus_set()
+
     def _fadenkreuz(self, x_px, y_px):
         c = self.canvas
         c.delete("fadenkreuz")
         w = c.winfo_width() or 1200
         h = c.winfo_height() or 700
-        c.create_line(0, y_px, w, y_px, fill=FARBEN["cyan"], dash=(3, 5),
+        n = getattr(self, "cursor_prozent", 100)
+        if n >= 100:                                   # across the whole drawing area
+            x0, x1, y0, y1 = 0, w, 0, h
+        else:                                          # n % of the area, centred on the cursor
+            hx, hy = max(3.0, w * n / 200.0), max(3.0, h * n / 200.0)
+            x0, x1, y0, y1 = x_px - hx, x_px + hx, y_px - hy, y_px + hy
+        c.create_line(x0, y_px, x1, y_px, fill=FARBEN["cyan"], dash=(3, 5),
                       tags="fadenkreuz")
-        c.create_line(x_px, 0, x_px, h, fill=FARBEN["cyan"], dash=(3, 5),
+        c.create_line(x_px, y0, x_px, y1, fill=FARBEN["cyan"], dash=(3, 5),
                       tags="fadenkreuz")
 
     def on_move(self, event):
@@ -6733,6 +6777,9 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                        (tr("txt.0198"), "*.*")])
         if not pfad:
             return
+        self._einzeldatei_laden(pfad)
+
+    def _einzeldatei_laden(self, pfad):
         try:
             with open(pfad, "r", encoding="utf-8") as f:
                 daten = json.load(f)
@@ -6744,6 +6791,28 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self._zeichnung_anwenden(daten)
         self._undo_reset()
         self.status.set((tr("txt.0030", p0=pfad)))
+
+    def datei_von_aussen_oeffnen(self, pfad):
+        """A file handed over by the system (double click in the file manager, 'Open with',
+        command line): .katieprj opens as project, anything else as a single drawing."""
+        pfad = os.path.abspath(str(pfad))
+        if not os.path.isfile(pfad):
+            messagebox.showerror(tr("msg.oeffnen_fehlgeschlagen"),
+                                 tr("msg.datei_fehlt", pfad=pfad), parent=self.root)
+            return
+        if pfad.lower().endswith(PROJEKT_ENDUNG):
+            if self._projekt_aenderungen_klaeren("wechseln"):
+                self.projekt_aus_datei_oeffnen(pfad)
+            return
+        if self._dirty:
+            antwort = messagebox.askyesnocancel(
+                tr("txt.0100"), self._speichern_frage_text("oeffnen"), parent=self.root)
+            if antwort is None or (antwort and not self.speichern()):
+                return
+        if self.projekt is not None and not messagebox.askyesno(
+                tr("msg.projekt.titel"), tr("msg.projekt.einzeldatei"), parent=self.root):
+            return
+        self._einzeldatei_laden(pfad)
 
     def _dict_zu_element(self, d):
         d = dict(d)
@@ -9160,6 +9229,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             return
         if cmd in ("raster", "fang"):
             self._cmd_wert(cmd, arg)
+        elif cmd == "cursorsize":
+            self._cmd_cursorsize(arg)
         elif cmd in ("ofang", "ortho"):
             var = self.osnap if cmd == "ofang" else self.ortho
             a = arg.upper()
@@ -12722,6 +12793,15 @@ def main():
     root = tk.Tk()
     fenstersymbol_setzen(root)
     app = CadApp(root)
+    # file handed over by the system: Windows/Linux as argument, macOS as an Apple event
+    args = [a for a in sys.argv[1:] if a and not a.startswith("-")]
+    if args:
+        root.after(300, lambda: app.datei_von_aussen_oeffnen(args[0]))
+    try:
+        root.createcommand("::tk::mac::OpenDocument",
+                           lambda *f: f and app.datei_von_aussen_oeffnen(f[0]))
+    except tk.TclError:
+        pass
     root.mainloop()
 
 

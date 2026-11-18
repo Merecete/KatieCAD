@@ -12,6 +12,12 @@ pl["CFBundleVersion"] = ver
 pl["CFBundleName"] = "KatieCAD"
 pl["CFBundleDisplayName"] = "KatieCAD"
 pl["NSHumanReadableCopyright"] = "BSD 3-Clause License - Merecete"
+pl["CFBundleDocumentTypes"] = [        # double click on .cadjson / .katieprj opens KatieCAD
+    {"CFBundleTypeName": "KatieCAD drawing", "CFBundleTypeRole": "Editor",
+     "CFBundleTypeExtensions": ["cadjson"], "LSHandlerRank": "Owner"},
+    {"CFBundleTypeName": "KatieCAD project", "CFBundleTypeRole": "Editor",
+     "CFBundleTypeExtensions": ["katieprj"], "LSHandlerRank": "Owner"},
+]
 with open(pfad, "wb") as f:
     plistlib.dump(pl, f)
 subprocess.run(["codesign", "--force", "--deep", "-s", "-", app], check=False)

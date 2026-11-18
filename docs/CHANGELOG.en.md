@@ -1,6 +1,10 @@
 # Changes
 
 ## 1.1.8
+- New: **File association:** `.cadjson` and `.katieprj` open with KatieCAD by double click (Windows installer: task "file association", on by default; Linux: MIME types + `MimeType` in the launcher; macOS: document types in the app). `katiecad file.cadjson` on the command line works too; projects open as projects
+- New: **Command `CURSORSIZE` (also `FADENKREUZ`):** cross-hair size 1-100 % of the drawing area, default 100 (across the whole area); the value is remembered
+- Change: **Manipulator easier to see:** thicker axes (4 px) with a dark edge, larger arrow heads and centre square with outline; length and click zones are unchanged, so drawing is not covered more
+- Fix: **Colour is "By layer" by default:** new objects used to get a fixed colour of their own and therefore did not follow a layer colour change. They now follow the layer colour by default (objects drawn earlier can be switched via Properties › Colour › "By layer")
 - New: **Backup file and autosave:** when saving, the previous version is kept as `<file>.bak` (File › Keep backup file, on by default; also for project sheets). File › Autosave… backs up unsaved changes every 10 minutes (adjustable, 0 = off) to the configuration folder without touching the original file; after a crash the backup is offered for restoring at the next start. Deleting a project also removes the sheets' `.bak` files
 - Change: **Faster menus (Linux):** every menu is now a single canvas instead of about 160 separate widgets (on X11/XWayland each widget is a window of its own, which caused the delay). Look and behaviour (hover, keyboard, sub-menus) are unchanged. Sub-menus are also prepared in the background and the menu appears fully built
 - Change: **Wider project sidebar:** the sidebar is wider by default (320 instead of 230 px; at start-up it was unintentionally cut down to the 170 px minimum), so longer sheet names and places are readable. It can still be dragged narrower or wider, your own width is remembered

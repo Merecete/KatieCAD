@@ -14,6 +14,8 @@ cp "$ROOT/KatieCAD.png" "$PKG/usr/share/icons/hicolor/256x256/apps/katiecad.png"
 cp "$ROOT/KatieCAD.png" "$PKG/usr/share/pixmaps/katiecad.png"
 mkdir -p "$PKG/usr/share/doc/katiecad"
 cp "$ROOT/THIRD_PARTY_NOTICES.txt" "$PKG/usr/share/doc/katiecad/THIRD_PARTY_NOTICES.txt"
+mkdir -p "$PKG/usr/share/mime/packages"
+cp "$ROOT/installer/katiecad-mime.xml" "$PKG/usr/share/mime/packages/katiecad.xml"
 cat > "$PKG/usr/share/applications/katiecad.desktop" <<DESK
 [Desktop Entry]
 Type=Application
@@ -25,6 +27,7 @@ Icon=katiecad
 Terminal=false
 Categories=Graphics;Engineering;Electronics;
 Keywords=CAD;electrical;schematic;switchgear;DXF;
+MimeType=application/x-katiecad;application/x-katiecad-project;
 StartupWMClass=KatieCAD
 DESK
 # AppStream metadata (software centres show licence, web site and description) and copyright file
@@ -70,6 +73,9 @@ cat > "$PKG/DEBIAN/$T" <<'POST'
 set -e
 if command -v appstreamcli >/dev/null 2>&1; then
   appstreamcli refresh-cache --force >/dev/null 2>&1 || true
+fi
+if command -v update-mime-database >/dev/null 2>&1; then
+  update-mime-database /usr/share/mime >/dev/null 2>&1 || true
 fi
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database -q /usr/share/applications >/dev/null 2>&1 || true

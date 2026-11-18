@@ -661,6 +661,8 @@ BEFEHLE = {
     "VERSATZ": "versatz", "OFFSET": "versatz", "O": "versatz",
     "LAENGE": "laenge", "LÄNGE": "laenge", "LENGTHEN": "laenge", "LEN": "laenge",
     "MANIP": "manip", "MANIPULATOR": "manip", "MP": "manip",
+    "CURSORSIZE": "cursorsize", "CURSORGROESSE": "cursorsize", "CURSORGRÖSSE": "cursorsize",
+    "FADENKREUZ": "cursorsize",
     "3D": "3d:oeffnen", "3DANSICHT": "3d:oeffnen", "3DVIEW": "3d:oeffnen",
     "QUADER": "3d:neu:quader", "BOX": "3d:neu:quader",
     "SCHRANK": "3d:neu:schrank", "CABINET": "3d:neu:schrank",

@@ -28,6 +28,7 @@ SetupIconFile=..\KatieCAD.ico
 WizardImageFile=wizard_large_164.bmp,wizard_large_192.bmp,wizard_large_246.bmp,wizard_large_328.bmp,wizard_large_410.bmp
 WizardSmallImageFile=wizard_small_55.bmp,wizard_small_64.bmp,wizard_small_83.bmp,wizard_small_110.bmp,wizard_small_138.bmp
 LicenseFile=..\LICENSE
+ChangesAssociations=yes
 
 [Languages]
 Name: "german"; MessagesFile: "compiler:Languages\German.isl"
@@ -39,8 +40,31 @@ german.WelcomeLabel2=Dieser Assistent installiert [name/ver] auf Ihrem Computer.
 spanish.WelcomeLabel2=Este asistente instalará [name/ver] en su equipo.%n%nKatieCAD es un programa de CAD 2D con CAD eléctrico, planificación de armarios y 3D sencillo: gratuito y de código abierto (licencia BSD de 3 cláusulas).%n%nAntes de continuar, cierre las demás aplicaciones.
 english.WelcomeLabel2=This wizard installs [name/ver] on your computer.%n%nKatieCAD is a 2D CAD program with electrical CAD, cabinet planning and simple 3D - free and open source (BSD 3-Clause license).%n%nPlease close all other applications before you continue.
 
+[CustomMessages]
+german.AssocFiles=KatieCAD-Dateien (.cadjson, .katieprj) mit KatieCAD öffnen (Doppelklick)
+english.AssocFiles=Open KatieCAD files (.cadjson, .katieprj) with KatieCAD (double click)
+spanish.AssocFiles=Abrir archivos de KatieCAD (.cadjson, .katieprj) con KatieCAD (doble clic)
+german.FileCadjson=KatieCAD-Zeichnung
+english.FileCadjson=KatieCAD drawing
+spanish.FileCadjson=Dibujo de KatieCAD
+german.FileProject=KatieCAD-Projekt
+english.FileProject=KatieCAD project
+spanish.FileProject=Proyecto de KatieCAD
+
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; Flags: unchecked
+Name: "assoc"; Description: "{cm:AssocFiles}"
+
+[Registry]
+; per-user or per-machine, depending on the install mode; removed again on uninstall
+Root: HKA; Subkey: "Software\Classes\.cadjson"; ValueType: string; ValueName: ""; ValueData: "KatieCAD.Zeichnung"; Flags: uninsdeletevalue; Tasks: assoc
+Root: HKA; Subkey: "Software\Classes\.katieprj"; ValueType: string; ValueName: ""; ValueData: "KatieCAD.Projekt"; Flags: uninsdeletevalue; Tasks: assoc
+Root: HKA; Subkey: "Software\Classes\KatieCAD.Zeichnung"; ValueType: string; ValueName: ""; ValueData: "{cm:FileCadjson}"; Flags: uninsdeletekey; Tasks: assoc
+Root: HKA; Subkey: "Software\Classes\KatieCAD.Zeichnung\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\KatieCAD.exe,0"; Tasks: assoc
+Root: HKA; Subkey: "Software\Classes\KatieCAD.Zeichnung\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\KatieCAD.exe"" ""%1"""; Tasks: assoc
+Root: HKA; Subkey: "Software\Classes\KatieCAD.Projekt"; ValueType: string; ValueName: ""; ValueData: "{cm:FileProject}"; Flags: uninsdeletekey; Tasks: assoc
+Root: HKA; Subkey: "Software\Classes\KatieCAD.Projekt\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\KatieCAD.exe,0"; Tasks: assoc
+Root: HKA; Subkey: "Software\Classes\KatieCAD.Projekt\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\KatieCAD.exe"" ""%1"""; Tasks: assoc
 
 [Files]
 Source: "..\dist\KatieCAD\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion

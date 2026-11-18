@@ -97,6 +97,7 @@ BESCHREIBUNG = {
     "fase": "Chaflán",
     "laenge": "Alargar",
     "manip": "Manipulador",
+    "cursorsize": "Tamaño del cursor 1-100 (CURSORSIZE)",
     "masstext": "Cambiar el texto de la cota",
     "matchprop": "Igualar propiedades",
     "messen": "Medir distancia",
