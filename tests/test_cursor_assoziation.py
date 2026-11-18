@@ -68,4 +68,9 @@ st2 = NS(auswahl=[], layers={"0": 1, "Rot": 2}, aktiver_layer=Var("Rot"), _layer
          _layer_info_aktualisieren=lambda: None)
 A.CadApp._layer_gewechselt(st2)
 check(st2._layer_aktuell == "Rot" and st2.aktiver_layer.get() == "Rot", "ohne Auswahl: wird aktueller Layer")
+g = A.CadApp._daten_gueltig
+check(g({}) and g({"elemente": [], "layers": [{"name": "0"}]}), "gueltige Daten")
+check(not g([]) and not g("x") and not g(None), "kein Objekt")
+check(not g({"elemente": {}}) and not g({"layers": [{"farbe": "#fff"}]}) and not g({"layers": ["0"]}), "kaputte Struktur")
+check(A.CadApp._dict_zu_element(NS(), "A") is None and A.CadApp._dict_zu_element(NS(), {"x": 1}) is None, "beschaedigter Eintrag wird uebersprungen")
 print("OK     test_cursor_assoziation - OK (%d Pruefungen)" % ok)

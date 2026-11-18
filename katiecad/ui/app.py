@@ -6766,10 +6766,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             return False
         daten = self._zeichnung_daten()
         try:
-            if self.bak_var.get():
-                SICH.bak_anlegen(pfad)
-            with open(pfad, "w", encoding="utf-8") as f:
-                json.dump(daten, f, indent=2, ensure_ascii=False)
+            self._json_atomar_schreiben(pfad, daten)       # atomic; keeps the .bak
         except Exception as e:
             messagebox.showerror(tr("msg.speichern_fehlgeschlagen"), str(e))
             return False
@@ -6799,16 +6796,33 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             return
         self._einzeldatei_laden(pfad)
 
+    @staticmethod
+    def _daten_gueltig(d):
+        """Rough shape check of drawing data from a file (a broken or foreign file must not
+        leave the program half loaded)."""
+        if not isinstance(d, dict):
+            return False
+        for k in ("elemente", "layers", "layouts", "layout_elemente", "block_definitionen"):
+            if not isinstance(d.get(k, []), list):
+                return False
+        return all(isinstance(l, dict) and isinstance(l.get("name"), str)
+                   for l in d.get("layers", []))
+
     def _einzeldatei_laden(self, pfad):
         try:
             with open(pfad, "r", encoding="utf-8") as f:
                 daten = json.load(f)
+            if not self._daten_gueltig(daten):
+                raise ValueError(tr("msg.datei_keine_zeichnung"))
         except Exception as e:
-            messagebox.showerror(tr("msg.oeffnen_fehlgeschlagen"), str(e))
+            messagebox.showerror(tr("msg.oeffnen_fehlgeschlagen"), str(e), parent=self.root)
             return
         self._projekt_fuer_einzeldatei_schliessen()
         self._datei_pfad = pfad
-        self._zeichnung_anwenden(daten)
+        try:
+            self._zeichnung_anwenden(daten)
+        except Exception as e:
+            messagebox.showerror(tr("msg.oeffnen_fehlgeschlagen"), str(e), parent=self.root)
         self._undo_reset()
         self.status.set((tr("txt.0030", p0=pfad)))
 
@@ -6835,6 +6849,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self._einzeldatei_laden(pfad)
 
     def _dict_zu_element(self, d):
+        if not isinstance(d, dict) or not isinstance(d.get("typ"), str):
+            return None                                 # damaged entry: skipped
         d = dict(d)
         typ = d.pop("typ")
         if typ in ("solid", "linien"):      # Legacy format: hatching whose
@@ -9852,7 +9868,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
     def _autosave_wiederherstellen(self):
         """At start: offers the autosave of a crashed session (the newest one)."""
         try:
-            alle = SICH.verwaiste(konfig_ordner())
+            alle = SICH.verwaiste(konfig_ordner(), maximal=1)
             if not alle or self._dirty or self.elemente:
                 return
             pfad, zeit, quelle, daten = alle[0]
@@ -9865,9 +9881,19 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             if antwort is None:
                 return                                   # later: stays for the next start
             if antwort:
+                if not self._daten_gueltig(daten):
+                    SICH.beiseite_legen(pfad)
+                    messagebox.showerror(tr("msg.autosave.titel"), tr("msg.datei_keine_zeichnung"),
+                                         parent=self.root)
+                    return
                 self._projekt_fuer_einzeldatei_schliessen()
                 self._datei_pfad = None
-                self._zeichnung_anwenden(daten)
+                try:
+                    self._zeichnung_anwenden(daten)
+                except Exception as e:
+                    SICH.beiseite_legen(pfad)            # keep it, but do not ask again
+                    messagebox.showerror(tr("msg.autosave.titel"), str(e), parent=self.root)
+                    return
                 self._undo_reset()
                 self._mark_dirty()
                 self.status.set(tr("msg.autosave.wiederhergestellt"))
@@ -9938,7 +9964,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         try:
             with open(pfad, "r", encoding="utf-8") as f:
                 daten = json.load(f)
-            if not isinstance(daten, dict):
+            if not self._daten_gueltig(daten):
                 raise ValueError("kein JSON-Objekt")
         except (OSError, ValueError):
             messagebox.showwarning(tr("msg.projekt.titel"),

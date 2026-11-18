@@ -105,7 +105,15 @@ def _prozess_lebt(pid):
         return False
 
 
-def verwaiste(konfig_ordner, eigene_pid=None):
+def beiseite_legen(pfad):
+    """Renames a defective autosave to '*.defekt' (kept for a manual look, no longer offered)."""
+    try:
+        os.replace(pfad, pfad + ".defekt")
+    except OSError:
+        datei_entfernen(pfad)
+
+
+def verwaiste(konfig_ordner, eigene_pid=None, maximal=None):
     """Autosave files of processes that no longer exist (crash), newest first:
     [(path, time, source, data)]. Broken or oversized files are skipped."""
     eigene_pid = os.getpid() if eigene_pid is None else eigene_pid
@@ -114,7 +122,16 @@ def verwaiste(konfig_ordner, eigene_pid=None):
         namen = os.listdir(ordner(konfig_ordner))
     except OSError:
         return erg
+
+    def _mtime(n):
+        try:
+            return os.path.getmtime(os.path.join(ordner(konfig_ordner), n))
+        except OSError:
+            return 0.0
+    namen.sort(key=_mtime, reverse=True)            # newest first: only these are parsed
     for n in namen:
+        if maximal is not None and len(erg) >= maximal:
+            break
         if not (n.startswith(_PRAEFIX) and n.endswith(_ENDUNG)):
             continue
         try:

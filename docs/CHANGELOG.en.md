@@ -1,6 +1,7 @@
 # Changes
 
 ## 1.1.8
+- Fix: **More robust loading and saving:** drawings are now also written atomically when saving as a single file (a crash in the middle of saving can no longer destroy the file). When opening, damaged or foreign files are checked first and rejected with a message instead of leaving the program half loaded; damaged single objects are skipped. Recovery reads only the newest autosave and sets an unusable one aside as `.defekt`
 - New: **Change the layer of a selection with one click:** select objects and pick a layer in the layer list of the toolbar - all selected objects move to that layer (undoable); the current layer for new objects is unchanged
 - Fix: **CURSORSIZE:** both arms of the cross-hair are now equally long (below 100 the horizontal one was longer than the vertical one)
 - New: **File association:** `.cadjson` and `.katieprj` open with KatieCAD by double click (Windows installer: task "file association", on by default; Linux: MIME types + `MimeType` in the launcher; macOS: document types in the app). `katiecad file.cadjson` on the command line works too; projects open as projects

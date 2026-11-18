@@ -46,4 +46,12 @@ with tempfile.TemporaryDirectory() as d:
     S.loeschen(k, own); ok(not os.path.exists(os.path.join(S.ordner(k), "autosave_%d.json" % own)), "own deleted")
     S.loeschen(k, own)                                      # again: no error
     ok(S.schreiben(os.path.join(d, "f", "x"), own, {"a": object()}) is None, "unserialisable -> None")
+    # only the newest orphan is parsed; defective ones are set aside
+    k2 = os.path.join(d, "cfg2"); a_ = tot + 10
+    S.schreiben(k2, a_, {"elemente": [1]}); os.utime(S._pfad(k2, a_), (1, 1))
+    S.schreiben(k2, a_ + 1, {"elemente": [2]})
+    v2 = S.verwaiste(k2, maximal=1)
+    ok(len(v2) == 1 and v2[0][3] == {"elemente": [2]}, "maximal=1 -> newest only")
+    S.beiseite_legen(v2[0][0])
+    ok(os.path.exists(v2[0][0] + ".defekt") and len(S.verwaiste(k2)) == 1, "set aside: not offered again")
 print("OK     test_sicherung - OK (%d Pruefungen)" % n)
