@@ -457,7 +457,7 @@ On the Mac, Cmd replaces Ctrl.
 ## Properties (Ctrl+1)
 **By layer (colour and weight):** the colour area of the toolbar has a **By layer** check box next to the colour field, and the colour dialog has a **By layer** button: new objects then take the colour of the current layer (the colour field shows it). In the **Weight** list **By layer** is the first entry: the line weight then comes from the layer and follows it. With a selection, changing the weight applies it to existing objects too; the properties window (double-click) and the properties palette (Ctrl+1) offer the same "By layer" choice.
 
-**Change the layer of a selection:** select objects and pick a layer in the layer list of the toolbar (next to "Manage layers"): all selected objects move to that layer with one click. The current layer for new objects stays unchanged (as in AutoCAD); without a selection the list sets the current layer. Undo with Ctrl+Z.
+**Change the layer of a selection:** select objects and pick a layer in the layer list of the toolbar (next to "Manage layers"): all selected objects move to that layer with one click. The current layer for new objects stays unchanged (as in AutoCAD); without a selection the list sets the current layer. Undo with Ctrl+Z. The list also always shows the layer of the clicked object (*VARIES* for a mixed selection); with nothing selected and while drawing it shows the current layer.
 
 New objects now start with **By layer** - change the colour of a layer and all objects on it change with it. Only when you deliberately pick your own colour in the colour field do new objects keep it. For objects that were drawn earlier with their own colour use Selection › Properties › Colour › "By layer".
 

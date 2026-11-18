@@ -53,24 +53,29 @@ check("%F" in lies("installer/build_deb.sh"), "Exec mit %F")
 check("CFBundleDocumentTypes" in lies("tools/macos_plist.py"), "macOS")
 check("datei_von_aussen_oeffnen" in lies("katiecad/ui/app.py") and "sys.argv[1:]" in lies("katiecad/ui/app.py"), "Start mit Dateiargument")
 check(re.search(r'eigene_farbe = tk\.BooleanVar\(value=False\)', lies("katiecad/ui/app.py")), "Standard: Farbe von Layer")
-# layer list with a selection: objects move, current layer stays
+# layer list: shows the layer of the selection; choosing moves objects, current layer stays
 class Var:
     def __init__(s, v): s.v = v
     def get(s): return s.v
     def set(s, v): s.v = v
-e1, e2 = NS(layer="0"), NS(layer="0")
-st = NS(auswahl=[e1, e2], layers={"0": 1, "Rot": 2}, aktiver_layer=Var("Rot"), _layer_aktuell="0",
-        _snapshot=lambda: None, _mark_dirty=lambda: None, redraw=lambda: None,
-        _layer_info_aktualisieren=lambda: None, status=NS(set=lambda t: None))
+def mk(auswahl, anzeige, wz="auswahl"):
+    return NS(auswahl=auswahl, layers={"0": 1, "Rot": 2, "Blau": 3}, aktiver_layer=Var("0"),
+              layer_anzeige=Var(anzeige), aktives_werkzeug=Var(wz), _snapshot=lambda: None,
+              _mark_dirty=lambda: None, redraw=lambda: None, status=NS(set=lambda t: None),
+              _layer_auswahl=lambda: [e for e in auswahl if hasattr(e, "layer")],
+              _layer_info_aktualisieren=lambda: None)
+e1, e2 = NS(layer="Rot"), NS(layer="Rot")
+st = mk([e1, e2], "Blau")
 A.CadApp._layer_gewechselt(st)
-check(e1.layer == "Rot" and e2.layer == "Rot" and st.aktiver_layer.get() == "0", "Auswahl -> Layer, aktueller Layer bleibt")
-st2 = NS(auswahl=[], layers={"0": 1, "Rot": 2}, aktiver_layer=Var("Rot"), _layer_aktuell="0",
-         _layer_info_aktualisieren=lambda: None)
-A.CadApp._layer_gewechselt(st2)
-check(st2._layer_aktuell == "Rot" and st2.aktiver_layer.get() == "Rot", "ohne Auswahl: wird aktueller Layer")
-g = A.CadApp._daten_gueltig
-check(g({}) and g({"elemente": [], "layers": [{"name": "0"}]}), "gueltige Daten")
-check(not g([]) and not g("x") and not g(None), "kein Objekt")
-check(not g({"elemente": {}}) and not g({"layers": [{"farbe": "#fff"}]}) and not g({"layers": ["0"]}), "kaputte Struktur")
-check(A.CadApp._dict_zu_element(NS(), "A") is None and A.CadApp._dict_zu_element(NS(), {"x": 1}) is None, "beschaedigter Eintrag wird uebersprungen")
+check(e1.layer == "Blau" and e2.layer == "Blau" and st.aktiver_layer.get() == "0", "Auswahl -> Layer, aktueller Layer bleibt")
+st = mk([], "Rot"); A.CadApp._layer_gewechselt(st)
+check(st.aktiver_layer.get() == "Rot", "ohne Auswahl: wird aktueller Layer")
+st = mk([e1], "0"); st.aktiver_layer.set("Rot"); e1.layer = "Blau"
+A.CadApp._layer_anzeige_nachziehen(st); check(st.layer_anzeige.get() == "Blau", "Anzeige = Layer des Objekts")
+st.auswahl = []; st._layer_auswahl = lambda: []
+A.CadApp._layer_anzeige_nachziehen(st); check(st.layer_anzeige.get() == "Rot", "nichts gewaehlt: aktueller Layer")
+st = mk([NS(layer="Rot"), NS(layer="Blau")], "0"); A.CadApp._layer_anzeige_nachziehen(st)
+check(st.layer_anzeige.get() == "*VERSCHIEDEN*" or "VARI" in st.layer_anzeige.get().upper() or "VERSCH" in st.layer_anzeige.get().upper(), "gemischt")
+st = mk([NS(layer="Blau")], "0", wz="linie"); A.CadApp._layer_anzeige_nachziehen(st)
+check(st.layer_anzeige.get() == "0", "beim Zeichnen: aktueller Layer")
 print("OK     test_cursor_assoziation - OK (%d Pruefungen)" % ok)

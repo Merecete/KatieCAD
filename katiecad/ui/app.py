@@ -299,7 +299,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
 
         self.layers = self._standard_layers(vorlage=True)
         self.aktiver_layer = tk.StringVar(value="0")
-        self._layer_aktuell = "0"          # current layer for new objects (toolbar list)
+        self.layer_anzeige = tk.StringVar(value="0")   # what the toolbar list shows
 
         self.elemente = []
 
@@ -1672,7 +1672,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         # --- Toolbar 2 ---
         tb2 = self.tb2
         ttk.Label(tb2, text=tr("tb.layer"), style="Title.TLabel").pack(side=tk.LEFT)
-        self.layer_cb = ttk.Combobox(tb2, textvariable=self.aktiver_layer,
+        self.layer_cb = ttk.Combobox(tb2, textvariable=self.layer_anzeige,
                                      values=list(self.layers.keys()),
                                      width=16, state="readonly")
         self.layer_cb.pack(side=tk.LEFT, padx=4)
@@ -2626,17 +2626,32 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         if hexf:
             self._bg_setzen("layout" if self._ist_layout() else "modell", hexf)
 
+    def _layer_auswahl(self):
+        """Selected objects that have a layer."""
+        return [e for e in self.auswahl if not isinstance(e, Viewport) and hasattr(e, "layer")]
+
+    def _layer_anzeige_nachziehen(self):
+        """The layer list shows the layer of the selected object(s) (or 'varies'); with
+        nothing selected, or while drawing, the current layer for new objects."""
+        ziele = (self._layer_auswahl()
+                 if self.aktives_werkzeug.get() == "auswahl" else [])
+        namen = {e.layer for e in ziele}
+        if not namen:
+            text = self.aktiver_layer.get()
+        elif len(namen) == 1:
+            text = next(iter(namen))
+        else:
+            text = tr("dlg.eig.verschieden")
+        if self.layer_anzeige.get() != text:
+            self.layer_anzeige.set(text)
+
     def _layer_gewechselt(self, event=None):
         """Layer list of the toolbar. With a selection the chosen layer is given to the
         selected objects (like in AutoCAD) and the current layer for new objects stays;
         without a selection it becomes the current layer."""
-        neu = self.aktiver_layer.get()
-        ziele = [e for e in self.auswahl
-                 if not isinstance(e, Viewport) and hasattr(e, "layer")]
+        neu = self.layer_anzeige.get()
+        ziele = self._layer_auswahl() if self.aktives_werkzeug.get() == "auswahl" else []
         if ziele and neu in self.layers:
-            aktuell = getattr(self, "_layer_aktuell", None)
-            if aktuell in self.layers:
-                self.aktiver_layer.set(aktuell)        # current layer stays
             self._snapshot()
             for el in ziele:
                 el.layer = neu
@@ -2645,10 +2660,12 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             self._layer_info_aktualisieren()
             self.status.set(tr("msg.layer.zugewiesen", layer=neu, n=len(ziele)))
             return
-        self._layer_aktuell = neu
+        if neu in self.layers:
+            self.aktiver_layer.set(neu)
         self._layer_info_aktualisieren()
 
     def _layer_info_aktualisieren(self):
+        self._layer_anzeige_nachziehen()
         self._farb_swatch_aktualisieren()
         l = self.layers.get(self.aktiver_layer.get())
         if l:
@@ -5756,6 +5773,10 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
     def redraw(self):
         _t0 = time.perf_counter()
         c = self.canvas
+        try:
+            self._layer_anzeige_nachziehen()          # layer list follows the selection
+        except (AttributeError, tk.TclError):
+            pass
         self._vp_fang_cache = None            # snap points of the 3D model are recomputed
         if self._ansicht3d is not None:
             try:
@@ -9553,7 +9574,6 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self.layer_cb.config(values=list(self.layers.keys()))
         if self.aktiver_layer.get() not in self.layers:
             self.aktiver_layer.set("0")
-            self._layer_aktuell = "0"
         self.elemente = []
         for d in daten.get("elemente", []):
             el = self._dict_zu_element(d)

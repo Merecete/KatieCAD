@@ -1,6 +1,7 @@
 # Änderungen
 
 ## 1.1.8
+- Neu: **Layer-Liste zeigt den Layer der Auswahl:** Klickt man ein Objekt an, steht sein Layer in der Layer-Liste der Werkzeugleiste (bei gemischter Auswahl *VERSCHIEDEN*); ohne Auswahl und beim Zeichnen steht dort wieder der eingestellte aktuelle Layer
 - Fix: **Robusteres Laden und Speichern:** Zeichnungen werden jetzt auch beim Speichern als Einzeldatei atomar geschrieben (Absturz mitten im Speichern kann die Datei nicht mehr zerstören). Beim Öffnen werden beschädigte oder fremde Dateien vorab geprüft und mit einer Meldung abgelehnt, statt das Programm halb geladen zurückzulassen; beschädigte Einzelobjekte werden übersprungen. Die Wiederherstellung liest nur die neueste Autosicherung und legt eine unbrauchbare als `.defekt` beiseite
 - Neu: **Layer einer Auswahl in einem Klick ändern:** Objekte markieren und in der Layer-Liste der Werkzeugleiste einen Layer wählen – alle markierten Objekte wechseln auf diesen Layer (rückgängig machbar); der aktuelle Layer für neue Objekte bleibt unverändert
 - Fix: **CURSORSIZE:** Beide Arme des Fadenkreuzes sind jetzt gleich lang (bei Werten unter 100 war der horizontale länger als der vertikale)
