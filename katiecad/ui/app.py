@@ -1512,7 +1512,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                             bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
                             activebackground=FARBEN["cyan"],
                             activeforeground=FARBEN["bg_dunkel"])
-        for _sp in ("de", "en", "es"):
+        for _sp in ("de", "en", "es", "fr"):
             m_sprache.add_radiobutton(label=tr("menu.sprache." + _sp), value=_sp,
                                       variable=self.sprache_var,
                                       command=lambda sp=_sp: self.sprache_wechseln(sp))

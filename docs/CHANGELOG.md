@@ -1,5 +1,8 @@
 # Änderungen
 
+## 1.1.9
+- Neu: **Französische Oberfläche:** KatieCAD gibt es jetzt auch auf Französisch (Einstellungen › Sprache › Français): alle Menüs, Dialoge, Meldungen und Berichte, französische Schriftköpfe (A4, A3, A2–A0), eine französische Kurzanleitung (`docs/USER_GUIDE.fr.md`) und französische Texte im Windows-Installer. Die Übersetzung stammt von GeraldBro (Pull Request #7) und wurde auf den aktuellen Stand gebracht; Texte, die es dort noch nicht gab, wurden ergänzt. Datumsangaben erscheinen auf Französisch als TT/MM/JJJJ. Die Tastenhilfe bleibt vorerst englisch
+
 ## 1.1.8
 - Neu: **Layer-Liste zeigt den Layer der Auswahl:** Klickt man ein Objekt an, steht sein Layer in der Layer-Liste der Werkzeugleiste (bei gemischter Auswahl *VERSCHIEDEN*); ohne Auswahl und beim Zeichnen steht dort wieder der eingestellte aktuelle Layer
 - Fix: **Robusteres Laden und Speichern:** Zeichnungen werden jetzt auch beim Speichern als Einzeldatei atomar geschrieben (Absturz mitten im Speichern kann die Datei nicht mehr zerstören). Beim Öffnen werden beschädigte oder fremde Dateien vorab geprüft und mit einer Meldung abgelehnt, statt das Programm halb geladen zurückzulassen; beschädigte Einzelobjekte werden übersprungen. Die Wiederherstellung liest nur die neueste Autosicherung und legt eine unbrauchbare als `.defekt` beiseite

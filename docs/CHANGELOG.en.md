@@ -1,5 +1,8 @@
 # Changes
 
+## 1.1.9
+- New: **French user interface:** KatieCAD is now also available in French (Settings › Language › Français): all menus, dialogs, messages and reports, French title blocks (A4, A3, A2–A0), a French quick guide (`docs/USER_GUIDE.fr.md`) and French texts in the Windows installer. The translation was contributed by GeraldBro (pull request #7) and brought up to date; texts that did not exist there yet were added. Dates appear in French as DD/MM/YYYY. The shortcut help stays in English for now
+
 ## 1.1.8
 - New: **Layer list shows the layer of the selection:** clicking an object shows its layer in the layer list of the toolbar (*VARIES* for a mixed selection); with nothing selected, and while drawing, it shows the current layer again
 - Fix: **More robust loading and saving:** drawings are now also written atomically when saving as a single file (a crash in the middle of saving can no longer destroy the file). When opening, damaged or foreign files are checked first and rejected with a message instead of leaving the program half loaded; damaged single objects are skipped. Recovery reads only the newest autosave and sets an unusable one aside as `.defekt`
