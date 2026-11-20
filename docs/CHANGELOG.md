@@ -1,6 +1,6 @@
 # Änderungen
 
-## 1.1.9
+## 1.2.0
 - Änderung: **Schnelleres Zoomen und Verschieben:** Beim Zoomen/Verschieben werden Wände, Leitungen, Querverweise, Geräte und Schriftköpfe nicht mehr jedes Mal neu berechnet (die Zeichnung ändert sich dabei nicht), und viele Mausrad-/Mausbewegungs-Ereignisse werden zu einem Neuzeichnen zusammengefasst. Das doppelte Zeichnen des Rasters entfällt. Besonders bei großen Zeichnungen spürbar
 - Neu: **Französische Oberfläche:** KatieCAD gibt es jetzt auch auf Französisch (Einstellungen › Sprache › Français): alle Menüs, Dialoge, Meldungen und Berichte, französische Schriftköpfe (A4, A3, A2–A0), eine französische Kurzanleitung (`docs/USER_GUIDE.fr.md`) und französische Texte im Windows-Installer. Die Übersetzung stammt von GeraldBro (Pull Request #7) und wurde auf den aktuellen Stand gebracht; Texte, die es dort noch nicht gab, wurden ergänzt. Datumsangaben erscheinen auf Französisch als TT/MM/JJJJ. Die Tastenhilfe bleibt vorerst englisch
 
