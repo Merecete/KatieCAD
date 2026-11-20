@@ -1,6 +1,7 @@
 # Changes
 
 ## 1.1.9
+- Change: **Faster zoom and pan:** zooming/panning no longer recalculates walls, cables, cross references, devices and title blocks every time (the drawing does not change), and many wheel/mouse-move events are merged into one redraw. The grid is no longer drawn twice. Most noticeable in large drawings
 - New: **French user interface:** KatieCAD is now also available in French (Settings › Language › Français): all menus, dialogs, messages and reports, French title blocks (A4, A3, A2–A0), a French quick guide (`docs/USER_GUIDE.fr.md`) and French texts in the Windows installer. The translation was contributed by GeraldBro (pull request #7) and brought up to date; texts that did not exist there yet were added. Dates appear in French as DD/MM/YYYY. The shortcut help stays in English for now
 
 ## 1.1.8

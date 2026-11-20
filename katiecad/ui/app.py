@@ -348,6 +348,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         }
 
         self.pan_start = None
+        self._modell_stand = None
+        self._ansicht_wartet = None
         self.letzter_punkt = None
         self.temp_ids = []
         self.aktuelle_polylinie = []
@@ -3093,8 +3095,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         v["zoom"] *= faktor
         v["ox"] = mx - x_mm_vor * v["zoom"]
         v["oy"] = my + y_mm_vor * v["zoom"]
-        self.redraw()
-        self._zeichne_raster()
+        self._ansicht_planen()
 
     def _zoom(self, faktor):
         v = self.view
@@ -3106,8 +3107,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         v["zoom"] *= faktor
         v["ox"] = mx - x_mm_vor * v["zoom"]
         v["oy"] = my + y_mm_vor * v["zoom"]
-        self.redraw()
-        self._zeichne_raster()
+        self._ansicht_neuzeichnen()
 
     def _reset_view(self):
         cw = self.canvas.winfo_width() or 1000
@@ -3177,8 +3177,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         v = self.view
         v["ox"] = ox + (event.x - x0)
         v["oy"] = oy + (event.y - y0)
-        self.redraw()
-        self._zeichne_raster()
+        self._ansicht_planen()
 
     @staticmethod
     def _vp_winkel_einrasten(a3, grenze=4.0):
@@ -3198,6 +3197,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         return alt != (yaw, pitch)
 
     def on_pan_end(self, event):
+        self._ansicht_sofort()
         self.pan_start = None
         self._vp_pan_start = None
         if getattr(self, "_vp_gedreht", False):
@@ -5770,9 +5770,14 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             ids = {id(e) for e in entfernt}
             self.auswahl = [e for e in self.auswahl if id(e) not in ids]
 
-    def redraw(self):
+    def redraw(self, nur_ansicht=False):
+        """Redraws the canvas. nur_ansicht=True is used for zoom/pan: the drawing itself did not
+        change, so the model recalculations (walls, cables, cross references, devices, title
+        blocks) are skipped - they only depend on the elements, never on the view."""
         _t0 = time.perf_counter()
         c = self.canvas
+        if nur_ansicht and self._modell_stand != self._modell_stand_jetzt():
+            nur_ansicht = False                # something changed meanwhile: recalculate as usual
         try:
             self._layer_anzeige_nachziehen()          # layer list follows the selection
         except (AttributeError, tk.TclError):
@@ -5784,28 +5789,30 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             except Exception:
                 pass
         self._bild_live = []                # keeps the PhotoImages of this frame
-        try:
-            wand_verknuepfen(self.elemente)
-        except Exception as ex:
-            print(f"[KatieCAD] Waende: {ex}")
-        try:
-            self._leitungen_automatisch()
-            if not self._ist_layout():
-                kabel_kreuzungen(self.elemente)
-        except Exception as ex:
-            print(f"[KatieCAD] Leitungen: {ex}")
-        try:
-            self._querverweise_aktualisieren()
-        except Exception as ex:
-            print(f"[KatieCAD] Querverweise: {ex}")
-        try:
-            self._geraete_aktualisieren()
-        except Exception as ex:
-            print(f"[KatieCAD] Geraete: {ex}")
-        try:
-            self._titelfelder_aktualisieren()
-        except Exception as ex:
-            print(f"[KatieCAD] Schriftkopf: {ex}")
+        if not nur_ansicht:
+            try:
+                wand_verknuepfen(self.elemente)
+            except Exception as ex:
+                print(f"[KatieCAD] Waende: {ex}")
+            try:
+                self._leitungen_automatisch()
+                if not self._ist_layout():
+                    kabel_kreuzungen(self.elemente)
+            except Exception as ex:
+                print(f"[KatieCAD] Leitungen: {ex}")
+            try:
+                self._querverweise_aktualisieren()
+            except Exception as ex:
+                print(f"[KatieCAD] Querverweise: {ex}")
+            try:
+                self._geraete_aktualisieren()
+            except Exception as ex:
+                print(f"[KatieCAD] Geraete: {ex}")
+            try:
+                self._titelfelder_aktualisieren()
+            except Exception as ex:
+                print(f"[KatieCAD] Schriftkopf: {ex}")
+            self._modell_stand = self._modell_stand_jetzt()
         _t1 = time.perf_counter()
         _t_raster = 0.0
         for tag in ("element", "blatt", "layout", "auswahl_highlight",
@@ -5846,6 +5853,37 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self._xref_dialog_aktualisieren()
         if getattr(self, "leistung_var", None) is not None and self.leistung_var.get():
             self._leistung_melden(_t1 - _t0, time.perf_counter() - _t1 - _t_raster, _t_raster)
+
+    def _modell_stand_jetzt(self):
+        """Cheap fingerprint of the model: if it differs from the one of the last full redraw,
+        the recalculations may not be skipped."""
+        return (len(self.elemente), len(self.layers), self._ist_layout())
+
+    def _ansicht_neuzeichnen(self):
+        """Redraw after a pure view change (zoom/pan/fit)."""
+        self._ansicht_wartet = None
+        self.redraw(nur_ansicht=True)
+        if self._ist_layout():
+            self._zeichne_raster()
+
+    def _ansicht_planen(self):
+        """Coalesces view changes: many wheel/motion events -> one redraw when Tk is idle."""
+        if getattr(self, "_ansicht_wartet", None) is not None:
+            return
+        try:
+            self._ansicht_wartet = self.root.after_idle(self._ansicht_neuzeichnen)
+        except Exception:
+            self._ansicht_neuzeichnen()
+
+    def _ansicht_sofort(self):
+        """Executes a pending view redraw immediately (e.g. when the mouse button is released)."""
+        w = getattr(self, "_ansicht_wartet", None)
+        if w is not None:
+            try:
+                self.root.after_cancel(w)
+            except Exception:
+                pass
+            self._ansicht_neuzeichnen()
 
     def _kull_fenster(self):
         """Visible area in mm (plus a margin) for the culling of large drawings."""
