@@ -259,14 +259,14 @@ def template_data(elements):
 # Built-in default template
 # ---------------------------------------------------------------
 def default_elements(lang="en"):
-    i = {"de": 0, "es": 2}.get(lang, 1)          # German / English (default) / Spanish
-    _w = {"project": ("Projekt", "Project", "Proyecto"),
-          "title": ("Titel", "Title", "Título"),
-          "date": ("Datum", "Date", "Fecha"),
-          "drawn": ("Gezeichnet", "Drawn by", "Dibujado por"),
-          "sheet": ("Blatt", "Sheet", "Hoja"),
-          "scale": ("Maßstab", "Scale", "Escala"),
-          "page": ("Seite", "Page", "Página")}
+    i = {"de": 0, "es": 2, "fr": 3}.get(lang, 1)          # German / English (default) / Spanish / French
+    _w = {"project": ("Projekt", "Project", "Proyecto", "Projet"),
+          "title": ("Titel", "Title", "Título", "Titre"),
+          "date": ("Datum", "Date", "Fecha", "Date"),
+          "drawn": ("Gezeichnet", "Drawn by", "Dibujado por", "Dessiné par"),
+          "sheet": ("Blatt", "Sheet", "Hoja", "Feuille"),
+          "scale": ("Maßstab", "Scale", "Escala", "Échelle"),
+          "page": ("Seite", "Page", "Página", "Page")}
     L = {k: v[i] for k, v in _w.items()}
     thick = {"layer": "0", "farbe": ZEICHEN_FARBE, "eig_farbe": True,
              "linientyp": "Volllinie (breit)", "staerke": 0.7}
