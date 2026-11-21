@@ -18,6 +18,7 @@ import tkinter as tk
 from katiecad.common.i18n import tr
 from katiecad.common import fenster as FENSTER
 from katiecad.model.core import FARBEN
+from katiecad.ui.kacheln import KachelnMixin
 
 # attributes of the program that belong to the drawing shown (taken along by the tab)
 DOK_ATTRIBUTE = ("elemente", "layers", "layouts", "aktives_layout", "view_modell", "auswahl",
@@ -39,13 +40,14 @@ class Dokument:
         self.blatt = None                    # project sheet of this tab (index)
 
 
-class TabsMixin:
+class TabsMixin(KachelnMixin):
     # ---------------------------------------------------- set-up
     def _tabs_init(self):
         self._dokumente = [Dokument()]
         self._dok_aktiv = 0
         self._tab_leiste = None
         self._tab_wechsel_laeuft = False
+        self._kacheln_init()                 # drawings side by side (ui/kacheln.py)
 
     def _tabs_da(self):
         return hasattr(self, "_dokumente")
@@ -135,6 +137,8 @@ class TabsMixin:
         try:
             self._aktionen_beenden()
             self._dok_sichern(self._dokumente[self._dok_aktiv])
+            if self.kacheln_aktiv():
+                self._kachel_wechsel(self._dokumente[index])
             self._dok_aktiv = index
             self._dok_einsetzen(self._dokumente[index])
         finally:
@@ -157,6 +161,8 @@ class TabsMixin:
         dok = Dokument()
         self._dokumente.insert(self._dok_aktiv + 1, dok)
         self._dok_aktiv += 1
+        if self.kacheln_aktiv():
+            self._kachel_neues_dok(dok)
         # fresh state: new objects - nothing may be shared with the other tab
         self.projekt = None
         self._undo_pro_blatt = {}
@@ -213,8 +219,12 @@ class TabsMixin:
             self._tab_leiste_zeichnen()
             return True
         self._aktionen_beenden()
-        del self._dokumente[self._dok_aktiv]
-        neu = min(self._dok_aktiv, len(self._dokumente) - 1)
+        weg = self._dokumente.pop(self._dok_aktiv)
+        naechste = self._kachel_dok_weg(weg) if self.kacheln_aktiv() else None
+        if naechste is not None:
+            neu = self._dokumente.index(naechste)
+        else:
+            neu = min(self._dok_aktiv, len(self._dokumente) - 1)
         self._dok_aktiv = neu
         self._dok_einsetzen(self._dokumente[neu])
         self._tab_leiste_zeichnen()
@@ -336,7 +346,7 @@ class TabsMixin:
             return
         if leiste is None:
             leiste = tk.Frame(self.root, bg=FARBEN["bg_dunkel"], bd=0, highlightthickness=0)
-            ziel = self._ansicht3d if getattr(self, "_ansicht3d", None) is not None else self.canvas
+            ziel = self._zeichenflaeche()
             leiste.pack(side=tk.TOP, fill=tk.X, before=ziel)
             self._tab_leiste = leiste
         for w in leiste.winfo_children():
@@ -362,6 +372,7 @@ class TabsMixin:
             zu.bind("<Button-1>", lambda e, i=i: self.tab_schliessen(i))
             zu.bind("<Enter>", lambda e, w=zu: w.config(fg=FARBEN["rot"]))
             zu.bind("<Leave>", lambda e, w=zu, f=fg: w.config(fg=f))
+        self._kacheln_koepfe()
 
     def _tab_kontextmenue(self, event, index):
         m = tk.Menu(self.root, tearoff=0, bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
@@ -369,6 +380,12 @@ class TabsMixin:
         m.add_command(label=tr("tabs.schliessen"), command=lambda: self.tab_schliessen(index))
         m.add_command(label=tr("tabs.andere_schliessen"),
                       command=lambda: self.tabs_andere_schliessen(index))
+        m.add_separator()
+        if self.kacheln_aktiv():
+            m.add_command(label=tr("tabs.als_tabs"), command=self.kacheln_aus)
+            m.add_command(label=tr("tabs.breiten_gleich"), command=self._kacheln_gleich)
+        else:
+            m.add_command(label=tr("tabs.kacheln"), command=self.kacheln_an)
         try:
             m.tk_popup(event.x_root, event.y_root)
         finally:
