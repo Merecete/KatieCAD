@@ -306,15 +306,16 @@ def menue_zeigen(menu, x, y, ebene=0):
     x = max(0, min(int(x), r._kt_w - breite))
     y = max(0, min(int(y), r._kt_h - hoehe))
     top = _popup_neu(menu, x, y, breite, hoehe)
-    top.configure(background=bg, highlightthickness=1, highlightbackground="#808080")
-    cv = T.Canvas(top, background=bg, highlightthickness=1, highlightbackground="#808080",
+    rand = _opt(r, "Menu.borderColor", "#808080")     # the program may give its frame colour
+    top.configure(background=bg, highlightthickness=1, highlightbackground=rand)
+    cv = T.Canvas(top, background=bg, highlightthickness=1, highlightbackground=rand,
                   width=breite - 2, height=hoehe - 2, borderwidth=0)
     cv.pack(fill=T.BOTH, expand=True)
     rects, texte = {}, {}
     for y0, y1, i in zeilen:
         e = eintraege[i]
         if e["type"] == "separator":
-            cv.create_line(4, (y0 + y1) // 2, breite - 6, (y0 + y1) // 2, fill="#808080")
+            cv.create_line(4, (y0 + y1) // 2, breite - 6, (y0 + y1) // 2, fill=rand)
             continue
         rects[i] = cv.create_rectangle(2, y0, breite - 4, y1, fill=bg, outline="")
         farbe = sperr if e.get("state") == T.DISABLED else fg
