@@ -1060,8 +1060,7 @@ class Misc:
             y -= th / 2
         elif "s" in anchor:
             y -= th
-        g.add(Color(*farbe))
-        g.add(Rectangle(texture=tex, pos=(int(kx + x), int(ky + self._kt_h - y - th)), size=(tw, th)))
+        fontmod.text_zeichnen(g, tex, farbe, (int(kx + x), int(ky + self._kt_h - y - th)), (tw, th))
 
 
 def _fh():
@@ -2309,15 +2308,13 @@ class Toplevel(Wm, BaseWidget):
                 vg = (0.95, 0.95, 0.95, 1) if sum(bg[:3]) < 1.2 else (0.1, 0.1, 0.1, 1)
                 tex = fontmod.text_textur(self._kt_titel, "TkDefaultFont")
                 if tex is not None:
-                    g.add(Color(*vg))
-                    g.add(Rectangle(texture=tex, size=tex.size,
-                                    pos=(kx + 10, int(ky + ah - TITEL_H / 2 - tex.size[1] / 2))))
+                    fontmod.text_zeichnen(g, tex, vg, (kx + 10, int(ky + ah - TITEL_H / 2 - tex.size[1] / 2)),
+                                          tex.size)
                 x_tex = fontmod.text_textur("✕", ("Segoe UI", 10))
                 if x_tex is not None:
-                    g.add(Color(*vg))
-                    g.add(Rectangle(texture=x_tex, size=x_tex.size,
-                                    pos=(kx + aw - 22 - x_tex.size[0] / 2,
-                                         int(ky + ah - TITEL_H / 2 - x_tex.size[1] / 2))))
+                    fontmod.text_zeichnen(g, x_tex, vg, (kx + aw - 22 - x_tex.size[0] / 2,
+                                                         int(ky + ah - TITEL_H / 2 - x_tex.size[1] / 2)),
+                                          x_tex.size)
                 g.add(Color(*bg))
                 g.add(Rectangle(pos=(kx + 1, ky + 1), size=(self._kt_w, self._kt_h)))
             else:

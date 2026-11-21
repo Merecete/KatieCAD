@@ -253,8 +253,7 @@ class EditMixin:
             breite = max(0, min(tw - sx, bw - versatz))
             if breite > 0:
                 region = tex.get_region(sx, 0, breite, th)
-                g.add(Color(*fg))
-                g.add(Rectangle(texture=region, pos=(kx + l + versatz, ky_text), size=(breite, th)))
+                fontmod.text_zeichnen(g, region, fg, (kx + l + versatz, ky_text), (breite, th))
         if aktiv and _Blinker.an and self._kt_bearbeitbar():
             cx = cur_x - self._kt_xscroll + versatz
             if 0 <= cx <= bw:
@@ -789,9 +788,8 @@ class Text(T.BaseWidget):
             tex = fontmod.text_textur(text, font)
             if tex is not None:
                 tw = min(tex.size[0], self._kt_w - l - r)
-                g.add(Color(*fg))
-                g.add(Rectangle(texture=tex.get_region(0, 0, tw, tex.size[1]), pos=(kx + l, ky_z),
-                                size=(tw, tex.size[1])))
+                fontmod.text_zeichnen(g, tex.get_region(0, 0, tw, tex.size[1]), fg, (kx + l, ky_z),
+                                      (tw, tex.size[1]))
             if aktiv and not disabled and _Blinker.an and a <= self._kt_cur <= e:
                 naechste = zeilen[k + 1][0] if k + 1 < len(zeilen) else None
                 if self._kt_cur < e or naechste is None or naechste > e:
@@ -1169,9 +1167,8 @@ class Listbox(T.BaseWidget):
             tex = fontmod.text_textur(self._kt_eintraege[k], font)
             if tex is not None:
                 tw = min(tex.size[0], bw - 2)
-                g.add(Color(*farbe))
-                g.add(Rectangle(texture=tex.get_region(0, 0, tw, tex.size[1]),
-                                pos=(kx + l + 2, kyz + 1), size=(tw, tex.size[1])))
+                fontmod.text_zeichnen(g, tex.get_region(0, 0, tw, tex.size[1]), farbe,
+                                      (kx + l + 2, kyz + 1), (tw, tex.size[1]))
 
     def _kt_klick(self, ev):
         if not self._kt_eintraege:
