@@ -2452,6 +2452,8 @@ class Ansicht3DMixin:
 
     def ansicht3d_setzen(self, an):
         an = bool(an)
+        if an and getattr(self, "kacheln_aktiv", lambda: False)():
+            self.kacheln_aus()                 # 3D works in the single drawing area
         if self._ist_layout():
             if self._ansicht3d is not None:
                 self._ansicht3d_aus_fenster()
