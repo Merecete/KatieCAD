@@ -12,6 +12,8 @@ installed packages; for each one the licence/notice files shipped with the packa
 The build scripts then add the folder to the program as `licenses/`.
 Wheels such as Pillow or numpy bring licence files of the libraries they contain - these are
 copied as well, which is exactly what the licences of those libraries require.
+Packages that ship no licence file of their own get the texts kept in installer/lizenzen/
+(see MITGELIEFERT below).
 Exit code 1 if a package of requirements.txt is not installed or has no licence file.
 """
 import os
@@ -21,6 +23,18 @@ import sys
 from importlib import metadata
 
 WURZEL = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Packages without licence files of their own: normalised name -> (files in installer/lizenzen,
+# note for INFO.txt). Their licences still require the text to be shipped with the program.
+MITGELIEFERT = {
+    "kivy-deps-glew": (["GLEW-LICENSE.txt"],
+                       "Licence text of GLEW (glew32.dll) from https://github.com/nigels-com/glew"),
+    "kivy-deps-angle": (["ANGLE-LICENSE.txt"],
+                        "Licence text of ANGLE (libEGL.dll, libGLESv2.dll) from "
+                        "https://github.com/google/angle"),
+    "pypiwin32": ([], "Empty compatibility package that only installs pywin32 - "
+                      "its licence is in the pywin32 folder."),
+}
+_LIZENZORDNER = os.path.join(WURZEL, "installer", "lizenzen")
 _LIZENZDATEI = re.compile(r"(^|/)(licen[sc]e|copying|notice|authors|copyright)[^/]*$", re.I)
 
 
@@ -99,12 +113,17 @@ def sammeln(ziel, namen=None):
         dateien = lizenz_dateien(d)
         for f in dateien:
             shutil.copy2(str(d.locate_file(f)), os.path.join(ordner, os.path.basename(str(f))))
+        eigene, hinweis = MITGELIEFERT.get(k, ([], None)) if not dateien else ([], None)
+        for name in eigene:                  # licence text kept in installer/lizenzen
+            shutil.copy2(os.path.join(_LIZENZORDNER, name), os.path.join(ordner, name))
         with open(os.path.join(ordner, "INFO.txt"), "w", encoding="utf-8") as fh:
             md = d.metadata
             fh.write("%s %s\nLicense: %s\nAuthor: %s\nHome page: %s\n" % (
                 md["Name"], d.version, lizenz_name(d),
                 md.get("Author") or md.get("Author-email") or "?", md.get("Home-page") or "?"))
-        if not dateien:
+            if hinweis:
+                fh.write("\n%s\n" % hinweis)
+        if not dateien and hinweis is None:
             ohne.append(md["Name"])
     return pakete, fehlend, ohne
 
