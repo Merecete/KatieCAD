@@ -1827,6 +1827,14 @@ class Tk(Wm, Misc, GeometrieMixin):
     # ---------------------------------------------------- dispatch
     def _kt_ausloesen(self, widget, ev):
         """Calls the bindings of every bind tag of the widget (Tk order); "break" stops."""
+        vorher = getattr(self, "_kt_akt_ev", None)
+        self._kt_akt_ev = ev                # a menu posted now survives this event (see klassen)
+        try:
+            return self._kt_ausloesen_tags(widget, ev)
+        finally:
+            self._kt_akt_ev = vorher
+
+    def _kt_ausloesen_tags(self, widget, ev):
         for tag in widget._kt_bindtags_liste():
             if tag == widget._kt_pfad:
                 tab = widget._kt_bindungen
