@@ -158,6 +158,11 @@ class KachelnMixin:
 
     # ---------------------------------------------------- on / off
     def kacheln_an(self):
+        """Shows the open drawings side by side (at most MAX_KACHELN, the current one always among
+        them). The drawing area of the tab view is replaced by a frame holding one tile per
+        drawing; every tile gets its own canvas with the same mouse bindings. An open 3D view is
+        closed first.
+        """
         if self.kacheln_aktiv() or len(self._dokumente) < 2:
             return
         try:
@@ -190,6 +195,9 @@ class KachelnMixin:
         self._tab_leiste_zeichnen()
 
     def kacheln_aus(self):
+        """Back to the tab view: the frame with the tiles goes away and the original drawing area
+        shows the current drawing again. 3D views of tiles are closed.
+        """
         if not self.kacheln_aktiv():
             return
         self._aktionen_beenden()
@@ -210,6 +218,11 @@ class KachelnMixin:
 
     # ---------------------------------------------------- building a tile
     def _kachel_bauen(self, dok, position=None):
+        """Builds one tile for `dok`: a header (title, ✕; drag to move the tile) and a canvas that
+        gets the same bindings as the drawing area of the tab view (via _bind_events with
+        self.canvas pointing at it for a moment). The bind tag KLASSE comes first, so a click
+        into an inactive tile only activates it. All tiles then get the same width.
+        """
         k = Kachel(dok)
         feld = self._kachel_feld
         k.rahmen = tk.Frame(feld, bg=FARBEN["bg_dunkel"], bd=0, highlightthickness=0)
@@ -316,6 +329,11 @@ class KachelnMixin:
 
     # ---------------------------------------------------- layout
     def _kacheln_anordnen(self):
+        """Places the tiles and the separators between them in the frame. Widths follow the shares
+        (`anteil`) of the tiles; the last tile takes the rest so no pixel is lost. The
+        separators are kept and only moved - building them anew while one is dragged would lose
+        the mouse.
+        """
         feld = self._kachel_feld
         if feld is None or not self._kacheln:
             return
@@ -377,6 +395,9 @@ class KachelnMixin:
 
     # ---------------------------------------------------- header: activate, move, close
     def _kacheln_koepfe(self):
+        """Header colours and titles of all tiles (the active one highlighted, the others dimmed);
+        also keeps the check mark of View > Drawings side by side right.
+        """
         self._kacheln_var_setzen()
         if not self.kacheln_aktiv():
             return
@@ -403,6 +424,10 @@ class KachelnMixin:
         self._kachel_zug_daten = {"x": e.x_root, "bewegt": False}
 
     def _kachel_zug(self, e, k):
+        """Drag of a tile header: once the mouse moved a few pixels the tile goes to the place
+        where its middle comes nearest to the mouse. The other tiles keep their order and every
+        tile keeps its width.
+        """
         z = self._kachel_zug_daten
         if z is None:
             return
@@ -532,6 +557,12 @@ class KachelnMixin:
 
     # ---------------------------------------------------- drawing an inactive tile
     def _kachel_zeichnen(self, k):
+        """Draws one tile. The active tile is simply redrawn. For an inactive tile the state of the
+        current drawing is stored, the tile's drawing is put in place for this moment (including
+        self.canvas and its 3D view), drawn, and the current drawing is put back. Palettes,
+        dialogs and the tool preview (_STILL) are switched off meanwhile, they belong to the
+        current drawing.
+        """
         k.zeichnen_id = None
         if not self.kacheln_aktiv() or k not in self._kacheln or k.dok not in self._dokumente:
             return

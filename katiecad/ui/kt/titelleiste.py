@@ -159,6 +159,9 @@ class Titelleiste(Widget):
         return self.gedrueckt is not None
 
     def los(self, x, y):
+        """Mouse button released at (x, y): runs the button only if the release is on the same
+        button the press was on (like a normal button).
+        """
         name, self.gedrueckt = self.gedrueckt, None
         self.zeichnen()
         if name is None or name != self.knopf_bei(x, y):
@@ -172,8 +175,7 @@ class Titelleiste(Widget):
             elif name == "alle":
                 self.alle_umschalten()
             elif name == "zu":
-                if self.root_tk._kt_k_schliessen() is False:
-                    pass
+                self.root_tk._kt_k_schliessen()     # asks about unsaved changes like Alt+F4
         except Exception:
             pass
 
@@ -224,6 +226,9 @@ class Titelleiste(Widget):
         return leiste, rand, text, hover
 
     def _symbol_textur(self):
+        """The KatieCAD symbol (16x16) as texture for the left end of the bar; None if it cannot be
+        loaded (then the bar has no symbol).
+        """
         if self._symbol is None:
             self._symbol = False
             try:
@@ -242,6 +247,11 @@ class Titelleiste(Widget):
         return self._symbol or None
 
     def zeichnen(self, *_a):
+        """Draws the title bar: background, line at the bottom, title, symbol and the buttons with
+        their hover state. macOS: three coloured dots on the left and the title centred; Windows
+        / Linux: symbol and title left, buttons right. When maximised Windows puts the window
+        frame partly off screen - the bar is drawn below that strip (`_kt_rand`).
+        """
         W, H = int(self.root_tk._kt_fenster_w), int(self.root_tk._kt_fenster_h)   # (Kivy lags)
         l, t, r, _b = self.root_tk._kt_rand
         H -= t                                           # maximised: frame strip above the bar

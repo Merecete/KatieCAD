@@ -55,6 +55,9 @@ def zwischenablage_lesen(ordner):
 
 # ------------------------------------------------------------ sheet locks
 def _lebt(pid):
+    """True if the process `pid` still runs (a lock file of a crashed window must not block a sheet
+    for ever). Windows: OpenProcess + exit code STILL_ACTIVE; elsewhere signal 0.
+    """
     if pid == os.getpid():
         return True
     if pid <= 0:

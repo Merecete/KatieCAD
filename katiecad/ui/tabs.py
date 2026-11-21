@@ -132,6 +132,10 @@ class TabsMixin(KachelnMixin):
 
     # ---------------------------------------------------- tabs
     def tab_aktivieren(self, index):
+        """Shows tab `index`: ends the running tool action, stores the state of the current drawing
+        in its Dokument and puts the state of the other one in place. With tiles shown, the
+        drawing area of that tile becomes self.canvas (an open 3D view of a tile stays open).
+        """
         if not self._tabs_da() or not (0 <= index < len(self._dokumente)) \
                 or index == self._dok_aktiv or self._tab_wechsel_laeuft:
             return
@@ -318,6 +322,10 @@ class TabsMixin(KachelnMixin):
 
     # ---------------------------------------------------- the tab bar
     def _tab_titel(self, i):
+        """Text of tab `i`: project name, sheet number and name for a project sheet, otherwise the
+        file name or "Untitled n"; " *" for unsaved changes. The data of the current tab is read
+        from the program, that of the others from their stored state.
+        """
         aktiv = i == self._dok_aktiv
         dok = self._dokumente[i]
         z = dok.zustand
@@ -337,6 +345,10 @@ class TabsMixin(KachelnMixin):
         return text + (" *" if dirty else "")
 
     def _tab_leiste_zeichnen(self):
+        """Builds the tab bar anew (title, active tab, ✕). It is only shown with more than one open
+        drawing and sits above the drawing area. Clicks are bound to the Dokument, not to the
+        position, so dragging a tab to another place keeps the bindings right.
+        """
         if not self._tabs_da():
             return
         self._kacheln_var_setzen()             # check mark in the View menu
@@ -435,6 +447,8 @@ class TabsMixin(KachelnMixin):
             self._tab_leiste_zeichnen()      # paddings / cursor as usual
 
     def _tab_kontextmenue(self, event, index):
+        """Right-click menu of a tab: close it, close the others, show all side by side / as tabs.
+        """
         m = tk.Menu(self.root, tearoff=0, bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
                     activebackground=FARBEN["cyan"], activeforeground=FARBEN["bg_dunkel"])
         m.add_command(label=tr("tabs.schliessen"), command=lambda: self.tab_schliessen(index))

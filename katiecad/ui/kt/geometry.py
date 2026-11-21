@@ -47,6 +47,10 @@ def _sticky(s):
 class GeometrieMixin:
     # ---------------------------------------------------- pack
     def pack_configure(self, cnf=None, **kw):
+        """pack() / pack_configure(): takes the widget into the pack list of its master (or of
+        `in_`), at the position given by before/after, and stores the options (side, fill,
+        expand, anchor, padding). The master is laid out again before the next frame.
+        """
         if cnf:
             kw = {**cnf, **kw}
         master = kw.pop("in_", None) or kw.pop("in", None) or self.master
@@ -115,6 +119,10 @@ class GeometrieMixin:
 
     # ---------------------------------------------------- grid
     def grid_configure(self, cnf=None, **kw):
+        """grid() / grid_configure(): takes the widget into the grid of its master; without
+        `row` it goes into the next free row like in Tk. Options of a former grid() call are
+        kept (grid_remove / grid again).
+        """
         if cnf:
             kw = {**cnf, **kw}
         master = kw.pop("in_", None) or kw.pop("in", None) or self.master
@@ -185,6 +193,10 @@ class GeometrieMixin:
         return self.pack_propagate(flag)
 
     def _kt_rc_konfig(self, tabelle, index, cnf=None, **kw):
+        """Shared code of columnconfigure / rowconfigure: stores weight, minsize, pad and
+        uniform for one index, a list of indices or "all"; without options it returns the
+        settings of the (first) index.
+        """
         if cnf:
             kw = {**cnf, **kw}
         if isinstance(index, (tuple, list)):
@@ -219,6 +231,9 @@ class GeometrieMixin:
 
     # ---------------------------------------------------- place
     def place_configure(self, cnf=None, **kw):
+        """place() / place_configure(): takes the widget into the place list of its master and
+        stores the absolute and relative position and size and the anchor.
+        """
         if cnf:
             kw = {**cnf, **kw}
         master = kw.pop("in_", None) or kw.pop("in", None) or self.master
@@ -275,6 +290,10 @@ class GeometrieMixin:
 # Requested size of a master
 # ============================================================
 def pack_req(m):
+    """Size a pack master asks for (width, height), computed like Tk's pack: slaves packed
+    top/bottom are stacked vertically, left/right ones side by side, each with its padding;
+    the result is the size that just fits all of them.
+    """
     breite = hoehe = max_b = max_h = 0
     for s in m._pack_slaves:
         if not s._kt_lebt:
@@ -293,6 +312,9 @@ def pack_req(m):
 
 
 def _x_ausdehnung(slaves, ab, hohlraum):
+    """How many extra pixels each expanding slave gets horizontally, considering only slaves
+    from position `ab` on (Tk's XExpansion in tkPack.c). `hohlraum` is the width still free.
+    """
     min_exp = hohlraum
     anzahl = 0
     for s in slaves[ab:]:
@@ -311,6 +333,7 @@ def _x_ausdehnung(slaves, ab, hohlraum):
 
 
 def _y_ausdehnung(slaves, ab, hohlraum):
+    """Vertical counterpart of _x_ausdehnung (Tk's YExpansion)."""
     min_exp = hohlraum
     anzahl = 0
     for s in slaves[ab:]:
@@ -329,6 +352,9 @@ def _y_ausdehnung(slaves, ab, hohlraum):
 
 
 def _anker(anchor, fx, fy, fw, fh, w, h):
+    """Position (x, y) of a widget of size (w, h) inside the frame (fx, fy, fw, fh) for a Tk
+    anchor (n, ne, e, se, s, sw, w, nw, center).
+    """
     a = anchor
     if a in ("n", "center", "s"):
         x = fx + (fw - w) // 2
@@ -346,6 +372,11 @@ def _anker(anchor, fx, fy, fw, fh, w, h):
 
 
 def pack_anordnen(m):
+    """Places the pack slaves of master `m` (Tk's ArrangePacking): each slave in turn gets a
+    parcel cut from the remaining cavity on its side, enlarged by expand, then the slave is
+    placed in its parcel according to fill and anchor. A slave left without any room is
+    hidden, as in Tk.
+    """
     l, t, r, b = m._kt_innen()
     cx, cy = l, t
     cw, ch = m._kt_w - l - r, m._kt_h - t - b
@@ -459,6 +490,11 @@ def grid_req(m):
 
 
 def _verteilen(liste, konf, verfuegbar):
+    """Distributes the available length among the grid columns (or rows) `liste` (their
+    requested sizes): extra space goes to the weighted ones in proportion to their weight,
+    missing space is taken from them without going below minsize. Returns the sizes and the
+    start positions (one more than columns).
+    """
     groessen = list(liste)
     diff = verfuegbar - sum(groessen)
     gew = [konf.get(k, {}).get("weight", 0) for k in range(len(groessen))]
@@ -499,6 +535,11 @@ def _verteilen(liste, konf, verfuegbar):
 
 
 def grid_anordnen(m):
+    """Places the grid slaves of master `m`: column widths and row heights from _grid_raster,
+    distributed with _verteilen; each slave fills its cells (span, padding, pad of the
+    column/row) according to sticky, otherwise it keeps its requested size and is centred on
+    that axis. A slave left without any room is hidden.
+    """
     slaves, spalten, zeilen = _grid_raster(m)
     if not slaves:
         return
@@ -547,6 +588,9 @@ def grid_anordnen(m):
 
 # ------------------------------------------------------------ place
 def place_anordnen(m):
+    """Places the place slaves of master `m`: absolute x/y/width/height plus the relative parts
+    (relx, relwidth ...) of the master's size, shifted by the anchor.
+    """
     for s in m._kt_place_slaves:
         if not s._kt_lebt:
             continue

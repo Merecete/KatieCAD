@@ -19,6 +19,9 @@ _echte_wurzel = [None]
 
 
 def _wurzel():
+    """The invisible root window of the real tkinter for the native dialogs (created once, hidden,
+    always on top, with the KatieCAD icon).
+    """
     r = _echte_wurzel[0]
     tk = ECHT["tkinter"]
     if r is None:
@@ -40,6 +43,10 @@ def _wurzel():
 
 
 def _nativ(modul, funktion, kw):
+    """Opens a native dialog of the real tkinter (e.g. filedialog.askopenfilename) and returns its
+    result. The button release that closed the native dialog never reaches the Kivy window, so
+    the pressed buttons and the mouse target of the layer are cleared afterwards.
+    """
     kw.pop("parent", None)
     r = _wurzel()
     try:
@@ -135,6 +142,10 @@ class _Abfrage:
         self._dlg, self._kt_e = dlg, e
 
         def ok(_ev=None):
+            """OK / Return in the input dialog: converts and checks the value (type, minimum,
+            maximum like Tk's simpledialog); on an error the message is shown and the dialog
+            stays open.
+            """
             s = e.get()
             try:
                 wert = umwandeln(s)

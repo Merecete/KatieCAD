@@ -32,6 +32,11 @@ def oberflaeche_waehlen():
 
 
 def _kivy_vorbereiten():
+    """Kivy settings that must be made before the Kivy window exists: no command line parsing and
+    no log files of Kivy, plain mouse input (no touch emulation, no red dots on right click),
+    Escape does not quit, the window size of the Tk version, at most 60 frames per second and -
+    unless KATIECAD_TITELLEISTE=system - the own title bar.
+    """
     os.environ.setdefault("KIVY_NO_ARGS", "1")            # the file argument is ours
     os.environ.setdefault("KIVY_NO_FILELOG", "1")
     os.environ.setdefault("KIVY_LOG_MODE", "PYTHON")
@@ -57,6 +62,11 @@ def _kivy_vorbereiten():
 
 
 def installieren():
+    """Puts the layer in place of tkinter: imports the real tkinter first (the native file and
+    colour dialogs still need it, see dlgmod.py), opens the Kivy window (raises if that is not
+    possible - the caller then stays with Tk) and replaces tkinter, tkinter.ttk, tkinter.font,
+    the dialog modules and PIL.ImageTk in sys.modules by the modules of this layer. Runs once.
+    """
     if _installiert[0]:
         return
     # the real tkinter is still needed for the native file and colour dialogs

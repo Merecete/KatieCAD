@@ -35,6 +35,10 @@ def _knopf_taste(ev):
 
 
 def _edit_druck(ev):
+    """Mouse press in an entry-like widget: on the arrow of a combobox (or anywhere in a
+    readonly one) the list opens, on the arrows of a spinbox the value steps, otherwise the
+    text cursor is placed.
+    """
     w = ev.widget
     if "disabled" in w._kt_zustand:
         return
@@ -96,6 +100,11 @@ def _ttk():
 
 
 def installieren(root):
+    """Registers the default behaviour of the widget classes as class bindings at the root
+    (buttons, check and radio buttons, entries, lists, tree views, scroll bars ...). As under
+    Tk they run after the widget's own bindings, so a widget binding returning "break"
+    suppresses them.
+    """
     k = root._kt_bind_klassen
 
     def setzen(klasse, seq, f):
@@ -151,6 +160,7 @@ _offen = []          # open pop-up Toplevels (stack)
 
 
 def popup_schliessen():
+    """Closes all open pop-ups (context menus with their sub menus, combobox lists)."""
     while _offen:
         p = _offen.pop()
         ziel = getattr(p, "_kt_besitzer", None)
@@ -184,6 +194,10 @@ def _opt(r, endung, standard):
 
 
 def combobox_aufklappen(cb):
+    """Opens the drop-down list of a combobox below it (above it if there is no room): a pop-up
+    with a Listbox and, for long lists, a scroll bar. A click or Return takes the value and
+    sends <<ComboboxSelected>>, Escape or a click outside closes the list.
+    """
     r = cb._kt_root_
     popup_schliessen()
     werte = cb._kt_werte()
@@ -270,6 +284,12 @@ def menue_schliessen(menu=None):
 
 
 def menue_zeigen(menu, x, y, ebene=0):
+    """Shows `menu` as context menu (tk_popup) at (x, y), `ebene` > 0 for a sub menu next to its
+    parent entry. The menu is drawn on one canvas: rows for the entries, check marks,
+    accelerators, cascades open their sub menu on hover. Colours come from the menu's options
+    or the option database (Menu.background, Menu.borderColor ...). The entry runs when the
+    mouse button is released on it.
+    """
     if ebene == 0:
         popup_schliessen()
         menu._kt_gepostet_bei = getattr(menu._kt_root_, "_kt_akt_ev", None)
@@ -345,6 +365,9 @@ def menue_zeigen(menu, x, y, ebene=0):
         return None
 
     def markieren(i):
+        """Highlights row `i` of the menu (None: no row), closes sub menus of deeper levels and
+        opens the sub menu of a cascade entry.
+        """
         if zustand["aktiv"] == i:
             return
         for j in (zustand["aktiv"], i):

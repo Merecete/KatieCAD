@@ -24,6 +24,10 @@ _namen = {}             # family (lower case) -> family as written
 
 
 def _windows_fonts():
+    """Installed fonts on Windows as (name, file) pairs, read from the registry (all users and
+    the current user). Names like "Segoe UI Bold (TrueType)" are cleaned; collections listed
+    as "A & B" give one entry per name.
+    """
     import winreg
     ordner = os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts")
     erg = []
@@ -51,6 +55,9 @@ def _windows_fonts():
 
 
 def _unix_fonts():
+    """Installed fonts on Linux / macOS as (name, file) pairs from fontconfig (`fc-list`); the
+    style is appended to the family unless it is "Regular". Empty list if fc-list is missing.
+    """
     import subprocess
     try:
         aus = subprocess.run(["fc-list", ":", "family", "style", "file"], capture_output=True,
@@ -77,6 +84,10 @@ _STILE = (("bold italic", "bolditalic"), ("bold oblique", "bolditalic"),
 
 
 def _familien_laden():
+    """Index of the installed fonts, built once: family (lower case) -> {style: file}, with
+    style regular / bold / italic / bolditalic taken from the end of the name. Used to turn a
+    Tk font spec into a TrueType file.
+    """
     global _familien
     if _familien is not None:
         return _familien
@@ -94,10 +105,8 @@ def _familien_laden():
                 stil = s
                 fam = name[: -len(endung) - 1]
                 break
-        if stil == "regular" and any(w in low for w in (" light", " semibold", " black",
-                                                       " condensed", " semilight", " narrow")):
-            # weight variants are families of their own for Tk as well
-            pass
+        # weight variants ("Segoe UI Light", "Arial Narrow" ...) stay families of their own,
+        # as they are for Tk
         key = fam.lower()
         _namen.setdefault(key, fam)
         _familien.setdefault(key, {}).setdefault(stil, datei)
@@ -161,6 +170,9 @@ _ERSATZ = ("Segoe UI Symbol", "Segoe UI Emoji", "Arial Unicode MS", "DejaVu Sans
 
 
 def _abdeckung(kname):
+    """The characters a font file contains (cached, read with fontTools; None if unknown). Text
+    with characters the font lacks is split into runs drawn with a fallback font.
+    """
     a = _abdeckung_cache.get(kname, False)
     if a is False:
         a = None
@@ -397,6 +409,9 @@ def _gdi():
 
 
 def _metrik(spec):
+    """Ascent and descent (pixels) of a font, as font.metrics() returns them under Tk. Windows:
+    from GDI; otherwise from Kivy's line height, split 80 / 20 like Tk.
+    """
     k = schluessel(spec)
     m = _metrik_cache.get(k)
     if m is None and _gdi():
@@ -415,6 +430,10 @@ _breite_cache = {}
 
 
 def text_breite(text, spec):
+    """Width of `text` in pixels for the font spec (the longest line for several lines), the
+    same value Tk's font.measure() gives. Cached, because layout asks for the same texts very
+    often.
+    """
     k = schluessel(spec)
     try:
         return _breite_cache[(text, k)]
