@@ -60,6 +60,7 @@ from katiecad.ui.ansicht3d import Ansicht3DMixin
 from katiecad.ui.aendern import AendernMixin
 from katiecad.ui.toolbar_dock import ToolbarDockMixin
 from katiecad.ui.tabs import TabsMixin
+from katiecad.ui.blockleiste import BlockleisteMixin
 from katiecad.model import geom2d as G2
 from katiecad.model import auswahl as AUSW
 from katiecad.electrical import nummerierung as NUM
@@ -254,7 +255,7 @@ _KULL_TYPEN = (Linie, Kreis, Bogen, Polylinie, Schraffur, Text)
 _KULL_WINZIG = (Linie, Kreis, Bogen, Polylinie)
 
 
-class CadApp(TabsMixin, AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
+class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
     def __init__(self, root):
         self.root = root
         if _MAC:
@@ -529,6 +530,7 @@ class CadApp(TabsMixin, AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self.root.bind("<Control-ISO_Left_Tab>", lambda e: self.tab_wechsel_naechster(-1))
         self.root.bind("<Control-w>", lambda e: (self.tab_schliessen(), "break")[1])
         self.root.bind("<Control-W>", lambda e: (self.tab_schliessen(), "break")[1])
+        self._blockleiste_wiederherstellen()     # docked block browser (ui/blockleiste.py)
 
     # --------------------------------------------------------
     # Properties
@@ -602,6 +604,7 @@ class CadApp(TabsMixin, AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self._update_titel()
 
     def _update_titel(self):
+        self._blockleiste_wurzeln_pruefen()      # project blocks folder of the drawing shown
         basis = "KatieCAD"
         p = getattr(self, "projekt", None)
         if p is not None and p.blaetter:
@@ -1466,6 +1469,13 @@ class CadApp(TabsMixin, AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                                   variable=self._kacheln_var(), command=self.kacheln_umschalten)
         m_ansicht.add_command(label=tr("menu.ansicht.kacheln_gleich"),
                               command=self._kacheln_gleich)
+        m_bl = tk.Menu(m_ansicht, tearoff=0)
+        for seite, text in (("", "menu.ansicht.blockleiste.aus"),
+                            ("links", "menu.ansicht.blockleiste.links"),
+                            ("rechts", "menu.ansicht.blockleiste.rechts")):
+            m_bl.add_radiobutton(label=tr(text), value=seite, variable=self._blockleiste_var(),
+                                 command=lambda s=seite: self.blockleiste_setzen(s))
+        m_ansicht.add_cascade(label=tr("menu.ansicht.blockleiste"), menu=m_bl)
         m_ansicht.add_separator()
         m_ansicht.add_command(label=tr("menu.ansicht.reset"),
                               command=self._reset_view)
@@ -12464,11 +12474,24 @@ class CadApp(TabsMixin, AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             self.status.set((tr("txt.0095")))
             return
         self._block_bibliothek_migrieren()
-        dlg = BlockBrowserDialog(
-            self.root, self._block_wurzeln(),
-            lambda pf: block_laden(pf, self._dict_zu_element))
-        standard = {os.path.normpath(w[1]) for w in self._block_wurzeln()}
-        neu = [w[1] for w in dlg.wurzeln]
+        dlg = BlockBrowserDialog(self.root, self._block_wurzeln(), self._block_datei_laden,
+                                 andockbar=not self._blockleiste_offen())
+        self._block_wurzeln_merken(dlg.wurzeln)
+        if dlg.angedockt:                  # "Dock as bar": the same browser as docked bar
+            cfg = self._blockleiste_konfig()
+            self.blockleiste_setzen(cfg.get("blockleiste_seite") or "rechts")
+            return
+        if dlg.result:
+            self.block_aus_datei_einfuegen(dlg.result)
+
+    def _block_datei_laden(self, pf):
+        """Block file -> BlockDefinition (raises on errors) - for the browser preview."""
+        return block_laden(pf, self._dict_zu_element)
+
+    def _block_wurzeln_merken(self, wurzeln):
+        """Keeps the folders added in the block browser (not the standard ones, the symbol
+        library or the project blocks folder - those are always shown)."""
+        neu = [w[1] for w in wurzeln]
         try:
             cfg = lade_konfiguration()
             cfg["block_wurzeln"] = [pf for pf in neu if os.path.normpath(pf) not in
@@ -12479,13 +12502,19 @@ class CadApp(TabsMixin, AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             speichere_konfiguration(cfg)
         except Exception as ex:
             print(f"[KatieCAD] Konfiguration: {ex}")
-        if not dlg.result:
+
+    def block_aus_datei_einfuegen(self, pf):
+        """Starts inserting the block of file `pf`: the user then clicks the insertion
+        point (used by the block browser dialog and the docked bar)."""
+        if self._ist_layout():
+            self.status.set((tr("txt.0095")))
             return
+        self._block_bibliothek_migrieren()
         try:
-            d = block_laden(dlg.result, self._dict_zu_element)
+            d = block_laden(pf, self._dict_zu_element)
         except Exception as ex:
             messagebox.showerror(tr("msg.blockdatei.titel"),
-                                 tr("msg.blockdatei.fehler", pfad=dlg.result, fehler=ex),
+                                 tr("msg.blockdatei.fehler", pfad=pf, fehler=ex),
                                  parent=self.root)
             return
         self.block_bibliothek.setze(d, persistieren=False)

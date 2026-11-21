@@ -3135,80 +3135,12 @@ def oeffne_im_dateimanager(pfad):
         print(f"[KatieCAD] Dateimanager: {e}")
 
 
-class BlockBrowserDialog(tk.Toplevel):
-    """Browses folders with block files (*.katieblock), shows a
-    preview and inserts the chosen block.
-
-    wurzeln: [(display_name, folder_path)]
-    lader:   function path -> BlockDefinition (raises on errors)
-    result:  path of the chosen file or None
-    wurzeln: after closing also contains the added folders"""
-
-    def __init__(self, parent, wurzeln, lader, start=None):
-        super().__init__(parent)
-        self.result = None
-        self.wurzeln = list(wurzeln)
-        self._lader = lader
-        self._dateien = {}
-        self.title(tr("dlg.bb.titel"))
-        self.geometry("980x560")
-        self.transient(parent)
-        _modal(self)
-        self.configure(bg=FARBEN["bg_mittel"])
-
-        f = ttk.Frame(self, padding=10)
-        f.pack(fill=tk.BOTH, expand=True)
-        f.columnconfigure(1, weight=1)
-        f.rowconfigure(1, weight=1)
-
-        ttk.Label(f, text=tr("dlg.bb.ordner"), style="Title.TLabel").grid(row=0, column=0, sticky=tk.W)
-        ttk.Label(f, text=tr("dlg.bb.dateien"), style="Title.TLabel").grid(row=0, column=1, sticky=tk.W, padx=8)
-        ttk.Label(f, text=tr("dlg.bb.vorschau"), style="Title.TLabel").grid(row=0, column=2, sticky=tk.W)
-
-        self.baum = ttk.Treeview(f, show="tree", selectmode="browse", height=18)
-        self.baum.grid(row=1, column=0, sticky="ns")
-        self.baum.column("#0", width=230)
-        self.baum.bind("<<TreeviewSelect>>", lambda e: self._ordner_gewaehlt())
-
-        self.liste = ttk.Treeview(f, columns=("name", "datum"), show="headings",
-                                  selectmode="browse", height=18)
-        self.liste.heading("name", text=tr("dlg.block.auswahl.name"))
-        self.liste.heading("datum", text="")
-        self.liste.column("name", width=240, anchor=tk.W)
-        self.liste.column("datum", width=110, anchor=tk.CENTER)
-        self.liste.grid(row=1, column=1, sticky="nsew", padx=8)
-        self.liste.bind("<<TreeviewSelect>>", lambda e: self._datei_gewaehlt())
-        self.liste.bind("<Double-Button-1>", lambda e: self._einfuegen())
-
-        rf = ttk.Frame(f)
-        rf.grid(row=1, column=2, sticky="n")
-        self.vorschau = tk.Canvas(rf, width=320, height=300, highlightthickness=1)
-        self.vorschau.pack()
-        self.info = ttk.Label(rf, text="", style="Hint.TLabel", wraplength=320,
-                              justify=tk.LEFT)
-        self.info.pack(anchor=tk.W, pady=(6, 0))
-
-        ttk.Label(f, text=tr("dlg.bb.hinweis"), style="Hint.TLabel",
-                  wraplength=900, justify=tk.LEFT).grid(
-            row=2, column=0, columnspan=3, sticky=tk.W, pady=(8, 4))
-
-        bf = ttk.Frame(f)
-        bf.grid(row=3, column=0, columnspan=3, sticky=tk.EW, pady=(4, 0))
-        self.btn_ein = ttk.Button(bf, text=tr("dlg.bb.einfuegen"), command=self._einfuegen)
-        self.btn_ein.pack(side=tk.LEFT, padx=3)
-        ttk.Button(bf, text=tr("dlg.bb.neuer_ordner"), command=self._neuer_ordner).pack(side=tk.LEFT, padx=3)
-        ttk.Button(bf, text=tr("dlg.bb.ordner_hinzu"), command=self._ordner_hinzu).pack(side=tk.LEFT, padx=3)
-        ttk.Button(bf, text=tr("dlg.bb.dateimanager"), command=self._dateimanager).pack(side=tk.LEFT, padx=3)
-        self.btn_del = ttk.Button(bf, text=tr("dlg.bb.loeschen"), command=self._loeschen)
-        self.btn_del.pack(side=tk.LEFT, padx=3)
-        ttk.Button(bf, text=tr("dlg.bb.schliessen"), command=self.destroy).pack(side=tk.RIGHT, padx=3)
-
-        self._baum_aufbauen(start)
-        self.bind("<Escape>", lambda e: self.destroy())
-        self.bind("<Return>", lambda e: self._einfuegen())
-        self._knoepfe()
-        _zentrieren(self, parent)
-        self.wait_window(self)
+class BlockBrowserBasis:
+    """Folder tree, block list and preview of the block browser - shared by the dialog
+    (BlockBrowserDialog) and the docked bar (ui/blockleiste.py). The using class builds the
+    widgets self.baum (folders), self.liste (blocks), self.vorschau (canvas), self.info
+    (label), self.btn_ein / self.btn_del (may be None) and sets self.wurzeln, self._lader and
+    self._dateien; it provides _einfuegen()."""
 
     # Folder tree
     def _baum_aufbauen(self, auswahl=None):
@@ -3268,6 +3200,10 @@ class BlockBrowserDialog(tk.Toplevel):
         sel = self.liste.selection()
         return self._dateien.get(sel[0]) if sel else None
 
+    def _vorschau_groesse(self):
+        """Size (width, height) the preview is drawn for."""
+        return 320, 300
+
     def _datei_gewaehlt(self):
         from katiecad.model.blocks import vorschau_geometrie
         pf = self._datei()
@@ -3281,7 +3217,7 @@ class BlockBrowserDialog(tk.Toplevel):
             zeichne_block_vorschau(self.vorschau, None)
             self.info.config(text=tr("dlg.bb.fehler", fehler=e))
             return
-        zeichne_block_vorschau(self.vorschau, geom)
+        zeichne_block_vorschau(self.vorschau, geom, *self._vorschau_groesse())
         bb = geom["bbox"] or (0, 0, 0, 0)
         text = tr("dlg.bb.info", n=len(d.elemente), b=round(bb[2] - bb[0], 1),
                   h=round(bb[3] - bb[1], 1))
@@ -3295,16 +3231,9 @@ class BlockBrowserDialog(tk.Toplevel):
 
     def _knoepfe(self):
         st = ["!disabled"] if self._datei() else ["disabled"]
-        self.btn_ein.state(st)
-        self.btn_del.state(st)
-
-    # Actions
-    def _einfuegen(self):
-        pf = self._datei()
-        if not pf:
-            return
-        self.result = pf
-        self.destroy()
+        for b in (self.btn_ein, getattr(self, "btn_del", None)):
+            if b is not None:
+                b.state(st)
 
     def _neuer_ordner(self):
         o = self._ordner()
@@ -3352,6 +3281,99 @@ class BlockBrowserDialog(tk.Toplevel):
             messagebox.showerror(tr("dlg.bb.titel"), str(e), parent=self)
             return
         self._ordner_gewaehlt()
+
+
+class BlockBrowserDialog(BlockBrowserBasis, tk.Toplevel):
+    """Browses folders with block files (*.katieblock), shows a
+    preview and inserts the chosen block.
+
+    wurzeln: [(display_name, folder_path)]
+    lader:   function path -> BlockDefinition (raises on errors)
+    result:  path of the chosen file or None
+    wurzeln: after closing also contains the added folders
+    andockbar: shows the button "Dock as bar"; it closes the dialog with self.angedockt
+               True (the caller then shows the docked bar, ui/blockleiste.py)"""
+
+    def __init__(self, parent, wurzeln, lader, start=None, andockbar=False):
+        super().__init__(parent)
+        self.result = None
+        self.angedockt = False
+        self.wurzeln = list(wurzeln)
+        self._lader = lader
+        self._dateien = {}
+        self.title(tr("dlg.bb.titel"))
+        self.geometry("980x560")
+        self.transient(parent)
+        _modal(self)
+        self.configure(bg=FARBEN["bg_mittel"])
+
+        f = ttk.Frame(self, padding=10)
+        f.pack(fill=tk.BOTH, expand=True)
+        f.columnconfigure(1, weight=1)
+        f.rowconfigure(1, weight=1)
+
+        ttk.Label(f, text=tr("dlg.bb.ordner"), style="Title.TLabel").grid(row=0, column=0, sticky=tk.W)
+        ttk.Label(f, text=tr("dlg.bb.dateien"), style="Title.TLabel").grid(row=0, column=1, sticky=tk.W, padx=8)
+        ttk.Label(f, text=tr("dlg.bb.vorschau"), style="Title.TLabel").grid(row=0, column=2, sticky=tk.W)
+
+        self.baum = ttk.Treeview(f, show="tree", selectmode="browse", height=18)
+        self.baum.grid(row=1, column=0, sticky="ns")
+        self.baum.column("#0", width=230)
+        self.baum.bind("<<TreeviewSelect>>", lambda e: self._ordner_gewaehlt())
+
+        self.liste = ttk.Treeview(f, columns=("name", "datum"), show="headings",
+                                  selectmode="browse", height=18)
+        self.liste.heading("name", text=tr("dlg.block.auswahl.name"))
+        self.liste.heading("datum", text="")
+        self.liste.column("name", width=240, anchor=tk.W)
+        self.liste.column("datum", width=110, anchor=tk.CENTER)
+        self.liste.grid(row=1, column=1, sticky="nsew", padx=8)
+        self.liste.bind("<<TreeviewSelect>>", lambda e: self._datei_gewaehlt())
+        self.liste.bind("<Double-Button-1>", lambda e: self._einfuegen())
+
+        rf = ttk.Frame(f)
+        rf.grid(row=1, column=2, sticky="n")
+        self.vorschau = tk.Canvas(rf, width=320, height=300, highlightthickness=1)
+        self.vorschau.pack()
+        self.info = ttk.Label(rf, text="", style="Hint.TLabel", wraplength=320,
+                              justify=tk.LEFT)
+        self.info.pack(anchor=tk.W, pady=(6, 0))
+
+        ttk.Label(f, text=tr("dlg.bb.hinweis"), style="Hint.TLabel",
+                  wraplength=900, justify=tk.LEFT).grid(
+            row=2, column=0, columnspan=3, sticky=tk.W, pady=(8, 4))
+
+        bf = ttk.Frame(f)
+        bf.grid(row=3, column=0, columnspan=3, sticky=tk.EW, pady=(4, 0))
+        self.btn_ein = ttk.Button(bf, text=tr("dlg.bb.einfuegen"), command=self._einfuegen)
+        self.btn_ein.pack(side=tk.LEFT, padx=3)
+        ttk.Button(bf, text=tr("dlg.bb.neuer_ordner"), command=self._neuer_ordner).pack(side=tk.LEFT, padx=3)
+        ttk.Button(bf, text=tr("dlg.bb.ordner_hinzu"), command=self._ordner_hinzu).pack(side=tk.LEFT, padx=3)
+        ttk.Button(bf, text=tr("dlg.bb.dateimanager"), command=self._dateimanager).pack(side=tk.LEFT, padx=3)
+        self.btn_del = ttk.Button(bf, text=tr("dlg.bb.loeschen"), command=self._loeschen)
+        self.btn_del.pack(side=tk.LEFT, padx=3)
+        ttk.Button(bf, text=tr("dlg.bb.schliessen"), command=self.destroy).pack(side=tk.RIGHT, padx=3)
+        if andockbar:
+            def andocken_jetzt():
+                self.angedockt = True
+                self.destroy()
+            ttk.Button(bf, text=tr("dlg.bb.andocken"), command=andocken_jetzt).pack(
+                side=tk.RIGHT, padx=3)
+
+        self._baum_aufbauen(start)
+        self.bind("<Escape>", lambda e: self.destroy())
+        self.bind("<Return>", lambda e: self._einfuegen())
+        self._knoepfe()
+        _zentrieren(self, parent)
+        self.wait_window(self)
+
+    # Actions
+    def _einfuegen(self):
+        pf = self._datei()
+        if not pf:
+            return
+        self.result = pf
+        self.destroy()
 
 
 def name_sicher(name):
