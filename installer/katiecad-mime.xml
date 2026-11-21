@@ -4,6 +4,7 @@
     <comment>KatieCAD drawing</comment>
     <comment xml:lang="de">KatieCAD-Zeichnung</comment>
     <comment xml:lang="es">Dibujo de KatieCAD</comment>
+    <comment xml:lang="fr">Dessin KatieCAD</comment>
     <icon name="katiecad"/>
     <glob pattern="*.cadjson"/>
     <sub-class-of type="application/json"/>
@@ -12,6 +13,7 @@
     <comment>KatieCAD project</comment>
     <comment xml:lang="de">KatieCAD-Projekt</comment>
     <comment xml:lang="es">Proyecto de KatieCAD</comment>
+    <comment xml:lang="fr">Projet KatieCAD</comment>
     <icon name="katiecad"/>
     <glob pattern="*.katieprj"/>
     <sub-class-of type="application/json"/>
