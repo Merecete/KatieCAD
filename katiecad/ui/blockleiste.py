@@ -9,7 +9,8 @@ click or "Insert" starts inserting the block exactly like the dialog does (the u
 clicks the insertion point). The bar stays open while drawing.
 
 Switched on and off with View > Block browser bar (off / left / right) or the button
-"Dock as bar" in the dialog; side and width are kept in the configuration
+"Dock as bar" in the dialog. Dragging the header moves the bar to the other side (as does
+the ⇄ button); its inner edge changes the width. Side and width are kept in the configuration
 ("blockleiste_seite", "blockleiste_breite"). The methods of CadApp used are in BlockleisteMixin.
 """
 
@@ -50,9 +51,12 @@ class Blockleiste(BlockBrowserBasis, ttk.Frame):
 
     # ---------------------------------------------------- widgets
     def _bauen(self):
-        kopf = ttk.Frame(self)
+        kopf = ttk.Frame(self, cursor="fleur")
         kopf.pack(fill=tk.X)
-        ttk.Label(kopf, text=tr("dlg.bb.titel"), style="Title.TLabel").pack(side=tk.LEFT)
+        titel = ttk.Label(kopf, text=tr("dlg.bb.titel"), style="Title.TLabel", cursor="fleur")
+        titel.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        for w in (kopf, titel):              # drag the header to the other side of the window
+            w.bind("<B1-Motion>", self._kopf_ziehen)
         # close and "other side" as small buttons at the right end of the header
         ttk.Button(kopf, text="✕", width=3, command=lambda: self.app.blockleiste_setzen("")
                    ).pack(side=tk.RIGHT)
@@ -118,6 +122,15 @@ class Blockleiste(BlockBrowserBasis, ttk.Frame):
     def zerstoeren(self):
         self.griff.destroy()
         self.destroy()
+
+    def _kopf_ziehen(self, ev):
+        """Header dragged: the bar docks on the half of the window the mouse is in (it moves
+        over while dragging; the widgets are only re-packed, so the drag goes on)."""
+        top = self.winfo_toplevel()
+        x = ev.x_root - top.winfo_rootx()
+        seite = "links" if x < top.winfo_width() / 2 else "rechts"
+        if seite != self.seite:
+            self.app.blockleiste_setzen(seite)
 
     def _ziehen(self, ev):
         if self.seite == "links":
