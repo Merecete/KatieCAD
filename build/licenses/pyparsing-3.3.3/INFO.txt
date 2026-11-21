@@ -1,4 +1,0 @@
-pyparsing 3.3.3
-License: MIT
-Author: Paul McGuire <ptmcg.gm+pyparsing@gmail.com>
-Home page: ?

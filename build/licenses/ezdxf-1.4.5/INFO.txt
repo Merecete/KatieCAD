@@ -1,4 +1,0 @@
-ezdxf 1.4.5
-License: MIT License
-Author: Manfred Moitzi <me@mozman.at>
-Home page: ?

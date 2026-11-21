@@ -1,4 +1,0 @@
-fonttools 4.68.0
-License: MIT
-Author: Just van Rossum
-Home page: http://github.com/fonttools/fonttools

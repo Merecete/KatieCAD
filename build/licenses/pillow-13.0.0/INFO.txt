@@ -1,4 +1,0 @@
-pillow 13.0.0
-License: MIT-CMU
-Author: Jeffrey 'Alex' Clark <aclark@aclark.net>
-Home page: ?
