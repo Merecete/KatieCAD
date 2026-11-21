@@ -257,6 +257,15 @@ def menue_schliessen(menu=None):
     ev = getattr(menu, "_kt_gepostet_bei", None) if menu is not None else None
     if ev is not None and ev is getattr(menu._kt_root_, "_kt_akt_ev", None):
         return
+    # a click INTO the open menu: under Tk the menu is a window of its own and the program's
+    # bindings never see that click - here it must not close the menu before the entry runs
+    if menu is not None:
+        akt = getattr(menu._kt_root_, "_kt_akt_ev", None)
+        w = getattr(akt, "widget", None)
+        while w is not None:
+            if w in _offen:
+                return
+            w = getattr(w, "master", None)
     popup_schliessen()
 
 
