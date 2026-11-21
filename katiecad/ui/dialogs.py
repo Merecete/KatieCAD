@@ -140,6 +140,7 @@ THIRD_PARTY_NOTICES.txt.
   NumPy, fonttools, pyparsing, typing_extensions (needed by ezdxf)
   Pillow        MIT-CMU (+ the libraries inside it)
   pypdf         BSD-3-Clause
+  Kivy          MIT (+ SDL2: zlib, GLEW: Modified BSD / MIT, ANGLE: BSD-3-Clause)
   PyInstaller   GPL-2.0 with bootloader exception (no obligations for the packaged program)
 
 LibreDWG (GPL-3.0-or-later) is NOT part of KatieCAD; if it is installed separately, KatieCAD

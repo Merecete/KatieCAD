@@ -8,7 +8,7 @@ python tools\lizenzen_sammeln.py build\licenses || echo WARNING: licence texts i
 set DOCS=
 if exist docs set DOCS=--add-data "docs;docs"
 pyinstaller --noconfirm --windowed --name KatieCAD --icon KatieCAD.ico ^
-  --collect-submodules katiecad --collect-submodules ezdxf --collect-submodules pypdf --collect-all ezdwg ^
+  --additional-hooks-dir installer\hooks --collect-submodules katiecad --collect-submodules ezdxf --collect-submodules pypdf --collect-all ezdwg ^
   --add-data "symbols;symbols" --add-data "title_blocks;title_blocks" ^
   --add-data "report_templates;report_templates" --add-data "build\licenses;licenses" ^
   --add-data "LICENSE;." --add-data "THIRD_PARTY_NOTICES.txt;." %DOCS% ^
