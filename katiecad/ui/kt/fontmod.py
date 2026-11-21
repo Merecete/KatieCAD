@@ -378,9 +378,30 @@ def _label(text, k):
 _metrik_cache = {}
 
 
+# Windows: text like Tk with GDI (ClearType); KATIECAD_KT_TEXT=sdl forces SDL_ttf
+_GDI = None
+
+
+def _gdi():
+    global _GDI
+    if _GDI is None:
+        _GDI = False
+        if sys.platform.startswith("win") and os.environ.get("KATIECAD_KT_TEXT", "").lower() != "sdl":
+            try:
+                from katiecad.ui.kt import gdi_text
+                if gdi_text.metrik(("Segoe UI", 12, False, False, False))[0] > 0:
+                    _GDI = gdi_text
+            except Exception:
+                _GDI = False
+    return _GDI
+
+
 def _metrik(spec):
     k = schluessel(spec)
     m = _metrik_cache.get(k)
+    if m is None and _gdi():
+        m = _gdi().metrik(k)
+        _metrik_cache[k] = m
     if m is None:
         h = _label("Ãg", k).get_extents("Ãg")[1]
         # SDL2 reports the whole line height; split it like Tk (ascent ~ 80 %)
@@ -401,6 +422,8 @@ def text_breite(text, spec):
         pass
     if not text:
         w = 0
+    elif _gdi():
+        w = max(_gdi().breite(z, k) for z in text.split("\n"))
     else:
         w = 0
         for z in text.split("\n"):
@@ -427,8 +450,10 @@ def text_textur(text, spec):
     t = _tex_cache.get((text, k))
     if t is None:
         try:
-            laeufe = _laeufe(text, k)
-            if len(laeufe) == 1:
+            laeufe = None if _gdi() else _laeufe(text, k)
+            if laeufe is None:
+                t = _gdi_textur(text, k)
+            elif len(laeufe) == 1:
                 lb = _label(text, laeufe[0][1])
                 lb.refresh()
                 t = lb.texture
@@ -443,6 +468,18 @@ def text_textur(text, spec):
 
 
 _fbos = []
+
+
+def _gdi_textur(text, k):
+    from kivy.graphics.texture import Texture
+    erg = _gdi().rendern(text, k)
+    if erg is None:
+        return None
+    w, h, daten = erg
+    t = Texture.create(size=(w, h), colorfmt="rgba")
+    t.blit_buffer(daten, colorfmt="rgba", bufferfmt="ubyte")
+    t.flip_vertical()                     # like Kivy's label textures (rows top first)
+    return t
 
 
 def _zusammensetzen(laeufe):
