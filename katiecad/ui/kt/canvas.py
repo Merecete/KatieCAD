@@ -21,6 +21,10 @@ from katiecad.ui.kt import tkmod as T
 
 
 def _flach(args):
+    try:
+        return [float(a) for a in args]            # usual case: plain numbers
+    except TypeError:
+        pass
     erg = []
     for a in args:
         if isinstance(a, (tuple, list)):
@@ -30,13 +34,25 @@ def _flach(args):
     return erg
 
 
+_FARBEN = {}
+
+
 def _farbe(v):
+    try:
+        return _FARBEN[v]
+    except (KeyError, TypeError):
+        pass
     if v is None or v == "":
         return None
     try:
-        return _base.farbe(v)
+        f = _base.farbe(v)
     except T.TclError:
-        return None
+        f = None
+    try:
+        _FARBEN[v] = f
+    except TypeError:
+        pass
+    return f
 
 
 def _stipple(f, stipple):
@@ -47,7 +63,7 @@ def _stipple(f, stipple):
 
 
 class _Item:
-    __slots__ = ("id", "typ", "xy", "o", "tags", "g", "bbox", "blk", "lk", "lp")
+    __slots__ = ("id", "typ", "xy", "o", "tags", "g", "bbox", "blk", "lk", "lp", "neu")
 
     def __init__(self, ident, typ, xy, o, tags):
         self.id, self.typ, self.xy, self.o, self.tags = ident, typ, xy, o, tags
@@ -56,6 +72,7 @@ class _Item:
         self.blk = None          # the block (batch of items) it is drawn in
         self.lk = None           # simple line: (colour, width) -> drawn in a shared mesh
         self.lp = None           # its points
+        self.neu = True          # instructions not built yet (done when the frame is drawn)
 
 
 _BLOCK = 400                     # items per block
@@ -164,6 +181,22 @@ def _dicke_mesh(g, farbe, w, items):
             g.add(Mesh(vertices=verts, indices=idx, mode="triangles"))
 
 
+def _rechtecke_mesh(g, farbe, items):
+    """Filled rectangles of one colour as quads of one mesh."""
+    verts, idx, n = [], [], 0
+    g.add(Color(*farbe))
+    for it in items:
+        x0, y0, x1, y1 = it.lp
+        verts += (x0, y0, 0.0, 0.0, x1, y0, 0.0, 0.0, x1, y1, 0.0, 0.0, x0, y1, 0.0, 0.0)
+        idx += (n, n + 1, n + 2, n, n + 2, n + 3)
+        n += 4
+        if n > 60000:
+            g.add(Mesh(vertices=verts, indices=idx, mode="triangles"))
+            verts, idx, n = [], [], 0
+    if idx:
+        g.add(Mesh(vertices=verts, indices=idx, mode="triangles"))
+
+
 def _ovale_mesh(g, farbe, items):
     """Filled ovals of one colour as triangles of one mesh."""
     verts, idx, n = [], [], 0
@@ -204,7 +237,9 @@ def _block_bauen(b):
         if not lauf:
             return
         farbe, w = key[0], key[1]
-        if w < 0:
+        if w == -2.0:
+            _rechtecke_mesh(g, farbe, lauf)
+        elif w < 0:
             _ovale_mesh(g, farbe, lauf)
         elif w <= 1.5:
             verts, idx, n = [], [], 0
@@ -536,9 +571,13 @@ class Canvas(T.BaseWidget):
         self._kt_flush_trigger()
 
     def _kt_flush(self, *_a):
+        bauen = self._kt_bauen
         for b in self._kt_bloecke:
             if b.dirty:
                 b.dirty = False
+                for it in b.items.values():
+                    if it.neu:
+                        bauen(it)
                 _block_bauen(b)
 
     def _kt_einreihen(self, it):
@@ -552,10 +591,12 @@ class Canvas(T.BaseWidget):
         self._kt_dirty(b)
 
     def _kt_aendern(self, it):
-        self._kt_bauen(it)
+        it.neu = True
+        it.bbox = None
         self._kt_dirty(it.blk)
 
     def _kt_bauen(self, it):
+        it.neu = False
         g = it.g
         g.clear()
         it.bbox = None
@@ -583,10 +624,18 @@ class Canvas(T.BaseWidget):
                 return
             x0, y0, x1, y1 = min(xy[0], xy[2]), min(xy[1], xy[3]), max(xy[0], xy[2]), max(xy[1], xy[3])
             f = _stipple(_farbe(o.get("fill")), o.get("stipple"))
+            ol = _farbe(o.get("outline"))
+            if f is not None and not o.get("dash"):
+                w = float(o.get("width", 1) or 0)
+                if ol is None or w <= 0:
+                    it.lk, it.lp = (f, -2.0, False), (x0, y0, x1, y1)
+                    return
+                if ol == f and w <= 1.5:              # outline in the fill colour: one px larger
+                    it.lk, it.lp = (f, -2.0, False), (x0, y0, x1 + 1, y1 + 1)
+                    return
             if f is not None:
                 g.add(Color(*f))
                 g.add(Rectangle(pos=(x0, y0), size=(x1 - x0, y1 - y0)))
-            ol = _farbe(o.get("outline"))
             w = float(o.get("width", 1) or 0)
             if ol is not None and w > 0:
                 if o.get("dash"):
@@ -731,12 +780,11 @@ class Canvas(T.BaseWidget):
             kw = {**args[-1], **kw}
             args = args[:-1]
         xy = _flach(args)
-        o = dict(_STANDARD[typ])
         tags = kw.pop("tags", None)
         if tags is None:
             tags = kw.pop("tag", None)
-        for k, v in kw.items():
-            o[k] = v
+        o = dict(_STANDARD[typ])
+        o.update(kw)
         ident = self._kt_naechste_id
         self._kt_naechste_id += 1
         tl = _tags(tags)
@@ -748,8 +796,7 @@ class Canvas(T.BaseWidget):
         if typ == "window":
             self._kt_fenster_setzen(it)
         else:
-            self._kt_bauen(it)
-            self._kt_einreihen(it)
+            self._kt_einreihen(it)          # built later, once per frame (see _kt_flush)
         return ident
 
     def create_line(self, *args, **kw):
@@ -912,6 +959,8 @@ class Canvas(T.BaseWidget):
         return None
 
     def _kt_item_bbox(self, it):
+        if it.neu and it.typ in ("text", "image"):
+            self._kt_bauen(it)                  # their size is only known once built
         if it.bbox is not None:
             return it.bbox
         xy = it.xy

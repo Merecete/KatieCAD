@@ -1459,6 +1459,8 @@ class Tk(Wm, Misc, GeometrieMixin):
         self._kt_eltern_k = Window
         self._kt_trigger_layout = Clock.create_trigger(self._kt_layout_tick, -1)
         self._kt_trigger_zeichnen = Clock.create_trigger(self._kt_zeichnen_tick, -1)
+        self._kt_bewegung_offen = None
+        self._kt_trigger_bewegung = Clock.create_trigger(self._kt_bewegung_senden, -1)
         Window.bind(on_mouse_down=self._kt_k_maus_runter, on_mouse_up=self._kt_k_maus_hoch,
                     on_mouse_move=self._kt_k_maus_zug, mouse_pos=self._kt_k_maus_pos,
                     on_key_down=self._kt_k_taste_runter, on_key_up=self._kt_k_taste_hoch,
@@ -1890,7 +1892,24 @@ class Tk(Wm, Misc, GeometrieMixin):
             except Exception:
                 pass
 
+    # Motion compression like Tk: many pointer moves between two frames -> one Motion event
+    # with the latest position (the 3D view redraws the whole scene per Motion)
     def _kt_k_maus_pos(self, _win, pos):
+        self._kt_bewegung_offen = self._kt_bewegung_offen or "pos"
+        self._kt_trigger_bewegung()
+
+    def _kt_k_maus_zug(self, _win, _x, _y, _mods):
+        self._kt_bewegung_offen = "zug"
+        self._kt_trigger_bewegung()
+
+    def _kt_bewegung_senden(self, *_a):
+        art, self._kt_bewegung_offen = self._kt_bewegung_offen, None
+        if art == "zug":
+            self._kt_bewegung_zug()
+        elif art == "pos":
+            self._kt_bewegung_pos()
+
+    def _kt_bewegung_pos(self):
         if self._kt_ende:
             return
         x, y = self._kt_maus_tk()
@@ -1906,7 +1925,7 @@ class Tk(Wm, Misc, GeometrieMixin):
         if not self._kt_knoepfe:
             self._kt_hover(None, x, y)
 
-    def _kt_k_maus_zug(self, _win, _x, _y, _mods):
+    def _kt_bewegung_zug(self):
         x, y = self._kt_maus_tk()
         if self._kt_titel_drag is not None:
             top, dx, dy = self._kt_titel_drag
@@ -1923,6 +1942,7 @@ class Tk(Wm, Misc, GeometrieMixin):
         self._kt_maus_ereignis(w, "Motion", x, y)
 
     def _kt_k_maus_runter(self, _win, _x, _y, button, _mods):
+        self._kt_bewegung_senden()              # pending move first (event order as under Tk)
         x, y = self._kt_maus_tk()
         if button in ("scrollup", "scrolldown", "scrollleft", "scrollright"):
             w = self._kt_widget_bei(x, y)
@@ -1980,6 +2000,7 @@ class Tk(Wm, Misc, GeometrieMixin):
         pass
 
     def _kt_k_maus_hoch(self, _win, _x, _y, button, _mods):
+        self._kt_bewegung_senden()
         if button.startswith("scroll"):
             return
         x, y = self._kt_maus_tk()
@@ -2015,6 +2036,7 @@ class Tk(Wm, Misc, GeometrieMixin):
         return self
 
     def _kt_k_taste_runter(self, _win, key, scancode, codepoint, modifiers):
+        self._kt_bewegung_senden()
         name = Window._system_keyboard.keycode_to_string(key) if hasattr(Window, "_system_keyboard") else ""
         shift = "shift" in modifiers
         keysym, char = EV.keysym_aus(name, codepoint, shift)
