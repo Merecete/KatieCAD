@@ -105,6 +105,9 @@ class Projekt:
         self.daten = dict(daten) if isinstance(daten, dict) else {}
         # Documentation settings (selected reports, template, ...)
         self.doku = dict(doku) if isinstance(doku, dict) else {}
+        # Sheet window (second KatieCAD window on the project, see common/fenster.py): it edits
+        # sheet contents only and never writes the project file - the main window owns it.
+        self.nur_seiten = False
 
     # ---- Paths --------------------------------------------------
     @property
@@ -182,6 +185,8 @@ class Projekt:
         return p
 
     def speichern(self):
+        if self.nur_seiten:
+            return
         os.makedirs(self.ordner, exist_ok=True)
         _json_schreiben(self.projektdatei, {
             "format": FORMAT_KENNUNG,

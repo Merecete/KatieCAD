@@ -439,8 +439,8 @@ class Ansicht3D(tk.Frame):
     MODI = ("flaeche", "linie", "kreis", "rechteck", "poly", "bem", "kanal", "kanalverb", "pivot", "text", "messen", "verschieben", "strecken")
     SKIZZEN = ("linie", "kreis", "rechteck", "poly")
 
-    def __init__(self, app):
-        super().__init__(app.root, bg=FARBEN["bg_mittel"])
+    def __init__(self, app, master=None):
+        super().__init__(master if master is not None else app.root, bg=FARBEN["bg_mittel"])
         self.app = app
         z = app._3d_zustand()
         self.zustand = z
@@ -665,6 +665,13 @@ class Ansicht3D(tk.Frame):
 
     def zeichne(self, *_):
         self._spaeter_id = None
+        if self.app._ansicht3d is not self:
+            # the 3D view of a tile that is not the active one: the program state is that of
+            # another drawing - the tile is drawn with its own drawing put in place
+            f = getattr(self.app, "_kachel_3d_zeichnen", None)
+            if f is not None:
+                f(self)
+            return
         c = self.canvas
         c.delete("all")
         try:
@@ -2459,16 +2466,22 @@ class Ansicht3DMixin:
             self.werkzeuge_fuer_3d()
             return
         w = self._ansicht3d
+        melden = getattr(self, "_kachel_3d_gemeldet", None)     # tiles (ui/kacheln.py)
         if an and w is None:
-            w = Ansicht3D(self)
+            # in the drawing area's place (in a tile: in that tile only)
+            w = Ansicht3D(self, self.canvas.master)
             self._ansicht3d = w
             w.pack(fill=tk.BOTH, expand=True, before=self.canvas)
             self.canvas.pack_forget()
+            if melden:
+                melden(w)
             w.after(60, w.einpassen)
             self.ansicht3d_werkzeug(beim_oeffnen=True)
         elif not an and w is not None:
             self.canvas.pack(fill=tk.BOTH, expand=True, before=w)
             self._ansicht3d = None
+            if melden:
+                melden(None)
             w.destroy()
             self.redraw()
         self._3d_var_holen().set(an)

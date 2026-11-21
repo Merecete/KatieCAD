@@ -1,0 +1,4 @@
+numpy 2.5.5
+License: BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0
+Author: Travis E. Oliphant et al.
+Home page: ?
