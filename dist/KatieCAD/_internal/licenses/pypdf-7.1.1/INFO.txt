@@ -1,0 +1,4 @@
+pypdf 7.1.1
+License: BSD-3-Clause
+Author: Mathieu Fenniak <biziqe@mathieu.fenniak.net>
+Home page: ?
