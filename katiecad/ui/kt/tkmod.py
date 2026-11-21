@@ -178,6 +178,8 @@ class IntVar(Variable):
     _kt_default = 0
 
     def get(self):
+        """IntVar.get(): the value as int like Tk (also for a stored bool or a numeric string).
+        """
         v = super().get()
         if isinstance(v, bool):
             return int(v)
@@ -295,6 +297,11 @@ class Misc:
 
     # ---------------------------------------------------- creation
     def _kt_anlegen(self, master, cnf, kw):
+        """Shared set-up of every widget (the Tk part of __init__): master, root, Tk path name,
+        empty bind and geometry state, the Kivy widget with its instruction groups
+        (background / content / children), default options of the class and the given ones.
+        Registers the widget at the root.
+        """
         if cnf:
             kw = {**cnf, **kw}
         name = kw.pop("name", None)
@@ -372,6 +379,10 @@ class Misc:
 
     # ---------------------------------------------------- options
     def _kt_konfig(self, kw, neu=False):
+        """Applies options to a widget: stores them in _kt_o, connects / disconnects variables
+        (textvariable, variable ...), and plans a new layout for options that change the size
+        (text, font, padding ...) or only a redraw for the others.
+        """
         layout = False
         for k, v in kw.items():
             k = _ALIAS.get(k, k)
@@ -656,6 +667,10 @@ class Misc:
 
     @staticmethod
     def _kt_binden(tabelle, sequence, func, add):
+        """Shared code of bind / bind_class / bind_all on one binding table: without sequence
+        the bound sequences, without func whether something is bound, with add="+" the
+        function is added, otherwise it replaces the old ones. Returns an id as Tk does.
+        """
         if sequence is None:
             return tuple(tabelle)
         if func is None:
@@ -704,6 +719,10 @@ class Misc:
         return [self._kt_pfad, self._kt_klasse, top._kt_pfad, "all"]
 
     def event_generate(self, sequence, **kw):
+        """event_generate(sequence, **fields): builds the event (virtual events like
+        <<ComboboxSelected>> too) and runs the bindings of this widget at once, as Tk does
+        with the default "when".
+        """
         m = EV.parse(sequence)
         if m is None:
             return
@@ -826,6 +845,9 @@ class Misc:
         self._kt_stapeln(oben=False)
 
     def _kt_stapeln(self, oben):
+        """lift / lower among the siblings: changes the order in the master's children (=
+        drawing order), `oben` True puts the widget on top.
+        """
         m = self.master
         if m is None:
             return
@@ -843,6 +865,10 @@ class Misc:
 
     # ---------------------------------------------------- destroy
     def destroy(self):
+        """destroy(): destroys the children first, sends <Destroy>, removes the widget from
+        geometry managers, variables, focus / grab / mouse state of the root and from the
+        Kivy tree. Calling it twice does nothing.
+        """
         if self._kt_zerstoert:
             return
         for c in list(self.children.values()):
@@ -902,6 +928,11 @@ class Misc:
         return b + pl, b + pt, b + pr, b + pb
 
     def _kt_req(self):
+        """Requested size (winfo_reqwidth / reqheight) like Tk: with geometry propagation the
+        size its pack or grid children need, otherwise the width / height options; plus
+        border, highlight and padding. Cached per layout pass, because layout asks for it
+        often.
+        """
         r = self._kt_root_
         if self._kt_req_pass == r._kt_pass:
             return self._kt_req_wert
@@ -930,6 +961,11 @@ class Misc:
         return max(w, l + r), max(h, t + b)
 
     def _kt_setzen(self, x, y, w, h, sichtbar=True):
+        """Places the widget at (x, y) with size (w, h) inside its master (called by the
+        geometry managers). Becoming visible / hidden attaches / detaches its Kivy widget and
+        remembers <Map> / <Unmap>; a new size or place remembers <Configure> (sent after the
+        layout pass) and plans a redraw.
+        """
         geaendert = (w, h) != (self._kt_w, self._kt_h)
         bewegt = (x, y) != (self._kt_x, self._kt_y)
         war = self._kt_sichtbar
@@ -1038,6 +1074,9 @@ class Misc:
         return _rgba(self._kt_o.get(name), standard)
 
     def _kt_hintergrund(self, kx, ky, farbe=None):
+        """Draws the background of a widget: fill colour, highlight ring (focus colour when
+        focused) and relief border.
+        """
         g = self._kt_g_hinten
         bg = farbe if farbe is not None else self._kt_farbe_opt("background")
         w, h = self._kt_w, self._kt_h
@@ -1104,6 +1143,9 @@ def _mass(v):
 
 
 def _padding(p):
+    """Tk padding spec (number, "l t r b" string or 1 to 4 values) -> (left, top, right, bottom)
+    in pixels, filled up the way Tk does (1 value: all sides, 2: horizontal / vertical ...).
+    """
     if isinstance(p, (int, float)):
         p = int(p)
         return p, p, p, p
@@ -1133,6 +1175,9 @@ def _heller(f, faktor):
 
 
 def _relief(g, kx, ky, w, h, bd, relief, bg):
+    """Draws a Tk relief border of width `bd` (raised, sunken, groove, ridge, solid, flat) with
+    light and dark shades derived from the background colour.
+    """
     hell, dunkel = _heller(bg, 1.45) if sum(bg[:3]) > 0.05 else (0.35, 0.35, 0.35, 1), _heller(bg, 0.55)
     if relief == SOLID:
         _rahmen(g, kx, ky, w, h, bd, (0, 0, 0, 1))
@@ -1261,6 +1306,10 @@ class Wm:
         self._kt_neu_zeichnen()
 
     def geometry(self, newGeometry=None):
+        """wm geometry: without argument the current "WxH+X+Y"; otherwise sets size and / or
+        position ("400x300", "+100+50", "400x300+100+50"). For a Toplevel it is its place
+        inside the main window.
+        """
         if newGeometry is None:
             return f"{self._kt_w}x{self._kt_h}+{self._kt_x}+{self._kt_y}"
         g = str(newGeometry).strip()
@@ -1531,6 +1580,9 @@ class Tk(Wm, Misc, GeometrieMixin):
         self._kt_k_groesse(Window, self._kt_fenster_w, self._kt_fenster_h, erzwingen=True)
 
     def _kt_geometrie_angewandt(self):
+        """Applies a size set with geometry() to the real (Kivy) window once it exists; the
+        title bar is added because geometry() means the content area, as under Tk.
+        """
         if self._kt_geo_gesetzt:
             w, h = self._kt_geo_gesetzt
             h += self._kt_titel_h             # geometry() means the content, as under Tk
@@ -1557,6 +1609,9 @@ class Tk(Wm, Misc, GeometrieMixin):
     wm_minsize = minsize
 
     def state(self, newstate=None):
+        """wm state: "normal", "zoomed" (maximised), "iconic" (minimised) or "withdrawn" for the
+        main window, carried out on the Kivy window.
+        """
         if newstate is None:
             return self._kt_zustand_wm
         self._kt_zustand_wm = newstate
@@ -1610,6 +1665,9 @@ class Tk(Wm, Misc, GeometrieMixin):
         traceback.print_exception(exc, val, tb)
 
     def destroy(self):
+        """Destroys the main window: all Toplevels, all widgets, ends the main loop and closes
+        the Kivy window.
+        """
         if self._kt_zerstoert:
             return
         for t in list(self._kt_toplevels):
@@ -1672,6 +1730,10 @@ class Tk(Wm, Misc, GeometrieMixin):
 
     # ---------------------------------------------------- after
     def _kt_after(self, ms, func, args):
+        """after(ms, func, *args): runs func later through Kivy's clock ("idle" = as soon as
+        possible). Without func it waits ms milliseconds while still handling events, like
+        Tk. Returns an id for after_cancel.
+        """
         self._kt_after_n += 1
         ident = f"after#{self._kt_after_n}"
         if func is None:
@@ -1777,6 +1839,9 @@ class Tk(Wm, Misc, GeometrieMixin):
             nach()
 
     def _kt_darstellen(self):
+        """Draws the main window itself: its Kivy widget follows the window size; background
+        (and the own title bar, whose colours follow it) when it changed.
+        """
         k = self._kt_k
         if tuple(k.size) != (self._kt_fenster_w, self._kt_fenster_h):
             k.size = (self._kt_fenster_w, self._kt_fenster_h)
@@ -1799,6 +1864,9 @@ class Tk(Wm, Misc, GeometrieMixin):
         return 0, 0
 
     def _kt_widget_weg(self, w):
+        """A widget is destroyed: clears every reference of the root to it (focus, grab, widget
+        under the mouse, mouse target, Toplevel list) so no event goes to a dead widget.
+        """
         if self._kt_fokus is w:
             self._kt_fokus = None
         if self._kt_grab is w:
@@ -1818,6 +1886,10 @@ class Tk(Wm, Misc, GeometrieMixin):
         return int(mx), int(_fh() - 1 - my)
 
     def _kt_widget_bei(self, x, y, nur_grab=True):
+        """The widget under the window point (x, y) in Tk coordinates: the topmost visible
+        Toplevel containing the point first, then down to the deepest child. With a grab only
+        the grabbing window and its children count.
+        """
         grab = self._kt_grab if nur_grab else None
         for t in reversed(self._kt_toplevels):
             if not t._kt_sichtbar or t._kt_zerstoert:
@@ -1843,6 +1915,11 @@ class Tk(Wm, Misc, GeometrieMixin):
             self._kt_akt_ev = vorher
 
     def _kt_ausloesen_tags(self, widget, ev):
+        """Runs the bindings for an event along the bind tags of the widget (widget, class,
+        toplevel, "all" - Tk's order); in every tag only the most specific matching sequence.
+        A function returning "break" stops the chain. True if stopped or the widget got
+        destroyed.
+        """
         for tag in widget._kt_bindtags_liste():
             if tag == widget._kt_pfad:
                 tab = widget._kt_bindungen
@@ -1887,6 +1964,9 @@ class Tk(Wm, Misc, GeometrieMixin):
         return ev
 
     def _kt_modifier_state(self):
+        """Tk state bits (Shift, Control, Alt, held mouse buttons) of the current moment, as
+        event.state needs them.
+        """
         s = 0
         mods = getattr(Window, "modifiers", []) or []
         if "shift" in mods:
@@ -1915,6 +1995,10 @@ class Tk(Wm, Misc, GeometrieMixin):
         return erg
 
     def _kt_hover(self, neu, x, y):
+        """The mouse moved from widget `alt` to `neu`: sends <Leave> to the widgets left and
+        <Enter> to the ones entered (along their parent chains, as Tk does) and sets the
+        hover state for the cursor and active colours.
+        """
         alt = self._kt_maus_widget
         if neu is alt:
             return
@@ -1965,6 +2049,9 @@ class Tk(Wm, Misc, GeometrieMixin):
             self._kt_bewegung_pos()
 
     def _kt_bewegung_pos(self):
+        """Handles the latest mouse position (no button held): hover state, cursor shape and
+        <Motion> to the widget under the mouse. Called once per frame (motion compression).
+        """
         if self._kt_ende:
             return
         x, y = self._kt_maus_tk()
@@ -1984,6 +2071,10 @@ class Tk(Wm, Misc, GeometrieMixin):
             self._kt_hover(None, x, y)
 
     def _kt_bewegung_zug(self):
+        """Handles the latest mouse position while a button is held: moves a Toplevel dragged by
+        its title bar, otherwise sends <B1-Motion> etc. to the widget the button was pressed
+        on (implicit grab).
+        """
         x, y = self._kt_maus_tk()
         if self._kt_titel_drag is not None:
             top, dx, dy = self._kt_titel_drag
@@ -2000,6 +2091,13 @@ class Tk(Wm, Misc, GeometrieMixin):
         self._kt_maus_ereignis(w, "Motion", x, y)
 
     def _kt_k_maus_runter(self, _win, _x, _y, button, _mods):
+        """Kivy: mouse button pressed. Wheel "buttons" become <MouseWheel> (delta +/-120 like
+        Windows Tk, sideways with Shift) for the widget under the mouse. Otherwise: the own
+        title bar gets its clicks; with a pop-up open a click outside only closes it (like
+        Tk's grab); a dialog's title bar starts moving it or closes it; the clicked dialog is
+        raised; double / triple clicks are counted; <ButtonPress-n> goes to the widget under
+        the mouse, which keeps getting the mouse until the button is released.
+        """
         self._kt_bewegung_senden()              # pending move first (event order as under Tk)
         x, y = self._kt_maus_tk()
         if button in ("scrollup", "scrolldown", "scrollleft", "scrollright"):
@@ -2062,6 +2160,9 @@ class Tk(Wm, Misc, GeometrieMixin):
         pass
 
     def _kt_k_maus_hoch(self, _win, _x, _y, button, _mods):
+        """Kivy: mouse button released: ends a title bar drag or sends <ButtonRelease-n> to the
+        widget the button was pressed on (even if the mouse is elsewhere now, as under Tk).
+        """
         self._kt_bewegung_senden()
         if button.startswith("scroll"):
             return
@@ -2102,6 +2203,12 @@ class Tk(Wm, Misc, GeometrieMixin):
         return self
 
     def _kt_k_taste_runter(self, _win, key, scancode, codepoint, modifiers):
+        """Kivy: key pressed. Turns Kivy's key code into Tk's keysym and character (Ctrl+letter
+        gives the control character, as under Tk) and sends <KeyPress> to the focus widget.
+        If no binding stopped it, Tab / Shift+Tab move the focus to the next / previous
+        widget (except in a Text) and the typed character may follow as text input
+        (_kt_k_text).
+        """
         self._kt_bewegung_senden()
         name = Window._system_keyboard.keycode_to_string(key) if hasattr(Window, "_system_keyboard") else ""
         shift = "shift" in modifiers
@@ -2109,8 +2216,7 @@ class Tk(Wm, Misc, GeometrieMixin):
         state = self._kt_modifier_state()
         if state & EV.CONTROL and char and len(char) == 1 and char.isalpha():
             char = chr(ord(char.lower()) - 96)
-        if keysym == "Tab" and shift:
-            keysym = "ISO_Left_Tab" if False else "Tab"
+        # Shift+Tab stays keysym "Tab" with Shift in event.state, as under Tk on Windows
         w = self._kt_tasten_ziel()
         ev = Event("KeyPress", w, keysym=keysym, char=char, keycode=key, state=state,
                    x_root=self._kt_maus_tk()[0], y_root=self._kt_maus_tk()[1])
@@ -2143,6 +2249,9 @@ class Tk(Wm, Misc, GeometrieMixin):
 
     # -- focus
     def _kt_fokus_setzen(self, w):
+        """Moves the keyboard focus to `w`: <FocusOut> to the old focus widget, <FocusIn> to the
+        new one, and the focus state for their colours.
+        """
         alt = self._kt_fokus
         if alt is w:
             return
@@ -2171,6 +2280,9 @@ class Tk(Wm, Misc, GeometrieMixin):
                 return
 
     def _kt_fokus_nachbar(self, w, richtung):
+        """Next / previous widget for Tab / Shift+Tab in the same Toplevel: the widgets that
+        take focus, in creation order like Tk's tk_focusNext.
+        """
         top = w.winfo_toplevel()
         liste = []
 
@@ -2201,6 +2313,10 @@ class Tk(Wm, Misc, GeometrieMixin):
             f._kt_ereignis("FocusIn")
 
     def _kt_k_groesse(self, _win, w, h, erzwingen=False):
+        """Kivy: the window size changed. The Tk size of the main window is the window minus the
+        own title bar and minus the frame Windows puts off screen when maximised (_kt_rand);
+        a new layout is planned.
+        """
         if (int(w), int(h)) == (self._kt_fenster_w, self._kt_fenster_h) and not self._kt_layout_offen \
                 and not erzwingen:
             return
@@ -2345,6 +2461,10 @@ class Toplevel(Wm, BaseWidget):
         return self._kt_x + self._kt_client_dx(), self._kt_y + self._kt_client_dy()
 
     def _kt_toplevel_anordnen(self):
+        """Size and position of a Toplevel inside the main window: requested size or the one set
+        with geometry(), within minsize / maxsize; on first show it is centred horizontally
+        and placed in the upper third unless a position was set.
+        """
         if not self._kt_sichtbar:
             return
         rw, rh = self._kt_req()
@@ -2375,6 +2495,9 @@ class Toplevel(Wm, BaseWidget):
         return self._kt_x, _fh() - self._kt_y - self._kt_aussen_h()
 
     def _kt_darstellen(self):
+        """Draws a Toplevel (dialog) inside the main window: shadow, border, the own title bar
+        with title and close button (not for overrideredirect pop-ups), and its background.
+        """
         if not self._kt_sichtbar:
             return
         kx, ky = self._kt_kivy_pos()
@@ -2501,6 +2624,9 @@ class _TextBild:
         return b if b else None
 
     def _kt_inhalt_groesse(self):
+        """Size of the text and / or image of a label or button (font, lines, wraplength,
+        compound) - the base of its requested size.
+        """
         font = self._kt_o.get("font")
         zeilen = self._kt_zeilen()
         lh = fontmod.zeilen_hoehe(font)
@@ -2657,6 +2783,9 @@ class Button(Label):
         self._kt_neu_zeichnen()
 
     def _kt_malen(self, kx, ky):
+        """Draws a tk.Button: active background on hover, sunken while pressed, then text /
+        image.
+        """
         aktiv = "active" in self._kt_zustand and "disabled" not in self._kt_zustand
         bg = self._kt_farbe_opt("activebackground" if aktiv else "background")
         relief = SUNKEN if self._kt_zustand & {"pressed"} else self._kt_o.get("relief", RAISED)
@@ -2773,6 +2902,10 @@ class Menu(BaseWidget):
 
     # -- entries
     def _kt_neu(self, typ, cnf, kw, index=None):
+        """Adds a menu entry (add_command, add_checkbutton, add_cascade, add_separator ...) with
+        Tk's default options; a checkbutton without variable gets its own BooleanVar as in
+        Tk.
+        """
         if cnf:
             kw = {**cnf, **kw}
         e = {"type": typ, "label": "", "accelerator": "", "state": NORMAL, "command": None,
@@ -2829,6 +2962,10 @@ class Menu(BaseWidget):
         self.insert(index, "checkbutton", cnf, **kw)
 
     def _kt_idx(self, index):
+        """Menu index (number, "end" / "last", or a label - exact, else the first label starting
+        with it) -> entry number; "active" and "@y" give None here. Unknown labels raise
+        TclError like Tk.
+        """
         n = len(self._kt_eintraege)
         if index in (END, "last"):
             return n - 1 if n else None
@@ -2874,6 +3011,7 @@ class Menu(BaseWidget):
         return "" if v is None else v
 
     def entryconfigure(self, index, cnf=None, **kw):
+        """entryconfigure(index, **options): reads or changes the options of a menu entry."""
         if cnf:
             kw = {**cnf, **kw}
         i = self._kt_idx(index)
@@ -2898,6 +3036,9 @@ class Menu(BaseWidget):
         return self._kt_eintraege[i]["type"]
 
     def invoke(self, index):
+        """invoke(index): runs a menu entry like a click - toggles the variable of a
+        checkbutton, sets the one of a radiobutton, then calls the command.
+        """
         i = self._kt_idx(index)
         if i is None:
             return

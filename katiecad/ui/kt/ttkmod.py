@@ -26,6 +26,10 @@ _MAP = {}       # style -> {option: [(states, value)]}
 
 
 def _clam():
+    """Default settings and state maps of Tk's "clam" theme (colours, borders, paddings per
+    style), the look the program's ttk styles build on. Called at start and by
+    theme_use("clam").
+    """
     _KONF.clear()
     _MAP.clear()
     d, dr, ds, li, fr = "#cfcdc8", "#bab5ab", "#9e9a91", "#eeebe7", "#dcdad5"
@@ -276,6 +280,10 @@ class Widget(T.BaseWidget):
 
     # -- ttk state API
     def state(self, statespec=None):
+        """state(): without argument the current states (as Tk returns them); with a state spec
+        like ("disabled",) or ("!disabled",) sets / clears them and returns the previous ones
+        so they can be restored. The widget is redrawn with the colours of the new state.
+        """
         if statespec is None:
             return tuple(sorted(self._kt_zustand - {"hover"}))
         alt = []
@@ -355,6 +363,7 @@ class Labelframe(Frame):
         return l + bw, t + max(bw, th + 2), r + bw, b + bw
 
     def _kt_malen(self, kx, ky):
+        """Draws a labelframe: border line with a gap for the label text at the top left."""
         bg = self._kt_sf("background")
         _rect(self._kt_g_hinten, bg, kx, ky, self._kt_w, self._kt_h)
         font = self._kt_s("font", "TkDefaultFont")
@@ -411,6 +420,10 @@ class Label(T._TextBild, Widget):
         return cw + l + r, ch + t + b
 
     def _kt_malen(self, kx, ky):
+        """Draws a ttk label: background, then text and / or image (via _kt_zeichne_inhalt) with
+        the font and anchor of the widget or its style; colours from the widget options or
+        the style for the current state.
+        """
         bg = _f(self._kt_o.get("background")) or self._kt_sf("background")
         _rect(self._kt_g_hinten, bg, kx, ky, self._kt_w, self._kt_h)
         fg = (None if "disabled" in self._kt_zustand else _f(self._kt_o.get("foreground"))) or \
@@ -568,6 +581,10 @@ class _Auswahl(Button):
         pass
 
     def _kt_malen(self, kx, ky):
+        """Draws a check button / radio button: as Toolbutton like a flat button (relief from
+        the style for the current state, e.g. pressed while selected), otherwise the
+        indicator followed by the text.
+        """
         if self._kt_toolbutton():
             relief = self._kt_s("relief", "flat")
             self._kt_knopf_malen(kx, ky, relief)
@@ -639,6 +656,9 @@ class Checkbutton(_Auswahl):
         return c() if c else None
 
     def _kt_indikator(self, g, x, y):
+        """The check box of a Checkbutton in clam style (11x11 with border and a tick when
+        selected).
+        """
         ib = self._kt_sf("indicatorbackground", (1, 1, 1, 1))
         _rect(g, ib, x, y, 11, 11)
         rand = _f("#9e9a91")
@@ -797,6 +817,7 @@ class Combobox(Entry):
         return T._int(self._kt_s("arrowsize", 15)) + 2
 
     def _kt_malen(self, kx, ky):
+        """Draws a combobox: the entry field plus the arrow button on the right."""
         a = self._kt_rechts()
         g = self._kt_g_hinten
         self._kt_feld_malen(kx, ky, self._kt_w)
@@ -865,6 +886,7 @@ class Spinbox(Entry):
         return 14
 
     def _kt_malen(self, kx, ky):
+        """Draws a spinbox: the entry field plus the up / down arrows on the right."""
         g = self._kt_g_hinten
         self._kt_feld_malen(kx, ky, self._kt_w)
         a = self._kt_rechts()
@@ -879,6 +901,10 @@ class Spinbox(Entry):
         self._kt_text_inhalt(kx, ky)
 
     def _kt_schritt(self, richtung):
+        """Arrow of a spinbox: the next / previous entry of `values`, or the value +/-
+        increment, kept within from_ .. to and formatted with `format`. Then runs the command
+        and sends <<Increment>> / <<Decrement>>.
+        """
         if "disabled" in self._kt_zustand:
             return
         werte = self._kt_o.get("values")
@@ -955,6 +981,9 @@ class Scrollbar(Widget):
         return p0, p1, lang
 
     def _kt_malen(self, kx, ky):
+        """Draws a scroll bar: trough, the two arrow buttons and the slider for the visible part
+        (_kt_anteil).
+        """
         g = self._kt_g_hinten
         vert = self._kt_o.get("orient") == T.VERTICAL
         trog = self._kt_sf("troughcolor", (0.73, 0.71, 0.67, 1))
@@ -993,6 +1022,9 @@ class Scrollbar(Widget):
 
     # -- mouse (from klassen.py)
     def _kt_klick(self, ev):
+        """Click on a scroll bar: arrows scroll one unit, the trough one page, the slider starts
+        dragging - all through the scroll command (e.g. canvas.yview) like in Tk.
+        """
         vert = self._kt_o.get("orient") == T.VERTICAL
         p = ev.y if vert else ev.x
         lang_ges = self._kt_h if vert else self._kt_w
@@ -1086,6 +1118,10 @@ class Treeview(Widget):
 
     # -- items
     def insert(self, parent, index, iid=None, **kw):
+        """insert(parent, index, iid=None, **options): adds an item (text, values, image, open,
+        tags) to the tree; without iid one is generated as in Tk (I001, I002 ...). Returns
+        the iid.
+        """
         if iid is None:
             self._kt_n += 1
             iid = f"I{self._kt_n:03X}"
@@ -1108,6 +1144,7 @@ class Treeview(Widget):
         return iid
 
     def delete(self, *items):
+        """delete(*items): removes the items with all their children."""
         for it in _flach_items(items):
             it = str(it)
             if it not in self._kt_knoten or it == "":
@@ -1171,6 +1208,7 @@ class Treeview(Widget):
     reattach = move
 
     def item(self, item, option=None, **kw):
+        """item(iid, option=None, **options): reads one option, all options, or changes them."""
         k = self._kt_knoten.get(str(item))
         if k is None:
             raise T.TclError(f'Item {item} not found')
@@ -1191,6 +1229,9 @@ class Treeview(Widget):
         self._kt_geaendert()
 
     def set(self, item, column=None, value=None):
+        """set(iid, column=None, value=None): value of a column of an item (all columns as dict
+        without column), or sets it.
+        """
         k = self._kt_knoten[str(item)]
         namen = self._kt_spalten_namen()
         if column is None:
@@ -1211,6 +1252,7 @@ class Treeview(Widget):
         self._kt_neu_zeichnen()
 
     def see(self, item):
+        """see(iid): opens the parents of the item and scrolls so it is visible."""
         sichtbar = self._kt_sichtbare()
         item = str(item)
         e = self._kt_knoten.get(item, {}).get("eltern")
@@ -1266,6 +1308,9 @@ class Treeview(Widget):
 
     # -- columns / headings
     def column(self, column, option=None, **kw):
+        """column(column, option=None, **options): width, minwidth, stretch and anchor of a
+        column - read or set.
+        """
         c = self._kt_spalte_name(column)
         d = self._kt_spalten.setdefault(c, {"width": 200, "minwidth": 20, "stretch": True, "anchor": "w"})
         if option is not None:
@@ -1436,6 +1481,9 @@ class Treeview(Widget):
 
     # -- drawing
     def _kt_malen(self, kx, ky):
+        """Draws the tree view: headings, visible rows (indentation, open / closed markers and
+        images in the tree column, colours from the item tags), and the selection.
+        """
         g, gi = self._kt_g_hinten, self._kt_g_inhalt
         z = self._kt_zustand - {"selected"}
         bg = _f(nachschlagen(self._kt_stil(), "fieldbackground", frozenset(z))) or \
@@ -1530,6 +1578,10 @@ class Treeview(Widget):
                 x += w
 
     def _kt_klick(self, ev):
+        """Click in the tree view: on a heading runs its command; on the open / close marker
+        toggles the item (<<TreeviewOpen>> / <<TreeviewClose>>); otherwise selects according
+        to selectmode (extended: Ctrl toggles, Shift selects a range).
+        """
         self.focus_set()
         kh = self._kt_kopf_h()
         if ev.y < kh:
@@ -1622,6 +1674,9 @@ class Notebook(Widget):
         super().__init__(master, **kw)
 
     def add(self, child, **kw):
+        """add(child, **options): adds a page (or changes the options of an existing one); the
+        first page becomes the selected one.
+        """
         for w, o in self._kt_tabs:
             if w is child:
                 o.update(kw)
@@ -1671,6 +1726,9 @@ class Notebook(Widget):
         return self.nametowidget(s)
 
     def select(self, tab_id=None):
+        """select(tab_id=None): without argument the selected page, otherwise shows that page
+        and sends <<NotebookTabChanged>>.
+        """
         if tab_id is None:
             return str(self._kt_aktiv) if self._kt_aktiv else ""
         w = self._kt_tab_widget(tab_id)
@@ -1712,6 +1770,9 @@ class Notebook(Widget):
         return [fontmod.text_breite(str(o.get("text", "")), f) + 14 for _w, o in self._kt_tabs]
 
     def _kt_req(self):
+        """Requested size of the notebook: the largest page plus the height of the tab row
+        (cached per layout pass).
+        """
         r = self._kt_root_
         if self._kt_req_pass == r._kt_pass:
             return self._kt_req_wert
@@ -1736,6 +1797,9 @@ class Notebook(Widget):
         T.Misc._kt_anordnen(self)
 
     def _kt_malen(self, kx, ky):
+        """Draws the notebook: the tab row (selected tab raised, joined to the page) and the
+        border of the page area.
+        """
         g = self._kt_g_hinten
         bg = self._kt_sf("background")
         _rect(g, bg, kx, ky, self._kt_w, self._kt_h)

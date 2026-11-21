@@ -96,6 +96,9 @@ class EditMixin:
 
     # -- Tk API
     def _kt_index(self, i):
+        """Entry index ("end", "insert", "anchor", "sel.first", "sel.last", "@x" or a number) ->
+        character position, as Tk's entry index command.
+        """
         t = self._kt_wert()
         if i in (T.END, "end"):
             return len(t)
@@ -214,6 +217,10 @@ class EditMixin:
         return self._kt_innen_text()[0]
 
     def _kt_text_malen(self, g, kx, ky, fg, sel_bg, sel_fg, aktiv):
+        """Draws the text of a one-line field: selection background, text (shown in the colours
+        of the selection where selected) and the blinking cursor when the field has the
+        focus. The text is shifted sideways so the cursor stays visible in a narrow field.
+        """
         l, t, r, b = self._kt_innen_text()
         bw = self._kt_w - l - r
         bh = self._kt_h - t - b
@@ -263,6 +270,10 @@ class EditMixin:
 
     # -- editing (called by the class bindings)
     def _kt_text_eingabe(self, s):
+        """Typed text: replaces the selection or is inserted at the cursor (line breaks
+        removed), unless the field is readonly / disabled or validatecommand rejects the new
+        value.
+        """
         if not self._kt_bearbeitbar() or not s:
             return
         s = s.replace("\r", "").replace("\n", "")
@@ -282,6 +293,10 @@ class EditMixin:
         self._kt_wert_setzen(neu)
 
     def _kt_pruefen(self, neu, s, idx, aktion):
+        """Runs validatecommand like Tk for the change `aktion` (insert / delete): the Tk
+        substitutions (%P new value, %S inserted text, %i index, %d action ...) are passed in
+        the order registered. True if the change may happen.
+        """
         vc = self._kt_o.get("validatecommand")
         modus = self._kt_o.get("validate", "none")
         if not vc or modus in ("none", None, ""):
@@ -304,6 +319,10 @@ class EditMixin:
             return True
 
     def _kt_taste(self, ev):
+        """Key in a one-line field: cursor movement (with Shift: selection, with Ctrl: word by
+        word), Home / End, delete keys, Ctrl+A / C / X / V. Other keys are left to the text
+        input (_kt_text_eingabe).
+        """
         ks = ev.keysym
         t = self._kt_wert()
         shift = bool(ev.state & EV.SHIFT)
@@ -369,6 +388,9 @@ class EditMixin:
 
     @staticmethod
     def _kt_wortgrenze(t, i, r):
+        """Position of the next word boundary from `i` in direction `r` (-1 left, +1 right) -
+        for Ctrl+arrow and double click.
+        """
         if r < 0:
             i -= 1
             while i > 0 and not t[i - 1].isalnum():
@@ -397,6 +419,9 @@ class EditMixin:
         self._kt_wert_setzen(t[:a] + t[b:])
 
     def _kt_maus_runter(self, ev):
+        """Mouse press in a one-line field: places the cursor; a double click selects the word,
+        a triple click everything.
+        """
         self.focus_set()
         i = self._kt_pos_bei(ev.x)
         if ev._kt_klicks >= 3:
@@ -505,13 +530,15 @@ class Text(T.BaseWidget):
 
     # -- indices "line.char", "end", "insert", modifiers "+Nc", "-1c", "lineend"
     def _kt_idx(self, index):
+        """Text index ("line.char", "end", "insert", "sel.first", "1.0 lineend", "insert+3c"
+        ...) -> position in the content string. Only the forms KatieCAD uses are supported;
+        offsets in lines are ignored.
+        """
         s = self._kt_inhalt
         if isinstance(index, (int, float)) and not isinstance(index, bool):
             index = str(index)
         index = str(index).strip()
-        mods = []
-        for trenner in ("+", "-"):
-            pass
+        # split "base +/- modifiers": "insert+3c" -> "insert", "+3c"; "1.0 lineend" -> "1.0", " lineend"
         basis = index
         rest = ""
         for i, ch in enumerate(index):
@@ -569,8 +596,7 @@ class Text(T.BaseWidget):
                     continue
                 if t.endswith(("c", "chars")) or t[-1].isdigit():
                     pos += zahl
-                elif "l" in t:
-                    pos = pos
+                # offsets in lines ("+1l", "+2 lines") are not used by KatieCAD: ignored
         return max(0, min(len(s) + 1, pos))
 
     def _kt_pos_text(self, pos):
@@ -620,6 +646,7 @@ class Text(T.BaseWidget):
             pass
 
     def see(self, index):
+        """see(index): scrolls so the line of `index` is visible."""
         pos = min(self._kt_idx(index), len(self._kt_inhalt))
         zeilen = self._kt_anzeige_zeilen()
         n = 0
@@ -736,6 +763,9 @@ class Text(T.BaseWidget):
                 pass
 
     def yview(self, *args):
+        """yview(): visible part as fractions; "moveto" a fraction or "scroll" n units / pages
+        (one unit = one line).
+        """
         n = max(1, len(self._kt_anzeige_zeilen()))
         s = self._kt_sicht_zeilen()
         if not args:
@@ -763,6 +793,9 @@ class Text(T.BaseWidget):
         self._kt_scroll_melden()
 
     def _kt_malen(self, kx, ky):
+        """Draws the multi-line text: visible lines from the first shown one (_kt_oben),
+        selection background, the text and the cursor when focused.
+        """
         disabled = self._kt_o.get("state") == "disabled"
         self._kt_hintergrund(kx, ky)
         g = self._kt_g_inhalt
@@ -798,6 +831,9 @@ class Text(T.BaseWidget):
                     g.add(Rectangle(pos=(kx + l + cx, ky_z), size=(1, lh)))
 
     def _kt_pos_bei(self, x, y):
+        """Position in the content for the point (x, y) inside the widget - where a click places
+        the cursor.
+        """
         font = self._kt_o.get("font")
         l, t, r, b = self._kt_innen_text()
         lh = max(1, fontmod.zeilen_hoehe(font))
@@ -816,6 +852,9 @@ class Text(T.BaseWidget):
         return self._kt_o.get("state") != "disabled"
 
     def _kt_text_eingabe(self, s):
+        """Typed text in the multi-line field: replaces the selection or is inserted at the
+        cursor.
+        """
         if not self._kt_bearbeitbar() or not s:
             return
         if self._kt_sel:
@@ -830,6 +869,9 @@ class Text(T.BaseWidget):
         self._kt_geaendert()
 
     def _kt_taste(self, ev):
+        """Key in the multi-line field: cursor movement over lines and characters (with Shift:
+        selection), Home / End, Return (new line), Tab, delete keys, Ctrl+A / C / X / V.
+        """
         ks = ev.keysym
         s = self._kt_inhalt
         ctrl = bool(ev.state & EV.CONTROL)
@@ -915,6 +957,9 @@ class Text(T.BaseWidget):
         self._kt_geaendert()
 
     def _kt_maus_runter(self, ev):
+        """Mouse press in the multi-line field: places the cursor; a double click selects the
+        word.
+        """
         self.focus_set()
         i = self._kt_pos_bei(ev.x, ev.y)
         self._kt_cur = i
@@ -1143,6 +1188,9 @@ class Listbox(T.BaseWidget):
         self._kt_scroll_melden()
 
     def _kt_malen(self, kx, ky):
+        """Draws the list: the visible entries from the top one, selected entries with the
+        selection colours.
+        """
         self._kt_hintergrund(kx, ky)
         g = self._kt_g_inhalt
         font = self._kt_o.get("font")
@@ -1171,6 +1219,10 @@ class Listbox(T.BaseWidget):
                                       (kx + l + 2, kyz + 1), (tw, tex.size[1]))
 
     def _kt_klick(self, ev):
+        """Click in the list: selects the entry under the mouse according to selectmode (browse
+        / single: only it, multiple: toggles, extended: with Ctrl toggles, with Shift a
+        range) and sends <<ListboxSelect>>.
+        """
         if not self._kt_eintraege:
             return
         self.focus_set()

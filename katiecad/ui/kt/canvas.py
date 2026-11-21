@@ -2,10 +2,15 @@
 """
 katiecad/ui/kt/canvas.py - tk.Canvas on Kivy/OpenGL (BSD-3-Clause).
 
-Items keep Tk's model (ids, tags, stacking order, coordinates with y downwards). Every
-item owns one Kivy InstructionGroup that is built once and only rebuilt when the item
-changes; all groups sit under one flip transform, so they are drawn in Tk coordinates
-directly by the GPU. Scrolling only changes that transform.
+Items keep Tk's model (ids, tags, stacking order, coordinates with y downwards). Drawing
+instructions are only built when the next frame is drawn, and not item by item: the items
+are kept in blocks of _BLOCK in stacking order, and consecutive simple lines, rectangles
+and filled ovals of one colour in a block are merged into one Kivy Mesh (built with NumPy),
+so thousands of items cost only a few GPU calls. A change only rebuilds its block. Every
+frame stays complete and exact - nothing is left out or simplified while zooming.
+
+All blocks sit under one flip transform, so they are drawn in Tk coordinates directly by
+the GPU. Scrolling only changes that transform. See docs/KIVY_SCHICHT.md.
 """
 
 import math
@@ -38,6 +43,9 @@ _FARBEN = {}
 
 
 def _farbe(v):
+    """Tk colour (name or #rgb) -> RGBA tuple for Kivy, None for "" / None (no fill / no
+    outline). Cached, because the same few colours are used by thousands of items.
+    """
     try:
         return _FARBEN[v]
     except (KeyError, TypeError):
@@ -70,8 +78,10 @@ class _Item:
         self.g = InstructionGroup()
         self.bbox = None
         self.blk = None          # the block (batch of items) it is drawn in
-        self.lk = None           # simple line: (colour, width) -> drawn in a shared mesh
-        self.lp = None           # its points
+        # run key: items with the same key that follow each other share one mesh of the block
+        # (colour, width, round caps); width -1.0 = filled oval, -2.0 = rectangle
+        self.lk = None
+        self.lp = None           # its points (line) or box (oval, rectangle)
         self.neu = True          # instructions not built yet (done when the frame is drawn)
 
 
@@ -468,6 +478,12 @@ def _harte_stellen(liste):
 
 
 def _block_bauen(b):
+    """Rebuilds the drawing instructions of one block. Consecutive geometry items with the same
+    run key (colour, width ...) become one mesh (_lauf_meshes). Other items (texts, images,
+    irregular shapes) are drawn after the geometry of the block unless geometry that comes
+    later overlaps them (_harte_stellen) - only then the geometry run is closed at their
+    place, so the stacking order stays exactly that of Tk.
+    """
     g = b.g
     g.clear()
     liste = list(b.items.values())
@@ -554,6 +570,9 @@ def _glatt(pts, geschlossen, schritte=12):
 
 
 def _dash_muster(dash, breite):
+    """Tk dash option -> list of on/off lengths in pixels (".", "-", "_", "," as in Tk or a
+    sequence of numbers); None for a solid line.
+    """
     if not dash:
         return None
     if isinstance(dash, str):
@@ -629,6 +648,10 @@ _JOIN = {"round": "round", "bevel": "bevel", "miter": "miter"}
 
 
 def _linie(g, pts, farbe, breite, dash=None, cap="butt", join="round", zu=False):
+    """Draws a polyline item on its own (not merged into a block mesh): dashed (thick dashes as
+    own triangles, _dicke_striche) or solid with Kivy's Line, caps and joins mapped to
+    Kivy's; closed if `zu`.
+    """
     if len(pts) < 4:
         return
     g.add(Color(*farbe))
@@ -651,6 +674,9 @@ def _linie(g, pts, farbe, breite, dash=None, cap="butt", join="round", zu=False)
 
 
 def _fuellen(g, pts, farbe, konvex=False):
+    """Fills a polygon: convex shapes as triangle fan, others through Kivy's tesselator (odd
+    winding rule like Tk).
+    """
     n = len(pts) // 2
     if n < 3:
         return
@@ -686,6 +712,9 @@ def _gespiegelt(tex):
 
 
 def _konvex(pts):
+    """True if the polygon (flat list x0, y0, x1, y1 ...) is convex - then it can be filled as a
+    simple triangle fan.
+    """
     n = len(pts) // 2
     if n <= 3:
         return True
@@ -758,6 +787,11 @@ class Canvas(T.BaseWidget):
 
     # ---------------------------------------------------- drawing
     def _kt_darstellen(self):
+        """Shows the canvas for this frame: moves the Kivy widget to its place, sets the
+        transform that turns Tk canvas coordinates (y downwards, scroll origin) into window
+        coordinates - shifted by half a pixel so 1-pixel lines hit pixel centres - builds the
+        changed blocks (_kt_flush) and redraws background and border when needed.
+        """
         if not self._kt_sichtbar or self._kt_zerstoert:
             return
         kx, ky = self._kt_kivy_pos()
@@ -823,6 +857,12 @@ class Canvas(T.BaseWidget):
         self._kt_dirty(it.blk)
 
     def _kt_bauen(self, it):
+        """Builds the Kivy instructions of one item from its type, coordinates and options.
+        Simple lines, rectangles and filled ovals only get a run key (`lk`) and points
+        (`lp`): they are drawn together with their neighbours in a shared mesh of the block.
+        Everything else draws into the item's own InstructionGroup. Also computes the
+        bounding box.
+        """
         it.neu = False
         g = it.g
         g.clear()
@@ -955,6 +995,10 @@ class Canvas(T.BaseWidget):
             it.bbox = (x, y, x + bw, y + bh)
 
     def _kt_text_bauen(self, it):
+        """Builds a text item: wraps it at `width`, measures it, places it by anchor and justify
+        (also rotated by `angle`) and draws it with fontmod.text_zeichnen (GDI / ClearType on
+        Windows).
+        """
         o, g, xy = it.o, it.g, it.xy
         text = str(o.get("text", ""))
         if not text or len(xy) < 2:
@@ -1007,6 +1051,10 @@ class Canvas(T.BaseWidget):
 
     # ---------------------------------------------------- item creation
     def _kt_neu(self, typ, args, kw):
+        """Shared code of all create_* methods: reads coordinates, tags and options, gives the
+        item the next id, puts it on top of the stacking order and into the last block.
+        Nothing is drawn yet - that happens at the next frame.
+        """
         if args and isinstance(args[-1], dict):
             kw = {**args[-1], **kw}
             args = args[:-1]
@@ -1071,6 +1119,9 @@ class Canvas(T.BaseWidget):
             self._kt_layout_planen()
 
     def _kt_anordnen(self):
+        """Lays out the canvas and the widgets embedded with create_window (they are placed at
+        their item's position and anchor and hidden with state=hidden).
+        """
         T.Misc._kt_anordnen(self)
         for i in self._kt_ordnung:
             it = self._kt_items[i]
@@ -1190,6 +1241,10 @@ class Canvas(T.BaseWidget):
         return None
 
     def _kt_item_bbox(self, it):
+        """Bounding box of an item in canvas coordinates (with half the line width), as bbox()
+        and find_overlapping() need it. Texts and images are built first, their size is only
+        known then.
+        """
         if it.neu and it.typ in ("text", "image"):
             self._kt_bauen(it)                  # their size is only known once built
         if it.bbox is not None:
@@ -1227,6 +1282,9 @@ class Canvas(T.BaseWidget):
 
     # ---------------------------------------------------- item changes
     def delete(self, *args):
+        """delete(tagOrId ...): removes the items, their tags and embedded windows. Blocks that
+        became empty are dropped, the others are rebuilt at the next frame.
+        """
         weg = []
         for a in args:
             weg.extend(self._kt_ids(a))
@@ -1292,6 +1350,9 @@ class Canvas(T.BaseWidget):
         self._kt_flush_trigger()
 
     def coords(self, tagOrId, *args):
+        """coords(tagOrId): the coordinates of the first matching item; with arguments it moves
+        that item (rebuilt at the next frame).
+        """
         it = self._kt_erstes(tagOrId)
         if it is None:
             return []
@@ -1306,6 +1367,10 @@ class Canvas(T.BaseWidget):
         return None
 
     def itemconfigure(self, tagOrId, cnf=None, **kw):
+        """itemconfigure(tagOrId, **options): without options returns the options of the first
+        item (in Tk's tuple form); otherwise changes them for all matching items, including a
+        new tag list.
+        """
         if cnf:
             kw = {**cnf, **kw}
         ids = self._kt_ids(tagOrId)
@@ -1384,6 +1449,9 @@ class Canvas(T.BaseWidget):
         self.addtag_withtag(newtag, "all")
 
     def addtag(self, newtag, how, *args):
+        """addtag(newtag, how, ...): Tk's general form for withtag, all, overlapping, enclosed
+        and closest.
+        """
         if how == "withtag":
             self.addtag_withtag(newtag, args[0])
         elif how == "all":
@@ -1416,6 +1484,9 @@ class Canvas(T.BaseWidget):
 
     # ---------------------------------------------------- stacking
     def tag_raise(self, tagOrId, aboveThis=None):
+        """tag_raise(tagOrId, aboveThis): moves the items to the top of the stacking order (or
+        just above `aboveThis`), keeping their relative order.
+        """
         ids = self._kt_ids(tagOrId)
         if not ids:
             return
@@ -1437,6 +1508,9 @@ class Canvas(T.BaseWidget):
         self._kt_neu_ordnen()
 
     def tag_lower(self, tagOrId, belowThis=None):
+        """tag_lower(tagOrId, belowThis): moves the items to the bottom of the stacking order
+        (or just below `belowThis`).
+        """
         ids = self._kt_ids(tagOrId)
         if not ids:
             return
@@ -1512,6 +1586,9 @@ class Canvas(T.BaseWidget):
             return None
 
     def _kt_sicht(self, achse):
+        """Visible part along an axis as fractions (first, last) of the scroll region - the
+        value xview() / yview() return and scroll bars use.
+        """
         r = self._kt_region()
         inset = self._kt_innen()[0]
         if achse == "x":
@@ -1526,6 +1603,9 @@ class Canvas(T.BaseWidget):
         return max(0.0, min(1.0, a)), max(0.0, min(1.0, e))
 
     def _kt_setze_org(self, achse, wert):
+        """Sets the scroll origin of an axis; with confine (default) it is kept inside the
+        scroll region like in Tk. Only moves the transform - nothing is rebuilt.
+        """
         r = self._kt_region()
         inset = self._kt_innen()[0]
         if r and _wahr(self._kt_o.get("confine", True)):
@@ -1560,6 +1640,9 @@ class Canvas(T.BaseWidget):
                     pass
 
     def _kt_view(self, achse, args):
+        """xview / yview: without arguments the visible fractions, otherwise "moveto" a fraction
+        or "scroll" n units / pages.
+        """
         if not args:
             return self._kt_sicht(achse)
         r = self._kt_region()
