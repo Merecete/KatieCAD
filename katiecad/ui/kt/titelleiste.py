@@ -318,8 +318,13 @@ class Titelleiste(Widget):
                 else:
                     g.add(Line(rectangle=(cx - 5, cy - 5, 10, 10), width=1))
             else:
-                g.add(Line(points=[cx - 5, cy - 5, cx + 5, cy + 5], width=1))
-                g.add(Line(points=[cx - 5, cy + 5, cx + 5, cy - 5], width=1))
+                # close: both diagonals pixel by pixel (like Windows) - two 1-pixel GL lines
+                # are rasterised differently and the X looks uneven
+                px, py = int(cx) - 5, int(cy) - 5
+                for i in range(11):
+                    g.add(Rectangle(pos=(px + i, py + i), size=(1, 1)))
+                    if i != 5:
+                        g.add(Rectangle(pos=(px + i, py + 10 - i), size=(1, 1)))
 
 
 def einrichten(root):
