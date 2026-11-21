@@ -1,4 +1,0 @@
-ezdwg 0.21.1
-License: MIT
-Author: neka-nat <nekanat.stock@gmail.com>
-Home page: ?
