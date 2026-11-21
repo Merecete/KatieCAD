@@ -1,6 +1,6 @@
 # KatieCAD
 
-**KatieCAD is an open-source electrical CAD for switchgear construction, distribution boards and building installation, built with Python and Tkinter.**
+**KatieCAD is an open-source electrical CAD for switchgear construction, distribution boards and building installation, built with Python and Kivy (OpenGL).**
 
 It covers the complete workflow of an electrical project: draw circuit diagrams across several sheets, connect devices with wires, let cross references and device designations be generated automatically, and produce the documentation (cover sheet, table of contents, device list, terminal plan, cable plan) at the push of a button. At the same time it is a full 2D CAD with simple 3D modelling: you can draw freely without a project, build bodies in 3D, create, save and reuse your own blocks, and print 2D and 3D views on the same sheet.
 
@@ -74,7 +74,10 @@ katiecad
 
 Requirements:
 - **Python 3.10+**
-- `tkinter` (included in standard Python on Windows/macOS; on Linux install `python3-tk`)
+- `tkinter` (included in standard Python on Windows/macOS; on Linux install `python3-tk`) –
+  used for the system file dialogs and as fallback user interface
+- an OpenGL-capable graphics driver for the Kivy user interface (`kivy` is installed by
+  `requirements.txt`)
 
 ```bash
 git clone https://github.com/Merecete/KatieCAD.git
@@ -102,7 +105,9 @@ pip install -r requirements.txt
 python3 main.py
 ```
 
-`requirements.txt` installs `ezdxf` (DXF) and `ezdwg` (DWG) and the other dependencies.
+`requirements.txt` installs `kivy` (user interface), `ezdxf` (DXF), `ezdwg` (DWG) and the
+other dependencies. To start with the old Tkinter interface instead, set `KATIECAD_UI=tk`.
+How the Kivy interface works is described in [docs/KIVY_SCHICHT.md](docs/KIVY_SCHICHT.md).
 
 ## Documentation
 
