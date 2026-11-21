@@ -1,0 +1,91 @@
+# -*- coding: utf-8 -*-
+"""
+katiecad/ui/kt - a Tkinter-compatible layer on Kivy (BSD-3-Clause).
+
+KatieCAD's user interface is written against the tkinter API. `installieren()` puts this
+layer in place of tkinter (sys.modules), so the same program code runs with Kivy/OpenGL
+drawing. The environment variable KATIECAD_UI=tk keeps the original Tk interface.
+
+    python main.py                 -> Kivy
+    KATIECAD_UI=tk python main.py  -> Tk (as before)
+"""
+
+import os
+import sys
+
+_installiert = [False]
+
+
+def gewuenscht():
+    """Which interface: "kivy" (default) or "tk"."""
+    return "tk" if os.environ.get("KATIECAD_UI", "").strip().lower() in ("tk", "tkinter") else "kivy"
+
+
+def oberflaeche_waehlen():
+    """Called by the start scripts before the user interface is imported. Without a usable
+    Kivy (not installed, no OpenGL window) KatieCAD falls back to the Tk interface."""
+    if gewuenscht() == "kivy":
+        try:
+            installieren()
+        except BaseException as e:            # also SystemExit from Kivy's window search
+            print(f"[KatieCAD] Kivy nicht verfuegbar ({e!r}) - Tk-Oberflaeche wird verwendet.")
+
+
+def _kivy_vorbereiten():
+    os.environ.setdefault("KIVY_NO_ARGS", "1")            # the file argument is ours
+    os.environ.setdefault("KIVY_NO_FILELOG", "1")
+    os.environ.setdefault("KIVY_LOG_MODE", "PYTHON")
+    if "KIVY_NO_CONSOLELOG" not in os.environ and not os.environ.get("KATIECAD_KIVY_LOG"):
+        os.environ["KIVY_NO_CONSOLELOG"] = "1"
+    from kivy.config import Config
+    Config.set("input", "mouse", "mouse,disable_multitouch")   # right click: no red dots
+    Config.set("kivy", "exit_on_escape", "0")
+    Config.set("kivy", "desktop", "1")
+    Config.set("graphics", "width", "1500")
+    Config.set("graphics", "height", "950")
+    Config.set("graphics", "resizable", "1")
+    Config.set("graphics", "multisamples", "0")
+    Config.set("graphics", "maxfps", "60")
+    Config.set("kivy", "keyboard_mode", "system")
+    for k in list(Config.options("input")):
+        if k != "mouse":
+            Config.remove_option("input", k)                 # no touch providers (wm_touch ...)
+
+
+def installieren():
+    if _installiert[0]:
+        return
+    # the real tkinter is still needed for the native file and colour dialogs
+    import tkinter as _tk                    # noqa: F401
+    import tkinter.filedialog                # noqa: F401
+    import tkinter.colorchooser              # noqa: F401
+    import tkinter.messagebox                # noqa: F401
+    echte = {k: v for k, v in sys.modules.items() if k == "tkinter" or k.startswith("tkinter.")}
+    _kivy_vorbereiten()
+    from kivy.core.window import Window      # raises/exits without a usable window provider
+    if Window is None:
+        raise RuntimeError("no Kivy window")
+    for k in echte:
+        del sys.modules[k]
+    from katiecad.ui.kt import tkmod, ttkmod, fontmod, dlgmod
+    dlgmod.ECHT.update(echte)
+    module = {"tkinter": tkmod, "tkinter.ttk": ttkmod, "tkinter.font": fontmod,
+              "tkinter.filedialog": dlgmod.filedialog, "tkinter.colorchooser": dlgmod.colorchooser,
+              "tkinter.messagebox": dlgmod.messagebox, "tkinter.simpledialog": dlgmod.simpledialog,
+              "tkinter.constants": tkmod}
+    for name, m in module.items():
+        sys.modules[name] = m
+        if "." in name:
+            setattr(tkmod, name.split(".", 1)[1], m)
+    # PIL.ImageTk -> PhotoImage of this layer
+    try:
+        import PIL
+        import types
+        it = types.ModuleType("PIL.ImageTk")
+        it.PhotoImage = lambda image=None, size=None, **kw: tkmod.PhotoImage._kt_aus_pil(image)
+        it.BitmapImage = it.PhotoImage
+        sys.modules["PIL.ImageTk"] = it
+        PIL.ImageTk = it
+    except ImportError:
+        pass
+    _installiert[0] = True

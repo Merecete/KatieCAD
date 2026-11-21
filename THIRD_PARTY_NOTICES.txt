@@ -33,6 +33,10 @@ Pillow                 MIT-CMU (+ libjpeg-turbo,    https://python-pillow.org
                        libtiff, libwebp, OpenJPEG,
                        Little CMS: permissive)
 pypdf                  BSD-3-Clause                 https://github.com/py-pdf/pypdf
+Kivy                   MIT                          https://github.com/kivy/kivy
+(user interface)       (+ SDL2, SDL2_ttf, SDL2_image: zlib;
+                       GLEW: Modified BSD / MIT;
+                       ANGLE (Windows): BSD-3-Clause)
 PyInstaller            GPL-2.0 with bootloader      https://pyinstaller.org
                        exception (no obligations
                        for the packaged program)

@@ -14,7 +14,7 @@ ICON=KatieCAD.png
 # so symbols, title blocks, report templates and docs are found.
 DOCS=""; [ -d docs ] && DOCS="--add-data docs:docs"
 pyinstaller --noconfirm $DOCS --windowed --name KatieCAD --icon "$ICON" \
-  --collect-submodules katiecad --collect-submodules ezdxf --collect-submodules pypdf --collect-all ezdwg \
+  --additional-hooks-dir installer/hooks --collect-submodules katiecad --collect-submodules ezdxf --collect-submodules pypdf --collect-all ezdwg \
   --add-data "symbols:symbols" --add-data "title_blocks:title_blocks" \
   --add-data "report_templates:report_templates" --add-data "build/licenses:licenses" \
   --add-data "LICENSE:." --add-data "THIRD_PARTY_NOTICES.txt:." \

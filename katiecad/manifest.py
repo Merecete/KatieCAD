@@ -11,6 +11,7 @@ MODULE = {
     "katiecad.ui.dialogs":        "All dialogs + licence window",
     "katiecad.ui.sidebar":        "Side bar: undo/redo + sheet list (resizable)",
     "katiecad.ui.widgets":        "Platform-independent buttons / colour swatches (macOS-safe)",
+    "katiecad.ui.kt":             "Tkinter-compatible layer on Kivy (OpenGL user interface)",
     "katiecad.model.core":        "Data model, geometry, electrical elements, PDF writer",
     "katiecad.model.project":     "Project management (folder, sheet list, *.katieprj)",
     "katiecad.model.titleblock": "Title block templates (title_blocks/), frame geometry, automatic fields",
