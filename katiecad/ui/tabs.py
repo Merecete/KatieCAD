@@ -355,27 +355,84 @@ class TabsMixin(KachelnMixin):
         for w in leiste.winfo_children():
             w.destroy()
         schrift = ("Segoe UI", 9)
+        self._tab_rahmen = []                  # (frame, document) in the order shown
         for i in range(len(self._dokumente)):
+            dok = self._dokumente[i]
             aktiv = i == self._dok_aktiv
             bg = FARBEN["bg_mittel"] if aktiv else FARBEN["bg_dunkel"]
             fg = FARBEN["text_hell"] if aktiv else FARBEN["text_dim"]
             tab = tk.Frame(leiste, bg=bg, highlightthickness=1,
                            highlightbackground=FARBEN["cyan"] if aktiv else FARBEN["rand"])
             tab.pack(side=tk.LEFT, padx=(4 if i == 0 else 0, 2), pady=(4, 0))
+            self._tab_rahmen.append((tab, dok))
             text = tk.Label(tab, text=self._tab_titel(i), bg=bg, fg=fg, font=schrift,
                             padx=10, pady=3, cursor="hand2")
             text.pack(side=tk.LEFT)
             zu = tk.Label(tab, text="✕", bg=bg, fg=fg, font=schrift, padx=6, pady=3,
                           cursor="hand2")
             zu.pack(side=tk.LEFT)
+            # bound to the document, not the position: the tabs can be dragged to another place
+            nr = self._dokumente.index
             for w in (tab, text):
-                w.bind("<Button-1>", lambda e, i=i: self.tab_aktivieren(i))
-                w.bind("<Button-2>", lambda e, i=i: self.tab_schliessen(i))
-                w.bind("<Button-3>", lambda e, i=i: self._tab_kontextmenue(e, i))
-            zu.bind("<Button-1>", lambda e, i=i: self.tab_schliessen(i))
+                w.bind("<Button-1>", lambda e, d=dok: self._tab_zug_start(e, d))
+                w.bind("<B1-Motion>", lambda e, d=dok: self._tab_zug(e, d))
+                w.bind("<ButtonRelease-1>", lambda e, d=dok: self._tab_zug_ende(e, d))
+                w.bind("<Button-2>", lambda e, d=dok: self.tab_schliessen(nr(d)))
+                w.bind("<Button-3>", lambda e, d=dok: self._tab_kontextmenue(e, nr(d)))
+            zu.bind("<Button-1>", lambda e, d=dok: self.tab_schliessen(nr(d)))
             zu.bind("<Enter>", lambda e, w=zu: w.config(fg=FARBEN["rot"]))
             zu.bind("<Leave>", lambda e, w=zu, f=fg: w.config(fg=f))
         self._kacheln_koepfe()
+
+    # ---------------------------------------------------- dragging a tab to another place
+    def _tab_zug_start(self, e, dok):
+        self._tab_zug_daten = {"x": e.x_root, "bewegt": False}
+
+    def _tab_zug(self, e, dok):
+        """Moves the dragged tab while the mouse moves (the tab widgets are only re-packed,
+        not built anew: the dragged one keeps the mouse)."""
+        z = getattr(self, "_tab_zug_daten", None)
+        if z is None or dok not in self._dokumente:
+            return
+        if not z["bewegt"] and abs(e.x_root - z["x"]) < 6:
+            return
+        z["bewegt"] = True
+        rahmen = getattr(self, "_tab_rahmen", [])
+        andere = [(f, d) for f, d in rahmen if d is not dok]
+        eigen = next(((f, d) for f, d in rahmen if d is dok), None)
+        if eigen is None:
+            return
+        try:
+            eigen[0].config(cursor="sb_h_double_arrow")
+        except tk.TclError:
+            pass
+        # new place: in front of the first other tab whose middle is right of the mouse
+        pos = len(andere)
+        for j, (f, d) in enumerate(andere):
+            if f.winfo_rootx() + f.winfo_width() / 2 > e.x_root:
+                pos = j
+                break
+        neu = andere[:pos] + [eigen] + andere[pos:]
+        if [d for _, d in neu] == [d for _, d in rahmen]:
+            return
+        aktiv = self._dokumente[self._dok_aktiv]
+        self._dokumente = [d for _, d in neu]
+        self._dok_aktiv = self._dokumente.index(aktiv)
+        self._tab_rahmen = neu
+        for f, _ in neu:
+            f.pack_forget()
+        for j, (f, _) in enumerate(neu):
+            f.pack(side=tk.LEFT, padx=(4 if j == 0 else 0, 2), pady=(4, 0))
+
+    def _tab_zug_ende(self, e, dok):
+        z, self._tab_zug_daten = getattr(self, "_tab_zug_daten", None), None
+        if dok not in self._dokumente:
+            return
+        i = self._dokumente.index(dok)
+        if i != self._dok_aktiv:
+            self.tab_aktivieren(i)           # click (or end of the drag): show that drawing
+        elif z is not None and z["bewegt"]:
+            self._tab_leiste_zeichnen()      # paddings / cursor as usual
 
     def _tab_kontextmenue(self, event, index):
         m = tk.Menu(self.root, tearoff=0, bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
