@@ -1475,6 +1475,8 @@ class Tk(Wm, Misc, GeometrieMixin):
         self._kt_layout_anfordern()
         from katiecad.ui.kt import klassen
         klassen.installieren(self)
+        print("[KatieCAD] Oberflaeche: Kivy, Text: "
+              + ("GDI (wie Tk)" if fontmod._gdi() else "SDL_ttf"))
 
     # ---------------------------------------------------- window manager
     def _kt_titel_gesetzt(self):
