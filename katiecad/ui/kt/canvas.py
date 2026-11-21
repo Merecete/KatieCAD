@@ -107,11 +107,70 @@ def _kreis(r):
     return k
 
 
+def _fugen(g, x0, y0, x1, y1, weiter, h, items):
+    """Joins of long polylines (circles, arcs, splines are drawn as many short segments):
+    two triangles per inner point close the gap between neighbouring segments, so curves
+    look as closed as Tk's round joins. Short polylines get round discs instead."""
+    if not any(weiter):
+        return
+    lang = []
+    i = 0
+    for it in items:                         # only polylines with more than 12 points
+        m = len(it.lp) // 2
+        k = max(0, m - 1)
+        if m > 12:
+            lang += range(i, i + k - 1)
+        i += k
+    if not lang:
+        return
+    if _np is not None:
+        a = _np.array((x0, y0, x1, y1), dtype=_np.float64)
+        dx, dy = a[2] - a[0], a[3] - a[1]
+        ln = _np.hypot(dx, dy)
+        ln[ln == 0] = 1.0
+        nx, ny = -dy / ln * h, dx / ln * h
+        j = _np.array(lang, dtype=_np.int64)
+        px, py = a[2, j], a[3, j]
+        n1x, n1y, n2x, n2y = nx[j], ny[j], nx[j + 1], ny[j + 1]
+        k = len(j)
+        for s0 in range(0, k, 12000):
+            s1 = min(k, s0 + 12000)
+            q = s1 - s0
+            v = _np.zeros((q, 5, 4), dtype=_np.float32)
+            v[:, 0, 0], v[:, 0, 1] = px[s0:s1], py[s0:s1]
+            v[:, 1, 0], v[:, 1, 1] = px[s0:s1] + n1x[s0:s1], py[s0:s1] + n1y[s0:s1]
+            v[:, 2, 0], v[:, 2, 1] = px[s0:s1] + n2x[s0:s1], py[s0:s1] + n2y[s0:s1]
+            v[:, 3, 0], v[:, 3, 1] = px[s0:s1] - n1x[s0:s1], py[s0:s1] - n1y[s0:s1]
+            v[:, 4, 0], v[:, 4, 1] = px[s0:s1] - n2x[s0:s1], py[s0:s1] - n2y[s0:s1]
+            idx = (_np.arange(q, dtype=_np.uint16)[:, None] * 5 +
+                   _np.array((0, 1, 2, 0, 3, 4), dtype=_np.uint16)[None, :]).ravel()
+            g.add(Mesh(vertices=v.ravel(), indices=idx, mode="triangles"))
+        return
+    verts, idx, n = [], [], 0
+    for i in lang:
+        def nrm(t):
+            dx, dy = x1[t] - x0[t], y1[t] - y0[t]
+            ln = math.hypot(dx, dy) or 1.0
+            return -dy / ln * h, dx / ln * h
+        (a1, b1), (a2, b2) = nrm(i), nrm(i + 1)
+        px, py = x1[i], y1[i]
+        verts += (px, py, 0.0, 0.0, px + a1, py + b1, 0.0, 0.0, px + a2, py + b2, 0.0, 0.0,
+                  px - a1, py - b1, 0.0, 0.0, px - a2, py - b2, 0.0, 0.0)
+        idx += (n, n + 1, n + 2, n, n + 3, n + 4)
+        n += 5
+        if n > 60000:
+            g.add(Mesh(vertices=verts, indices=idx, mode="triangles"))
+            verts, idx, n = [], [], 0
+    if idx:
+        g.add(Mesh(vertices=verts, indices=idx, mode="triangles"))
+
+
 def _dicke_mesh(g, farbe, w, items):
     """Thick lines of one colour/width: quads per segment + discs for round caps and
     corners, all in as few meshes as possible."""
     h = w / 2.0
     x0, y0, x1, y1 = [], [], [], []
+    weiter = []                              # per segment: the next one continues the polyline
     punkte = []                              # discs (caps / corners)
     for it in items:
         pts = it.lp
@@ -119,15 +178,17 @@ def _dicke_mesh(g, farbe, w, items):
         y0 += pts[1:-2:2]
         x1 += pts[2::2]
         y1 += pts[3::2]
+        m = len(pts) // 2
+        weiter += [True] * (m - 2) + [False] if m >= 2 else []
         if it.lk[2]:                         # round caps
             punkte += ((pts[0], pts[1]), (pts[-2], pts[-1]))
-        m = len(pts) // 2
-        if 2 < m <= 12:                      # corners of short polylines (long ones are curves)
+        if 2 < m <= 12:                      # corners of short polylines: round discs
             punkte += [(pts[2 * j], pts[2 * j + 1]) for j in range(1, m - 1)]
     kreis = _kreis(h)
     nk = len(kreis)
     g.add(Color(*farbe))
-    if _np is not None and x0:
+    _fugen(g, x0, y0, x1, y1, weiter, h, items)
+    if _np is not None and len(x0) >= 64:      # numpy only pays off for larger runs
         a = _np.array((x0, y0, x1, y1), dtype=_np.float64)
         dx, dy = a[2] - a[0], a[3] - a[1]
         ln = _np.hypot(dx, dy)
@@ -146,9 +207,9 @@ def _dicke_mesh(g, farbe, w, items):
             v[:, 2, 1] = a[3, s0:s1] - ny[s0:s1]
             v[:, 3, 0] = a[0, s0:s1] - nx[s0:s1]
             v[:, 3, 1] = a[1, s0:s1] - ny[s0:s1]
-            idx = (_np.arange(k, dtype=_np.int64)[:, None] * 4 +
-                   _np.array((0, 1, 2, 0, 2, 3), dtype=_np.int64)).ravel()
-            g.add(Mesh(vertices=v.ravel().tolist(), indices=idx.tolist(), mode="triangles"))
+            idx = (_np.arange(k, dtype=_np.uint16)[:, None] * 4 +
+                   _np.array((0, 1, 2, 0, 2, 3), dtype=_np.uint16)).ravel()
+            g.add(Mesh(vertices=v.ravel(), indices=idx, mode="triangles"))
     elif x0:
         verts, idx, n = [], [], 0
         for i in range(len(x0)):
@@ -165,19 +226,33 @@ def _dicke_mesh(g, farbe, w, items):
         if idx:
             g.add(Mesh(vertices=verts, indices=idx, mode="triangles"))
     if punkte:
-        verts, idx, n = [], [], 0
+        # discs: same index pattern for every disc, only shifted -> built once per size
         ring = [(cx * h, cy * h) for cx, cy in kreis]
-        for px, py in punkte:
-            verts += (px, py, 0.0, 0.0)
-            for cx, cy in ring:
-                verts += (px + cx, py + cy, 0.0, 0.0)
-            for j in range(nk):
-                idx += (n, n + 1 + j, n + 1 + (j + 1) % nk)
-            n += nk + 1
-            if n > 60000:
-                g.add(Mesh(vertices=verts, indices=idx, mode="triangles"))
-                verts, idx, n = [], [], 0
-        if idx:
+        muster = []
+        for j in range(nk):
+            muster += (0, 1 + j, 1 + (j + 1) % nk)
+        pro = nk + 1
+        max_n = 60000 // pro
+        if _np is not None and len(punkte) >= 32:
+            p = _np.array(punkte, dtype=_np.float32)
+            r = _np.array([(0.0, 0.0)] + ring, dtype=_np.float32)            # centre + ring
+            muster_a = _np.array(muster, dtype=_np.uint16)
+            for s0 in range(0, len(p), max_n):
+                teil = p[s0:s0 + max_n]
+                k = len(teil)
+                v = _np.zeros((k, pro, 4), dtype=_np.float32)
+                v[:, :, :2] = teil[:, None, :] + r[None, :, :]
+                idx = (_np.arange(k, dtype=_np.uint16)[:, None] * pro + muster_a[None, :]).ravel()
+                g.add(Mesh(vertices=v.ravel(), indices=idx, mode="triangles"))
+            return
+        for s0 in range(0, len(punkte), max_n):
+            teil = punkte[s0:s0 + max_n]
+            verts = []
+            for px, py in teil:
+                verts += (px, py, 0.0, 0.0)
+                for cx, cy in ring:
+                    verts += (px + cx, py + cy, 0.0, 0.0)
+            idx = [i + k * pro for k in range(len(teil)) for i in muster]
             g.add(Mesh(vertices=verts, indices=idx, mode="triangles"))
 
 
@@ -199,24 +274,62 @@ def _rechtecke_mesh(g, farbe, items):
 
 def _ovale_mesh(g, farbe, items):
     """Filled ovals of one colour as triangles of one mesh."""
-    verts, idx, n = [], [], 0
+    _ovale_boxen(g, farbe, [it.lp for it in items])
+
+
+def _ovale_boxen(g, farbe, boxen):
+    """Filled ellipses (x0, y0, x1, y1) of one colour; ellipses with the same number of
+    segments are generated together with numpy (e.g. thousands of grid dots)."""
     g.add(Color(*farbe))
-    for it in items:
-        x0, y0, x1, y1 = it.lp
-        cx, cy, rx, ry = (x0 + x1) / 2, (y0 + y1) / 2, (x1 - x0) / 2, (y1 - y0) / 2
-        k = _kreis_n(max(8, min(64, int(max(rx, ry) * 1.5) + 6)))
-        verts += (cx, cy, 0.0, 0.0)
-        for ux, uy in k:
-            verts += (cx + ux * rx, cy + uy * ry, 0.0, 0.0)
-        m = len(k)
-        for j in range(m):
-            idx += (n, n + 1 + j, n + 1 + (j + 1) % m)
-        n += m + 1
-        if n > 60000:
+    gruppen = {}
+    for b in boxen:
+        n = max(8, min(64, int(max(b[2] - b[0], b[3] - b[1]) * 0.75) + 6))
+        gruppen.setdefault(n, []).append(b)
+    for n, bl in gruppen.items():
+        k = _kreis_n(n)
+        pro = n + 1
+        muster = []
+        for j in range(n):
+            muster += (0, 1 + j, 1 + (j + 1) % n)
+        max_n = 60000 // pro
+        for s0 in range(0, len(bl), max_n):
+            teil = bl[s0:s0 + max_n]
+            if _np is not None and len(teil) >= 16:
+                a = _np.array(teil, dtype=_np.float32)
+                c = _np.stack(((a[:, 0] + a[:, 2]) / 2, (a[:, 1] + a[:, 3]) / 2), axis=1)
+                rr = _np.stack(((a[:, 2] - a[:, 0]) / 2, (a[:, 3] - a[:, 1]) / 2), axis=1)
+                ring = _np.array([(0.0, 0.0)] + k, dtype=_np.float32)       # centre + ring
+                v = _np.zeros((len(teil), pro, 4), dtype=_np.float32)
+                v[:, :, :2] = c[:, None, :] + ring[None, :, :] * rr[:, None, :]
+                idx = (_np.arange(len(teil), dtype=_np.uint16)[:, None] * pro +
+                       _np.array(muster, dtype=_np.uint16)[None, :]).ravel()
+                g.add(Mesh(vertices=v.ravel(), indices=idx, mode="triangles"))
+                continue
+            verts = []
+            for x0, y0, x1, y1 in teil:
+                cx, cy, rx, ry = (x0 + x1) / 2, (y0 + y1) / 2, (x1 - x0) / 2, (y1 - y0) / 2
+                verts += (cx, cy, 0.0, 0.0)
+                for ux, uy in k:
+                    verts += (cx + ux * rx, cy + uy * ry, 0.0, 0.0)
+            idx = [i + q * pro for q in range(len(teil)) for i in muster]
             g.add(Mesh(vertices=verts, indices=idx, mode="triangles"))
-            verts, idx, n = [], [], 0
-    if idx:
-        g.add(Mesh(vertices=verts, indices=idx, mode="triangles"))
+
+
+def _ring_ovale(g, farben, items):
+    """Ovals with a 1 px outline in another colour (grid dots): outline as the larger
+    ellipse, fill on top - like Tk's fill + outline."""
+    rand, fuellung = farben
+    # pixel box like Tk/GDI: pixels floor(x0) .. floor(x1); the outline is its outer pixel ring
+    # (canvas coordinates are pixel centres, so the box edges lie half a pixel outside)
+    aussen, innen = [], []
+    for it in items:
+        x0, y0, x1, y1 = (math.floor(v) for v in it.lp)
+        aussen.append((x0 - 0.5, y0 - 0.5, x1 + 0.5, y1 + 0.5))
+        if x1 - x0 >= 2 and y1 - y0 >= 2:
+            innen.append((x0 + 0.5, y0 + 0.5, x1 - 0.5, y1 - 0.5))
+    _ovale_boxen(g, rand, aussen)
+    if innen:
+        _ovale_boxen(g, fuellung, innen)
 
 
 def _kreis_n(n):
@@ -227,52 +340,166 @@ def _kreis_n(n):
     return k
 
 
+def _lauf_meshes(g, farbe, lauf):
+    """All geometry of one run (one colour): thin lines as GL lines, thick lines, filled
+    rectangles and ovals as triangles - two or three meshes for the whole run."""
+    duenn, dick, rechtecke, ovale = [], {}, [], []
+    if lauf[0].lk[1] == -3.0:                 # key = (outline, fill): only ring ovals
+        _ring_ovale(g, farbe, lauf)
+        return
+    for it in lauf:
+        w = it.lk[1]
+        if w == -2.0:
+            rechtecke.append(it)
+        elif w < 0:
+            ovale.append(it)
+        elif w <= 1.5:
+            duenn.append(it.lp)
+        else:
+            dick.setdefault(w, []).append(it)
+    if duenn:
+        _duenne_mesh(g, farbe, duenn)
+    for w, items in dick.items():
+        _dicke_mesh(g, farbe, w, items)
+    if rechtecke:
+        _rechtecke_mesh(g, farbe, rechtecke)
+    if ovale:
+        _ovale_mesh(g, farbe, ovale)
+
+
+def _duenne_mesh(g, farbe, polylinien):
+    """1 px lines (GL lines, like Tk's): one mesh per 60000 points."""
+    g.add(Color(*farbe))
+    if _np is not None and len(polylinien) > 64:
+        laengen = [len(p) // 2 for p in polylinien]
+        alle = _np.fromiter((v for p in polylinien for v in p), dtype=_np.float32)
+        pkt = alle.reshape(-1, 2)
+        n = len(pkt)
+        # segment j -> (j, j + 1) unless j is the last point of its polyline
+        ende = _np.cumsum(laengen) - 1
+        start = _np.ones(n, dtype=bool)
+        start[ende] = False
+        seg = _np.nonzero(start)[0]
+        for s0 in range(0, n, 60000):
+            s1 = min(n, s0 + 60000)
+            teil = seg[(seg >= s0) & (seg < s1 - 1)]
+            # segments crossing the chunk border go into the next chunk
+            v = _np.zeros((s1 - s0, 4), dtype=_np.float32)
+            v[:, :2] = pkt[s0:s1]
+            idx = _np.empty(len(teil) * 2, dtype=_np.uint16)
+            idx[0::2] = teil - s0
+            idx[1::2] = teil - s0 + 1
+            if len(idx):
+                g.add(Mesh(vertices=v.ravel(), indices=idx, mode="lines"))
+            rest = seg[seg == s1 - 1]
+            if len(rest) and s1 < n:
+                g.add(Mesh(vertices=_np.array([pkt[s1 - 1, 0], pkt[s1 - 1, 1], 0, 0,
+                                                pkt[s1, 0], pkt[s1, 1], 0, 0], dtype=_np.float32),
+                           indices=_np.array([0, 1], dtype=_np.uint16), mode="lines"))
+        return
+    verts, idx, n = [], [], 0
+    for pts in polylinien:
+        m = len(pts) // 2
+        for j in range(m):
+            verts += (pts[2 * j], pts[2 * j + 1], 0.0, 0.0)
+        for j in range(m - 1):
+            idx += (n + j, n + j + 1)
+        n += m
+        if n > 60000:
+            g.add(Mesh(vertices=verts, indices=idx, mode="lines"))
+            verts, idx, n = [], [], 0
+    if idx:
+        g.add(Mesh(vertices=verts, indices=idx, mode="lines"))
+
+
+def _geo_bbox(it):
+    """Box of a geometry item of the shared meshes (incl. line width)."""
+    lp = it.lp
+    w = it.lk[1]
+    if w < 0:
+        return lp[0], lp[1], lp[2], lp[3]
+    xs, ys = lp[0::2], lp[1::2]
+    h = w / 2.0 + 1.0
+    return min(xs) - h, min(ys) - h, max(xs) + h, max(ys) + h
+
+
+def _item_box(it):
+    """Box of another item (text, image, dashed line ...) - only for the overlap test."""
+    if it.bbox is not None:
+        return it.bbox
+    xy = it.xy
+    if len(xy) < 2:
+        return None
+    w = float(it.o.get("width", 1) or 1) / 2.0 + 1.0
+    xs, ys = xy[0::2], xy[1::2]
+    return min(xs) - w, min(ys) - w, max(xs) + w, max(ys) + w
+
+
+def _harte_stellen(liste):
+    """Indices of the non-geometry items that must keep their exact place in the stacking
+    order: those overlapped by geometry that comes after them. All others may be drawn after
+    the geometry of the block - which looks exactly the same, because nothing there covers
+    them - so the geometry is not cut into many small meshes."""
+    geo = [(i, _geo_bbox(it)) for i, it in enumerate(liste) if it.lk is not None]
+    andere = [(i, it) for i, it in enumerate(liste) if it.lk is None]
+    if not geo or not andere:
+        return set(i for i, _it in andere)
+    hart = set()
+    if _np is not None and len(geo) > 32:
+        seq = _np.array([i for i, _b in geo])
+        bb = _np.array([b for _i, b in geo], dtype=_np.float64)
+        for i, it in andere:
+            r = _item_box(it)
+            if r is None:
+                continue
+            m = (seq > i) & (bb[:, 0] <= r[2]) & (bb[:, 2] >= r[0]) & (bb[:, 1] <= r[3]) & (bb[:, 3] >= r[1])
+            if m.any():
+                hart.add(i)
+    else:
+        for i, it in andere:
+            r = _item_box(it)
+            if r is None:
+                continue
+            for j, b in geo:
+                if j > i and b[0] <= r[2] and b[2] >= r[0] and b[1] <= r[3] and b[3] >= r[1]:
+                    hart.add(i)
+                    break
+    return hart
+
+
 def _block_bauen(b):
     g = b.g
     g.clear()
+    liste = list(b.items.values())
+    hart = _harte_stellen(liste)
     lauf = []
     key = None
+    wartend = []                 # other items drawn after the current geometry (see above)
 
     def fertig():
-        if not lauf:
-            return
-        farbe, w = key[0], key[1]
-        if w == -2.0:
-            _rechtecke_mesh(g, farbe, lauf)
-        elif w < 0:
-            _ovale_mesh(g, farbe, lauf)
-        elif w <= 1.5:
-            verts, idx, n = [], [], 0
-            for it in lauf:
-                pts = it.lp
-                m = len(pts) // 2
-                for j in range(m):
-                    verts += (pts[2 * j], pts[2 * j + 1], 0.0, 0.0)
-                for j in range(m - 1):
-                    idx += (n + j, n + j + 1)
-                n += m
-                if n > 60000:
-                    g.add(Color(*farbe))
-                    g.add(Mesh(vertices=verts, indices=idx, mode="lines"))
-                    verts, idx, n = [], [], 0
-            if idx:
-                g.add(Color(*farbe))
-                g.add(Mesh(vertices=verts, indices=idx, mode="lines"))
-        else:
-            _dicke_mesh(g, farbe, w, lauf)
+        if lauf:
+            _lauf_meshes(g, key, lauf)
 
-    for it in b.items.values():
+    for i, it in enumerate(liste):
         k = it.lk
         if k is None:
-            fertig()
-            lauf, key = [], None
-            g.add(it.g)
+            if i in hart:                     # exact place: close the geometry before it
+                fertig()
+                lauf, key = [], None
+                for w_ in wartend:
+                    g.add(w_.g)
+                wartend = []
+                g.add(it.g)
+            else:
+                wartend.append(it)
             continue
-        if (k[0], k[1]) != (key[0], key[1]) if key else True:
+        if k[0] != key:
             fertig()
-            lauf, key = [], k
+            lauf, key = [], k[0]
         lauf.append(it)
     fertig()
+    for w_ in wartend:
+        g.add(w_.g)
 
 
 _STANDARD = {
@@ -658,6 +885,10 @@ class Canvas(T.BaseWidget):
             if f is not None and (ol is None or w <= 0 or (ol == f and w <= 1.5)) and not o.get("dash"):
                 it.lk = (f, -1.0, False)              # filled oval: shared mesh of the block
                 it.lp = (x0, y0, x1, y1) if ol is None or w <= 0 else (x0 - 0.5, y0 - 0.5, x1 + 0.5, y1 + 0.5)
+                return
+            if f is not None and ol is not None and 0 < w <= 1.5 and not o.get("dash"):
+                it.lk = ((ol, f), -3.0, False)        # filled oval with outline (grid dots)
+                it.lp = (x0, y0, x1, y1)
                 return
             if f is not None:
                 g.add(Color(*f))
