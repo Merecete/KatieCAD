@@ -12,6 +12,7 @@ normal Toplevel gets a title bar that can be dragged, overrideredirect ones (pop
 tool tips) have none.
 """
 
+import sys
 import time
 import math
 
@@ -1067,7 +1068,7 @@ def _fh():
     """Height of the window as the layout knows it (Kivy's Window.height lags behind a
     size set by the program)."""
     r = _base.ROOT[0]
-    return r._kt_h if r is not None else Window.height
+    return r._kt_fenster_h if r is not None else Window.height
 
 
 def _int(v):
@@ -1449,6 +1450,11 @@ class Tk(Wm, Misc, GeometrieMixin):
         self._kt_widgets["."] = self
         self._kt_sichtbar = True
         self._kt_lebt = True
+        self._kt_titel_h = 0                # own title bar of the main window (titelleiste.py)
+        self._kt_leiste = None
+        self._kt_fenster_w = int(Window.width)
+        self._kt_fenster_h = int(Window.height)
+        self._kt_rand = (0, 0, 0, 0)        # maximised with own title bar: off-screen frame
         self._kt_w, self._kt_h = int(Window.width), int(Window.height)
         # Kivy: our root surface + one layer for the Toplevels above it
         self._kt_ebene = _Flaeche(size_hint=(None, None), size=Window.size, pos=(0, 0))
@@ -1473,6 +1479,13 @@ class Tk(Wm, Misc, GeometrieMixin):
             Window.clearcolor = (0, 0, 0, 1)
         except Exception:
             pass
+        from katiecad.ui.kt import titelleiste
+        self._kt_leiste = titelleiste.einrichten(self)
+        if self._kt_leiste is not None:
+            self._kt_titel_h = titelleiste.HOEHE
+            self._kt_h = self._kt_fenster_h - self._kt_titel_h
+            Window.bind(focus=lambda _w, an: (setattr(self._kt_leiste, "aktiv", bool(an)),
+                                               self._kt_leiste.zeichnen()))
         self._kt_layout_anfordern()
         from katiecad.ui.kt import klassen
         klassen.installieren(self)
@@ -1485,10 +1498,34 @@ class Tk(Wm, Misc, GeometrieMixin):
             Window.set_title(self._kt_titel)
         except Exception:
             pass
+        if self._kt_leiste is not None:
+            self._kt_leiste.zeichnen()
+
+    def _kt_client_dx(self):
+        return self._kt_rand[0]
+
+    def _kt_client_dy(self):
+        return self._kt_rand[1] + self._kt_titel_h
+
+    def _kt_rand_setzen(self, maximiert):
+        """Windows places a maximised window's frame outside the screen (about 8 px per
+        side); with our own title bar that strip belongs to the client area, so the content
+        keeps clear of it."""
+        r = 0
+        if maximiert and sys.platform.startswith("win"):
+            try:
+                import ctypes
+                u = ctypes.windll.user32
+                r = u.GetSystemMetrics(32) + u.GetSystemMetrics(92)   # SIZEFRAME + PADDEDBORDER
+            except Exception:
+                r = 8
+        self._kt_rand = (r, r, r, r)
+        self._kt_k_groesse(Window, self._kt_fenster_w, self._kt_fenster_h, erzwingen=True)
 
     def _kt_geometrie_angewandt(self):
         if self._kt_geo_gesetzt:
             w, h = self._kt_geo_gesetzt
+            h += self._kt_titel_h             # geometry() means the content, as under Tk
             try:
                 Window.size = (w, h)
             except Exception:
@@ -1733,9 +1770,9 @@ class Tk(Wm, Misc, GeometrieMixin):
 
     def _kt_darstellen(self):
         k = self._kt_k
-        if tuple(k.size) != (self._kt_w, self._kt_h):
-            k.size = (self._kt_w, self._kt_h)
-            self._kt_ebene.size = (self._kt_w, self._kt_h)
+        if tuple(k.size) != (self._kt_fenster_w, self._kt_fenster_h):
+            k.size = (self._kt_fenster_w, self._kt_fenster_h)
+            self._kt_ebene.size = (self._kt_fenster_w, self._kt_fenster_h)
             self._kt_zeichnen_noetig = True
         if self._kt_zeichnen_noetig:
             self._kt_zeichnen_noetig = False
@@ -1743,10 +1780,12 @@ class Tk(Wm, Misc, GeometrieMixin):
             self._kt_g_inhalt.clear()
             bg = self._kt_farbe_opt("background", (0.94, 0.94, 0.94, 1))
             self._kt_g_hinten.add(Color(*bg))
-            self._kt_g_hinten.add(Rectangle(pos=(0, 0), size=(self._kt_w, self._kt_h)))
+            self._kt_g_hinten.add(Rectangle(pos=(0, 0), size=(self._kt_fenster_w, self._kt_fenster_h)))
+            if self._kt_leiste is not None:
+                self._kt_leiste.zeichnen()          # its colours follow the background
 
     def _kt_abs(self):
-        return 0, 0
+        return self._kt_client_dx(), self._kt_client_dy()
 
     def _kt_kivy_pos(self):
         return 0, 0
@@ -1783,7 +1822,7 @@ class Tk(Wm, Misc, GeometrieMixin):
                 return w or t
         if grab is not None and grab.winfo_toplevel() is not self:
             return None
-        return _suchen(self, x, y) or self
+        return _suchen(self, x - self._kt_client_dx(), y - self._kt_client_dy()) or self
 
     # ---------------------------------------------------- dispatch
     def _kt_ausloesen(self, widget, ev):
@@ -1916,6 +1955,9 @@ class Tk(Wm, Misc, GeometrieMixin):
         if self._kt_knoepfe and self._kt_maus_ziel is not None:
             return                      # handled by on_mouse_move (button held)
         neu = self._kt_widget_bei(x, y)
+        if self._kt_leiste is not None:
+            self._kt_leiste.setze_hover(self._kt_leiste.knopf_bei(x, y)
+                                        if neu is self and y < self._kt_client_dy() else None)
         self._kt_hover(neu, x, y)
         if neu is not None:
             self._kt_maus_ereignis(neu, "Motion", x, y)
@@ -1958,6 +2000,10 @@ class Tk(Wm, Misc, GeometrieMixin):
             return
         num = {"left": 1, "middle": 2, "right": 3, "mouse4": 4, "mouse5": 5}.get(button, 1)
         w = self._kt_widget_bei(x, y)
+        if self._kt_leiste is not None and w is self and y < self._kt_client_dy() and num == 1:
+            if self._kt_leiste.runter(x, y):
+                self._kt_knoepfe.add(num)
+                return
         if self._kt_popups:
             if w is None or not any(_ist_in(w, p) for p in self._kt_popups):
                 from katiecad.ui.kt import klassen
@@ -2008,6 +2054,10 @@ class Tk(Wm, Misc, GeometrieMixin):
         if self._kt_titel_drag is not None:
             self._kt_titel_drag = None
             self._kt_knoepfe.discard(num)
+            return
+        if self._kt_leiste is not None and self._kt_leiste.gedrueckt is not None:
+            self._kt_knoepfe.discard(num)
+            self._kt_leiste.los(x, y)
             return
         w = self._kt_maus_ziel
         state = self._kt_modifier_state()
@@ -2134,10 +2184,16 @@ class Tk(Wm, Misc, GeometrieMixin):
         else:
             f._kt_ereignis("FocusIn")
 
-    def _kt_k_groesse(self, _win, w, h):
-        if (int(w), int(h)) == (self._kt_w, self._kt_h) and not self._kt_layout_offen:
+    def _kt_k_groesse(self, _win, w, h, erzwingen=False):
+        if (int(w), int(h)) == (self._kt_fenster_w, self._kt_fenster_h) and not self._kt_layout_offen \
+                and not erzwingen:
             return
-        self._kt_w, self._kt_h = int(w), int(h)
+        l, t, r, b = self._kt_rand
+        self._kt_fenster_w, self._kt_fenster_h = int(w), int(h)
+        self._kt_w = int(w) - l - r
+        self._kt_h = int(h) - t - self._kt_titel_h - b
+        if self._kt_leiste is not None:
+            self._kt_leiste.zeichnen()
         self._kt_ebene.size = (w, h)
         self._kt_zeichnen_noetig = True
         self._kt_layout_anfordern()
@@ -2287,7 +2343,7 @@ class Toplevel(Wm, BaseWidget):
         elif not self._kt_erst_gezeigt:
             r = self._kt_root_
             x = max(0, (r._kt_w - w) // 2)
-            y = max(0, (r._kt_h - h) // 3)
+            y = r._kt_client_dy() + max(0, (r._kt_h - h) // 3)
             self._kt_pos_gesetzt = (x, y)
         else:
             x, y = self._kt_x, self._kt_y
