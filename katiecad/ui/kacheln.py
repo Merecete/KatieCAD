@@ -50,6 +50,29 @@ class KachelnMixin:
         self._kachel_klasse_da = False
         self._kachel_klick_schlucken = False
 
+    def _kacheln_var(self):
+        """Check mark of View > Drawings side by side."""
+        v = getattr(self, "_kacheln_an_var", None)
+        if v is None:
+            v = self._kacheln_an_var = tk.BooleanVar(value=False)
+        return v
+
+    def _kacheln_var_setzen(self):
+        try:
+            self._kacheln_var().set(self.kacheln_aktiv())
+        except Exception:
+            pass
+
+    def kacheln_umschalten(self):
+        """View menu: tiles on / off."""
+        if self.kacheln_aktiv():
+            self.kacheln_aus()
+        elif len(self._dokumente) < 2:
+            self._kacheln_var_setzen()
+            self.status.set(tr("msg.kacheln.zu_wenig"))
+        else:
+            self.kacheln_an()
+
     def kacheln_aktiv(self):
         return bool(getattr(self, "_kacheln", None))
 
@@ -276,6 +299,7 @@ class KachelnMixin:
 
     # ---------------------------------------------------- header: activate, move, close
     def _kacheln_koepfe(self):
+        self._kacheln_var_setzen()
         if not self.kacheln_aktiv():
             return
         aktiv = self._dokumente[self._dok_aktiv]

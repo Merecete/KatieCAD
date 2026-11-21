@@ -62,6 +62,14 @@ YES, NO, TRUE, FALSE = 1, 0, 1, 0
 READABLE, WRITABLE, EXCEPTION = 2, 4, 8
 
 
+
+def _tcl_wert(w):
+    """Value as Tcl hands it to Python: a boolean is stored as 1 / 0 (BooleanVar.set(True)
+    -> globalgetvar gives 1), so comparisons with onvalue=1 work as under Tk."""
+    if w is True or w is False:
+        return int(w)
+    return w
+
 class TclError(Exception):
     pass
 
@@ -796,7 +804,7 @@ class Misc:
 
     def getvar(self, name="PY_VAR"):
         v = _VARS.get(str(name))
-        return v._kt_roh() if v is not None else ""
+        return _tcl_wert(v._kt_roh()) if v is not None else ""
 
     def setvar(self, name="PY_VAR", value="1"):
         v = _VARS.get(str(name))
@@ -1186,7 +1194,7 @@ class _Interp:
 
     def globalgetvar(self, name):
         v = _VARS.get(str(name))
-        return v._kt_roh() if v is not None else ""
+        return _tcl_wert(v._kt_roh()) if v is not None else ""
 
     getvar = globalgetvar
 
