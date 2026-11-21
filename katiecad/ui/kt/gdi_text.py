@@ -8,8 +8,8 @@ Here the text is rendered by GDI exactly like Tk does - same glyph shapes, same 
 (GetTextExtentPoint32 is what Tk's font measure uses). GDI falls back to other fonts for
 missing characters (⋮ ☰ ▸ ✓) by itself.
 
-The ClearType result is turned into a white RGBA image whose alpha is the coverage; it is
-tinted with the text colour when drawn.
+The ClearType result keeps its coverage per sub pixel (RGB); fontmod.text_zeichnen blends
+it per colour channel like GDI does, so the text is as crisp as under Tk.
 """
 
 import ctypes
@@ -131,19 +131,21 @@ def rendern(text, key):
     finally:
         _gdi.SelectObject(dc, alt)
         _gdi.DeleteObject(bmp)
-    # coverage -> alpha: mean of the three sub pixels (keeps ClearType's weight and gamma)
+    # ClearType: one coverage value per sub pixel (R, G, B) - blended per channel when drawn
+    # (fontmod.text_zeichnen), alpha = strongest sub pixel
     try:
         import numpy as np
         b = np.frombuffer(roh, dtype=np.uint8).reshape(h, w, 4)
-        cov = b[:, :, :3].astype(np.uint16).sum(axis=2) // 3
         out = np.empty((h, w, 4), dtype=np.uint8)
-        out[:, :, :3] = 255
-        out[:, :, 3] = cov.astype(np.uint8)
+        out[:, :, 0] = b[:, :, 2]
+        out[:, :, 1] = b[:, :, 1]
+        out[:, :, 2] = b[:, :, 0]
+        out[:, :, 3] = b[:, :, :3].max(axis=2)
         daten = out.tobytes()
     except ImportError:
         daten = bytearray(w * h * 4)
         for i in range(w * h):
-            c = (roh[4 * i] + roh[4 * i + 1] + roh[4 * i + 2]) // 3
-            daten[4 * i:4 * i + 4] = bytes((255, 255, 255, c))
+            bb, gg, rr = roh[4 * i], roh[4 * i + 1], roh[4 * i + 2]
+            daten[4 * i:4 * i + 4] = bytes((rr, gg, bb, max(rr, gg, bb)))
         daten = bytes(daten)
     return w, h, daten

@@ -670,7 +670,8 @@ class Canvas(T.BaseWidget):
             bw, bh = bild.width(), bild.height()
             x, y = _verankern(o.get("anchor", "center"), xy[0], xy[1], bw, bh)
             g.add(Color(1, 1, 1, 1))
-            g.add(Rectangle(texture=tex, pos=(x, y), size=(bw, bh), tex_coords=_gespiegelt(tex)))
+            g.add(Rectangle(texture=tex, pos=(round(x) - 0.5, round(y) - 0.5), size=(bw, bh),
+                            tex_coords=_gespiegelt(tex)))
             it.bbox = (x, y, x + bw, y + bh)
 
     def _kt_text_bauen(self, it):
@@ -698,7 +699,6 @@ class Canvas(T.BaseWidget):
         else:
             ox, oy = x, y
         if f is not None:
-            g.add(Color(*f))
             for i, z in enumerate(zeilen):
                 tex = fontmod.text_textur(z, font)
                 if tex is None:
@@ -709,8 +709,10 @@ class Canvas(T.BaseWidget):
                     zx = lx + tw - bs[i]
                 else:
                     zx = lx
-                g.add(Rectangle(texture=tex, pos=(round(ox + zx), round(oy + ly + i * lh)),
-                                size=tex.size, tex_coords=_gespiegelt(tex)))
+                # -0.5: cancels the half pixel of the canvas transform (meant for 1 px
+                # lines), so the text lands exactly on the pixel grid and stays sharp
+                fontmod.text_zeichnen(g, tex, f, (round(ox + zx) - 0.5, round(oy + ly + i * lh) - 0.5),
+                                      tex.size, _gespiegelt(tex))
         if winkel:
             g.add(PopMatrix())
             # bounding box of the rotated text

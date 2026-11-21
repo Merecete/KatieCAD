@@ -469,6 +469,52 @@ def text_textur(text, spec):
 
 _fbos = []
 
+# ------------------------------------------------------------
+# Drawing a text texture. GDI textures carry ClearType coverage per sub pixel: they are
+# drawn in two passes with per-channel blending  dst = dst * (1 - cov) + farbe * cov.
+# ------------------------------------------------------------
+_blend_alt = []
+
+
+def _blend_text1(_instr=None):
+    from kivy.graphics import opengl as gl
+    if not _blend_alt:
+        _blend_alt.extend((gl.glGetIntegerv(gl.GL_BLEND_SRC_RGB)[0], gl.glGetIntegerv(gl.GL_BLEND_DST_RGB)[0],
+                           gl.glGetIntegerv(gl.GL_BLEND_SRC_ALPHA)[0], gl.glGetIntegerv(gl.GL_BLEND_DST_ALPHA)[0]))
+    gl.glBlendFuncSeparate(gl.GL_ZERO, gl.GL_ONE_MINUS_SRC_COLOR, gl.GL_ZERO, gl.GL_ONE)
+
+
+def _blend_text2(_instr=None):
+    from kivy.graphics import opengl as gl
+    gl.glBlendFuncSeparate(gl.GL_ONE, gl.GL_ONE, gl.GL_ZERO, gl.GL_ONE)
+
+
+def _blend_zurueck(_instr=None):
+    from kivy.graphics import opengl as gl
+    if _blend_alt:
+        gl.glBlendFuncSeparate(*_blend_alt)
+
+
+def text_zeichnen(g, tex, farbe, pos, size, tex_coords=None):
+    """Adds the instructions that draw text texture `tex` in colour `farbe` to group g."""
+    from kivy.graphics import Color, Rectangle, Callback
+    kw = {"texture": tex, "pos": pos, "size": size}
+    if tex_coords is not None:
+        kw["tex_coords"] = tex_coords
+    if not _gdi():
+        g.add(Color(*farbe))
+        g.add(Rectangle(**kw))
+        return
+    r, gg, b = farbe[0], farbe[1], farbe[2]
+    a = farbe[3] if len(farbe) > 3 else 1.0
+    g.add(Callback(_blend_text1))
+    g.add(Color(a, a, a, 1))
+    g.add(Rectangle(**kw))
+    g.add(Callback(_blend_text2))
+    g.add(Color(r * a, gg * a, b * a, 1))
+    g.add(Rectangle(**kw))
+    g.add(Callback(_blend_zurueck))
+
 
 def _gdi_textur(text, k):
     from kivy.graphics.texture import Texture
@@ -479,6 +525,7 @@ def _gdi_textur(text, k):
     t = Texture.create(size=(w, h), colorfmt="rgba")
     t.blit_buffer(daten, colorfmt="rgba", bufferfmt="ubyte")
     t.flip_vertical()                     # like Kivy's label textures (rows top first)
+    t.mag_filter = t.min_filter = "nearest"     # pixel exact, never smeared
     return t
 
 
