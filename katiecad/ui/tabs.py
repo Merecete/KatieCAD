@@ -337,6 +337,7 @@ class TabsMixin(KachelnMixin):
     def _tab_leiste_zeichnen(self):
         if not self._tabs_da():
             return
+        self._kacheln_var_setzen()             # check mark in the View menu
         zeigen = len(self._dokumente) > 1
         leiste = self._tab_leiste
         if not zeigen:

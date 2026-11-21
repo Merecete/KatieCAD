@@ -54,17 +54,19 @@ def monitore():
         class _MI(ctypes.Structure):
             _fields_ = [("cbSize", wintypes.DWORD), ("rcMonitor", wintypes.RECT),
                         ("rcWork", wintypes.RECT), ("dwFlags", wintypes.DWORD)]
+        # an own instance: other modules set argtypes on the shared windll.user32
+        u32 = ctypes.WinDLL("user32")
         CB = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HMONITOR, wintypes.HDC,
                                 ctypes.POINTER(wintypes.RECT), wintypes.LPARAM)
 
         def cb(h, _dc, _r, _l):
             mi = _MI()
             mi.cbSize = ctypes.sizeof(_MI)
-            if ctypes.windll.user32.GetMonitorInfoW(h, ctypes.byref(mi)):
+            if u32.GetMonitorInfoW(h, ctypes.byref(mi)):
                 w = mi.rcWork
                 erg.append((w.left, w.top, w.right, w.bottom))
             return True
-        ctypes.windll.user32.EnumDisplayMonitors(None, None, CB(cb), 0)
+        u32.EnumDisplayMonitors(None, None, CB(cb), 0)
     except Exception:
         erg = []
     _monitor_cache[0], _monitor_cache[1] = jetzt, erg
