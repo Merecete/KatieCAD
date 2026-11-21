@@ -251,12 +251,19 @@ def menue_schliessen(menu=None):
     """Closes the open context menu (only if it belongs to `menu`)."""
     if menu is not None and not any(getattr(p, "_kt_besitzer", None) is menu for p in _offen):
         return
+    # Tk's tk_popup waits until the menu is closed, so bindings that run later for the same
+    # click (e.g. "a click closes open menus" on the window) never see it open. Here the menu
+    # stays open while that click is still being handled.
+    ev = getattr(menu, "_kt_gepostet_bei", None) if menu is not None else None
+    if ev is not None and ev is getattr(menu._kt_root_, "_kt_akt_ev", None):
+        return
     popup_schliessen()
 
 
 def menue_zeigen(menu, x, y, ebene=0):
     if ebene == 0:
         popup_schliessen()
+        menu._kt_gepostet_bei = getattr(menu._kt_root_, "_kt_akt_ev", None)
     pc = menu._kt_o.get("postcommand")
     if pc:
         pc()
