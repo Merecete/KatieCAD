@@ -1,0 +1,517 @@
+# -*- coding: utf-8 -*-
+"""
+katiecad/ui/kt/fontmod.py - tkinter.font on Kivy (BSD-3-Clause).
+
+Font specs as Tk knows them ("Segoe UI 9 bold", ("Segoe UI", 9, "bold"), named
+fonts, Font objects) are resolved to a TrueType file and a pixel size. Text is
+rendered once per (text, font) as a white texture and tinted when drawn.
+"""
+
+import os
+import sys
+
+from kivy.core.text import Label as _CoreLabel, LabelBase
+
+from katiecad.ui.kt import _base
+
+NORMAL, ROMAN, BOLD, ITALIC = "normal", "roman", "bold", "italic"
+
+# ------------------------------------------------------------
+# Font files of the system
+# ------------------------------------------------------------
+_familien = None        # family (lower case) -> {"regular": pfad, "bold": .., "italic": .., "bolditalic": ..}
+_namen = {}             # family (lower case) -> family as written
+
+
+def _windows_fonts():
+    import winreg
+    ordner = os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts")
+    erg = []
+    for wurzel, pfad in ((winreg.HKEY_LOCAL_MACHINE, ordner),
+                         (winreg.HKEY_CURRENT_USER, None)):
+        try:
+            k = winreg.OpenKey(wurzel, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts")
+        except OSError:
+            continue
+        i = 0
+        while True:
+            try:
+                name, datei, _t = winreg.EnumValue(k, i)
+            except OSError:
+                break
+            i += 1
+            if not isinstance(datei, str) or not datei.lower().endswith((".ttf", ".otf", ".ttc")):
+                continue
+            if not os.path.isabs(datei):
+                datei = os.path.join(pfad or ordner, datei)
+            name = name.replace("(TrueType)", "").replace("(OpenType)", "").strip()
+            for teil in name.split("&"):
+                erg.append((teil.strip(), datei))
+    return erg
+
+
+def _unix_fonts():
+    import subprocess
+    try:
+        aus = subprocess.run(["fc-list", ":", "family", "style", "file"], capture_output=True,
+                             text=True, timeout=10).stdout
+    except (OSError, subprocess.SubprocessError):
+        return []
+    erg = []
+    for zeile in aus.splitlines():
+        try:
+            datei, rest = zeile.split(":", 1)
+            fam, _, stil = rest.partition(":style=")
+            fam = fam.split(",")[0].strip()
+            stil = stil.split(",")[0].strip()
+        except ValueError:
+            continue
+        if not datei.lower().endswith((".ttf", ".otf", ".ttc")):
+            continue
+        erg.append((f"{fam} {stil}" if stil and stil.lower() != "regular" else fam, datei.strip()))
+    return erg
+
+
+_STILE = (("bold italic", "bolditalic"), ("bold oblique", "bolditalic"),
+          ("bold", "bold"), ("italic", "italic"), ("oblique", "italic"), ("regular", "regular"))
+
+
+def _familien_laden():
+    global _familien
+    if _familien is not None:
+        return _familien
+    _familien = {}
+    try:
+        liste = _windows_fonts() if sys.platform.startswith("win") else _unix_fonts()
+    except Exception:
+        liste = []
+    for name, datei in liste:
+        low = name.lower()
+        stil = "regular"
+        fam = name
+        for endung, s in _STILE:
+            if low.endswith(" " + endung):
+                stil = s
+                fam = name[: -len(endung) - 1]
+                break
+        if stil == "regular" and any(w in low for w in (" light", " semibold", " black",
+                                                       " condensed", " semilight", " narrow")):
+            # weight variants are families of their own for Tk as well
+            pass
+        key = fam.lower()
+        _namen.setdefault(key, fam)
+        _familien.setdefault(key, {}).setdefault(stil, datei)
+    return _familien
+
+
+def _fallback_datei():
+    import kivy
+    return os.path.join(os.path.dirname(kivy.__file__), "data", "fonts", "Roboto-Regular.ttf")
+
+
+_ALIAS = {"helvetica": ("arial", "liberation sans", "dejavu sans"),
+          "courier": ("courier new", "liberation mono", "dejavu sans mono"),
+          "times": ("times new roman", "liberation serif", "dejavu serif"),
+          "tkdefaultfont": ("segoe ui", "dejavu sans"),
+          "helvetica neue": ("helvetica neue", "arial"),
+          "segoe ui": ("segoe ui", "dejavu sans", "arial")}
+
+_registriert = {}
+_dateien = {}           # Kivy font name -> regular file (for the glyph coverage)
+
+
+def _kivy_name(familie):
+    """Registers the family with Kivy (regular/bold/italic files) -> Kivy font name."""
+    key = (familie or "").lower()
+    if key in _registriert:
+        return _registriert[key]
+    fams = _familien_laden()
+    kandidaten = [key] + list(_ALIAS.get(key, ())) + ["segoe ui", "arial", "dejavu sans"]
+    dateien = None
+    for k in kandidaten:
+        if k in fams and "regular" in fams[k]:
+            dateien = fams[k]
+            break
+        if k in fams:            # only a bold/italic cut installed
+            d = fams[k]
+            dateien = {"regular": next(iter(d.values()))}
+            dateien.update(d)
+            break
+    if dateien is None:
+        dateien = {"regular": _fallback_datei()}
+    name = "kt_" + key.replace(" ", "_") if key else "kt_default"
+    reg = dateien["regular"]
+    try:
+        LabelBase.register(name, reg, dateien.get("italic"), dateien.get("bold"),
+                           dateien.get("bolditalic"))
+    except Exception:
+        LabelBase.register(name, _fallback_datei())
+    _registriert[key] = name
+    _dateien[name] = reg
+    return name
+
+
+# ------------------------------------------------------------
+# Glyph fallback: Tk/Windows takes missing characters (⋮ ☰ ▸ ✓ ...) from another font;
+# SDL2_ttf does not, so the text is split into runs per font.
+# ------------------------------------------------------------
+_abdeckung_cache = {}
+_ERSATZ = ("Segoe UI Symbol", "Segoe UI Emoji", "Arial Unicode MS", "DejaVu Sans",
+           "Noto Sans Symbols", "Noto Sans Symbols2", "Symbola")
+
+
+def _abdeckung(kname):
+    a = _abdeckung_cache.get(kname, False)
+    if a is False:
+        a = None
+        pfad = _dateien.get(kname)
+        if pfad:
+            try:
+                from fontTools.ttLib import TTFont
+                f = TTFont(pfad, fontNumber=0, lazy=True)
+                a = frozenset(f.getBestCmap() or ())
+                f.close()
+            except Exception:
+                a = None
+        _abdeckung_cache[kname] = a
+    return a
+
+
+def _hat(kname, ch):
+    a = _abdeckung(kname)
+    return a is None or ord(ch) in a or ch in " \t"
+
+
+def _laeufe(text, k):
+    """-> [(part, key)] - one part per font; usually just [(text, k)]."""
+    if all(ord(ch) < 0x2000 for ch in text):
+        return [(text, k)]
+    haupt = _kivy_name(k[0])
+    if all(_hat(haupt, ch) for ch in text):
+        return [(text, k)]
+    erg = []
+    for ch in text:
+        fam = k[0]
+        if not _hat(haupt, ch):
+            for e in _ERSATZ:
+                if e.lower() in _familien_laden() and _hat(_kivy_name(e), ch):
+                    fam = e
+                    break
+        kk = (fam,) + tuple(k[1:])
+        if erg and erg[-1][1] == kk:
+            erg[-1] = (erg[-1][0] + ch, kk)
+        else:
+            erg.append((ch, kk))
+    return erg
+
+
+def families(root=None, displayof=None):
+    fams = _familien_laden()
+    return tuple(sorted({_namen.get(k, k) for k, v in fams.items()}))
+
+
+# ------------------------------------------------------------
+# Point -> pixel (Tk "scaling")
+# ------------------------------------------------------------
+def pixel(size):
+    """Tk size (points > 0, pixels < 0) -> pixels."""
+    try:
+        size = float(size)
+    except (TypeError, ValueError):
+        size = 9
+    if size < 0:
+        return max(1, int(round(-size)))
+    return max(1, int(round(size * _base.skalierung())))
+
+
+# ------------------------------------------------------------
+# Font objects
+# ------------------------------------------------------------
+_STANDARD = sys.platform.startswith("win") and "Segoe UI" or \
+    (sys.platform == "darwin" and "Helvetica Neue" or "DejaVu Sans")
+_benannt = {}
+
+
+class Font:
+    _kt_zaehler = 0
+
+    def __init__(self, root=None, font=None, name=None, exists=False, **opt):
+        if font is not None:
+            fam, size, weight, slant, underline, over = _parse(font)
+        else:
+            fam, size, weight, slant, underline, over = _STANDARD, 9, NORMAL, ROMAN, 0, 0
+        self._opt = {"family": opt.get("family", fam), "size": int(opt.get("size", size)),
+                     "weight": opt.get("weight", weight), "slant": opt.get("slant", slant),
+                     "underline": int(bool(opt.get("underline", underline))),
+                     "overstrike": int(bool(opt.get("overstrike", over)))}
+        if name is None:
+            Font._kt_zaehler += 1
+            name = f"font{Font._kt_zaehler}"
+        self.name = name
+        if name not in _benannt or not exists:
+            _benannt[name] = self
+
+    def __str__(self):
+        return self.name
+
+    def __eq__(self, other):
+        return isinstance(other, Font) and other._opt == self._opt
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def actual(self, option=None, displayof=None):
+        return self._opt[option] if option else dict(self._opt)
+
+    def cget(self, option):
+        return self._opt[option]
+
+    def configure(self, **opt):
+        if not opt:
+            return dict(self._opt)
+        self._opt.update(opt)
+        if "size" in opt:
+            self._opt["size"] = int(opt["size"])
+        _base.alles_neu()                      # widgets using it get re-laid out
+
+    config = configure
+
+    def copy(self):
+        return Font(**self._opt)
+
+    def measure(self, text, displayof=None):
+        return text_breite(str(text), self)
+
+    def metrics(self, *options, **kw):
+        a, d = _metrik(self)
+        m = {"ascent": a, "descent": d, "linespace": a + d, "fixed": 0}
+        if options:
+            return m[options[0]] if len(options) == 1 else tuple(m[o] for o in options)
+        return m
+
+    def __getitem__(self, k):
+        return self._opt[k]
+
+    def __setitem__(self, k, v):
+        self.configure(**{k: v})
+
+    # -- key for the caches
+    def _kt_schluessel(self):
+        o = self._opt
+        return (o["family"], pixel(o["size"]), o["weight"] == BOLD, o["slant"] == ITALIC,
+                bool(o["underline"]))
+
+
+def _parse(spec):
+    """Tk font description -> (family, size, weight, slant, underline, overstrike)."""
+    if isinstance(spec, Font):
+        o = spec._opt
+        return o["family"], o["size"], o["weight"], o["slant"], o["underline"], o["overstrike"]
+    if isinstance(spec, str):
+        if spec in _benannt:
+            return _parse(_benannt[spec])
+        if spec.startswith("{"):
+            fam, _, rest = spec[1:].partition("}")
+            teile = [fam] + rest.split()
+        else:
+            teile = spec.split()
+            # "Segoe UI 9 bold": family may contain spaces -> up to the first number
+            for i, t in enumerate(teile):
+                if t.lstrip("-").isdigit():
+                    teile = [" ".join(teile[:i])] + teile[i:]
+                    break
+            else:
+                teile = [" ".join(teile)]
+        spec = teile
+    spec = list(spec) if spec else []
+    fam = spec[0] if spec else _STANDARD
+    size = 9
+    if len(spec) > 1:
+        try:
+            size = int(float(spec[1]))
+        except (TypeError, ValueError):
+            pass
+    weight, slant, ul, ov = NORMAL, ROMAN, 0, 0
+    for t in spec[2:]:
+        for w in str(t).split():
+            if w == "bold":
+                weight = BOLD
+            elif w == "italic":
+                slant = ITALIC
+            elif w == "underline":
+                ul = 1
+            elif w == "overstrike":
+                ov = 1
+    return fam or _STANDARD, size, weight, slant, ul, ov
+
+
+_schluessel_cache = {}
+
+
+def schluessel(spec):
+    """Font description -> (family, px, bold, italic, underline) (cached)."""
+    if spec is None or spec == "":
+        spec = "TkDefaultFont"
+    if isinstance(spec, Font):
+        return spec._kt_schluessel()
+    try:
+        return _schluessel_cache[spec]
+    except (KeyError, TypeError):
+        pass
+    if isinstance(spec, str) and spec in _benannt:
+        return _benannt[spec]._kt_schluessel()
+    fam, size, weight, slant, ul, _ov = _parse(spec)
+    k = (fam, pixel(size), weight == BOLD, slant == ITALIC, bool(ul))
+    try:
+        _schluessel_cache[spec] = k
+    except TypeError:
+        _schluessel_cache[tuple(spec)] = k
+    return k
+
+
+def _label(text, k):
+    fam, px, fett, kursiv, ul = k
+    return _CoreLabel(text=text, font_name=_kivy_name(fam), font_size=px, bold=fett,
+                      italic=kursiv, underline=ul, padding=0, color=(1, 1, 1, 1))
+
+
+_metrik_cache = {}
+
+
+def _metrik(spec):
+    k = schluessel(spec)
+    m = _metrik_cache.get(k)
+    if m is None:
+        h = _label("Ãg", k).get_extents("Ãg")[1]
+        # SDL2 reports the whole line height; split it like Tk (ascent ~ 80 %)
+        a = int(round(h * 0.8))
+        m = (a, h - a)
+        _metrik_cache[k] = m
+    return m
+
+
+_breite_cache = {}
+
+
+def text_breite(text, spec):
+    k = schluessel(spec)
+    try:
+        return _breite_cache[(text, k)]
+    except KeyError:
+        pass
+    if not text:
+        w = 0
+    else:
+        w = 0
+        for z in text.split("\n"):
+            w = max(w, sum(_label(t, kk).get_extents(t)[0] for t, kk in _laeufe(z, k)))
+    if len(_breite_cache) > 20000:
+        _breite_cache.clear()
+    _breite_cache[(text, k)] = w
+    return w
+
+
+def zeilen_hoehe(spec):
+    a, d = _metrik(spec)
+    return a + d
+
+
+_tex_cache = {}
+
+
+def text_textur(text, spec):
+    """White texture of a (single-line) text; None for empty text."""
+    if not text:
+        return None
+    k = schluessel(spec)
+    t = _tex_cache.get((text, k))
+    if t is None:
+        try:
+            laeufe = _laeufe(text, k)
+            if len(laeufe) == 1:
+                lb = _label(text, laeufe[0][1])
+                lb.refresh()
+                t = lb.texture
+            else:
+                t = _zusammensetzen(laeufe)
+        except Exception:
+            t = None
+        if len(_tex_cache) > 6000:
+            _tex_cache.clear()
+        _tex_cache[(text, k)] = t
+    return t
+
+
+_fbos = []
+
+
+def _zusammensetzen(laeufe):
+    """Text from several fonts -> one texture (rendered side by side in an Fbo)."""
+    from kivy.graphics import Fbo, Rectangle, ClearColor, ClearBuffers, Color
+    texturen = []
+    for t, kk in laeufe:
+        lb = _label(t, kk)
+        lb.refresh()
+        texturen.append(lb.texture)
+    breite = sum(t.size[0] for t in texturen if t is not None)
+    hoehe = max((t.size[1] for t in texturen if t is not None), default=1)
+    fbo = Fbo(size=(max(1, breite), max(1, hoehe)))
+    with fbo:
+        ClearColor(0, 0, 0, 0)
+        ClearBuffers()
+        Color(1, 1, 1, 1)
+        x = 0
+        for t in texturen:
+            if t is None:
+                continue
+            Rectangle(texture=t, pos=(x, (hoehe - t.size[1]) // 2), size=t.size)
+            x += t.size[0]
+    fbo.draw()
+    _fbos.append(fbo)
+    if len(_fbos) > 500:
+        del _fbos[:100]
+    return fbo.texture
+
+
+def umbrechen(text, spec, breite):
+    """Splits text into lines of at most `breite` pixels (Tk wraplength / width)."""
+    zeilen = []
+    for absatz in str(text).split("\n"):
+        if breite <= 0 or text_breite(absatz, spec) <= breite:
+            zeilen.append(absatz)
+            continue
+        aktuell = ""
+        for wort in absatz.split(" "):
+            versuch = wort if not aktuell else aktuell + " " + wort
+            if text_breite(versuch, spec) <= breite or not aktuell:
+                aktuell = versuch
+            else:
+                zeilen.append(aktuell)
+                aktuell = wort
+        zeilen.append(aktuell)
+    return zeilen
+
+
+def nametofont(name, root=None):
+    try:
+        return _benannt[str(name)]
+    except KeyError:
+        from katiecad.ui.kt.tkmod import TclError
+        raise TclError(f'named font "{name}" does not exist')
+
+
+def names(root=None):
+    return tuple(_benannt)
+
+
+def _standard_fonts():
+    for name, size, extra in (("TkDefaultFont", 9, {}), ("TkTextFont", 9, {}),
+                              ("TkMenuFont", 9, {}), ("TkHeadingFont", 9, {"weight": BOLD}),
+                              ("TkCaptionFont", 9, {}), ("TkSmallCaptionFont", 8, {}),
+                              ("TkIconFont", 9, {}), ("TkTooltipFont", 8, {})):
+        Font(name=name, family=_STANDARD, size=size, **extra)
+    Font(name="TkFixedFont", family="Courier New" if sys.platform.startswith("win") else "DejaVu Sans Mono",
+         size=10)
+
+
+_standard_fonts()

@@ -48,3 +48,11 @@ Meldet das Skript „NOT INSTALLED“ oder „WITHOUT licence file“, vor dem R
 ## Prüfen
 Nach dem Bauen das Programm starten und im Block-Browser nachsehen, ob „Symbole“
 erscheint und unter Rahmen die Titelblock-Vorlagen auswählbar sind.
+
+## Oberfläche: Kivy (Standard) oder Tk
+Die Oberfläche läuft über Kivy (OpenGL); `kivy` steht in `requirements.txt`. Die
+Build-Skripte binden mit `--additional-hooks-dir installer/hooks` die Kivy-Bibliotheken
+(unter Windows SDL2, GLEW, ANGLE aus `kivy_deps`) ein. Fehlen sie, startet das Programm
+automatisch mit der bisherigen Tk-Oberfläche. Tk lässt sich auch erzwingen:
+`set KATIECAD_UI=tk` (Windows) bzw. `KATIECAD_UI=tk ./KatieCAD`.
+Prüfen: Unter Windows hat das Programmfenster bei Kivy die Fensterklasse `SDL_app`.
