@@ -95,7 +95,8 @@ class TabsMixin(KachelnMixin):
             pass
         for f in ("_layout_switcher_neu_aufbauen", "_update_kontext_widgets", "redraw",
                   "_zeichne_raster", "_viewport_modus_anzeige_aktualisieren",
-                  "_layer_info_aktualisieren", "_aktualisiere_undo_redo", "_update_titel"):
+                  "_layer_info_aktualisieren", "_aktualisiere_undo_redo", "_update_titel",
+                  "_3d_anzeige_nachziehen"):
             try:
                 getattr(self, f)()
             except Exception as e:
@@ -105,8 +106,9 @@ class TabsMixin(KachelnMixin):
         except Exception:
             pass
 
-    def _aktionen_beenden(self):
-        """Ends whatever tool action is running before the drawing is exchanged."""
+    def _aktionen_beenden(self, drei_d=True):
+        """Ends whatever tool action is running before the drawing is exchanged
+        (drei_d=False: an open 3D view stays - a tile keeps its 3D view)."""
         try:
             self._paste_abbrechen()
         except Exception:
@@ -117,7 +119,7 @@ class TabsMixin(KachelnMixin):
             except Exception:
                 break
         try:
-            if self.ansicht3d_aktiv():
+            if drei_d and self.ansicht3d_aktiv():
                 self.ansicht3d_setzen(False)
         except Exception:
             pass
@@ -135,7 +137,7 @@ class TabsMixin(KachelnMixin):
             return
         self._tab_wechsel_laeuft = True
         try:
-            self._aktionen_beenden()
+            self._aktionen_beenden(drei_d=not self.kacheln_aktiv())
             self._dok_sichern(self._dokumente[self._dok_aktiv])
             if self.kacheln_aktiv():
                 self._kachel_wechsel(self._dokumente[index])
@@ -156,7 +158,7 @@ class TabsMixin(KachelnMixin):
         """Opens a new tab with an empty drawing and makes it the current one."""
         if not self._tabs_da():
             return
-        self._aktionen_beenden()
+        self._aktionen_beenden(drei_d=not self.kacheln_aktiv())
         self._dok_sichern(self._dokumente[self._dok_aktiv])
         dok = Dokument()
         self._dokumente.insert(self._dok_aktiv + 1, dok)

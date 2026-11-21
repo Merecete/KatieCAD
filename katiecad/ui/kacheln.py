@@ -36,6 +36,7 @@ class Kachel:
         self.x = 0
         self.w = 0
         self.rahmen = self.kopf = self.titel = self.zu = self.canvas = None
+        self.w3 = None                 # the tile's 3D view (shown instead of its canvas)
         self.bild_live = []            # keeps the images of this tile's last drawing
         self.zeichnen_id = None
 
@@ -91,6 +92,69 @@ class KachelnMixin:
 
     def _kachel_aktiv(self):
         return self._kachel_von(self._dokumente[self._dok_aktiv])
+
+    def _kachel_von_widget(self, w):
+        """The tile a widget belongs to (its drawing area, its 3D view and everything in it)."""
+        while w is not None:
+            for k in self._kacheln or ():
+                if w is k.rahmen:
+                    return k
+            w = getattr(w, "master", None)
+        return None
+
+    # ---------------------------------------------------- 3D in a tile
+    def _kachel_3d_gemeldet(self, w):
+        """ansicht3d_setzen opened (w) or closed (None) the 3D view in the drawing area."""
+        if not self.kacheln_aktiv():
+            return
+        k = next((k for k in self._kacheln if k.canvas is self.canvas), None)
+        if k is None:
+            return
+        k.w3 = w
+        if w is not None:
+            self._kachel_klasse_setzen(w)
+
+    def _kachel_klasse_setzen(self, w):
+        """The tile's mouse rule (bind tag) for a widget and everything in it."""
+        stapel = [w]
+        while stapel:
+            x = stapel.pop()
+            stapel.extend(x.winfo_children())
+            try:
+                tags = tuple(x.bindtags())
+                if KLASSE not in tags:
+                    x.bindtags((KLASSE,) + tags)
+            except Exception:
+                pass
+
+    def _kachel_3d_weg(self, k):
+        """Closes the 3D view of a tile that gets another drawing."""
+        w = k.w3
+        if w is None:
+            return
+        k.w3 = None
+        if self._ansicht3d is w:
+            self._ansicht3d = None
+        try:
+            k.canvas.pack(fill=tk.BOTH, expand=True, before=w)
+            w.destroy()
+        except tk.TclError:
+            pass
+
+    def _kachel_3d_zeichnen(self, w):
+        """The 3D view of an inactive tile wants to draw (size changed, ...)."""
+        k = next((k for k in self._kacheln or () if k.w3 is w), None)
+        if k is not None:
+            self._kachel_spaeter_zeichnen(k, 10)
+
+    def _3d_anzeige_nachziehen(self):
+        """3D switch and the 2D-only tool buttons follow the drawing shown."""
+        try:
+            if not self._ist_layout():
+                self._3d_var_holen().set(self._ansicht3d is not None)
+            self.werkzeuge_fuer_3d()
+        except Exception:
+            pass
 
     # ---------------------------------------------------- on / off
     def kacheln_an(self):
@@ -201,21 +265,29 @@ class KachelnMixin:
         r = self.root
 
         def inaktiv(e):
-            return self.kacheln_aktiv() and e.widget is not self.canvas
+            if not self.kacheln_aktiv():
+                return False
+            k = self._kachel_von_widget(e.widget)
+            return k is not None and k is not self._kachel_aktiv()
+
+        def flaeche(w):
+            return isinstance(w, tk.Canvas)        # drawing area / 3D area (not a button)
 
         def druecken(e, weiter):
             if not inaktiv(e):
                 return None
-            k = next((k for k in self._kacheln if k.canvas is e.widget), None)
+            k = self._kachel_von_widget(e.widget)
             if k is not None:
                 self._kachel_aktivieren(k)
-            if not weiter or e.widget is not self.canvas:
+            if not flaeche(e.widget):
+                return None                        # a button of the tile's 3D bar: works
+            if not weiter or inaktiv(e):
                 self._kachel_klick_schlucken = True     # its drag / release as well
                 return "break"
             return None
 
         def sperren(e):
-            return "break" if inaktiv(e) else None
+            return "break" if inaktiv(e) and flaeche(e.widget) else None
 
         def links_weiter(e):
             if self._kachel_klick_schlucken:
@@ -247,10 +319,21 @@ class KachelnMixin:
         feld = self._kachel_feld
         if feld is None or not self._kacheln:
             return
-        for w in list(feld.winfo_children()):
-            if getattr(w, "_kachel_trenner", False):
-                w.destroy()
         n = len(self._kacheln)
+        # the separators are kept (not built anew): the one being dragged holds the mouse
+        trenner = getattr(self, "_kachel_trenner", None)
+        if trenner is None or any(t.master is not feld for t in trenner):
+            trenner = self._kachel_trenner = []
+        while len(trenner) < n - 1:
+            i = len(trenner)
+            t = tk.Frame(feld, bg=FARBEN["bg_dunkel"], width=TRENNER, bd=0,
+                         highlightthickness=0, cursor="sb_h_double_arrow")
+            t.bind("<B1-Motion>", lambda e, i=i: self._trenner_ziehen(e, i))
+            t.bind("<Enter>", lambda e, t=t: t.config(bg=FARBEN["rand"]))
+            t.bind("<Leave>", lambda e, t=t: t.config(bg=FARBEN["bg_dunkel"]))
+            trenner.append(t)
+        while len(trenner) > n - 1:
+            trenner.pop().destroy()
         breite = max(feld.winfo_width(), 1)
         hoehe = max(feld.winfo_height(), 1)
         platz = max(breite - TRENNER * (n - 1), n)
@@ -262,13 +345,8 @@ class KachelnMixin:
             k.rahmen.place(x=k.x, y=0, width=k.w, height=hoehe)
             x += k.w
             if i < n - 1:
-                t = tk.Frame(feld, bg=FARBEN["bg_dunkel"], width=TRENNER, bd=0,
-                             highlightthickness=0, cursor="sb_h_double_arrow")
-                t._kachel_trenner = True
-                t.place(x=x, y=0, width=TRENNER, height=hoehe)
-                t.bind("<B1-Motion>", lambda e, i=i: self._trenner_ziehen(e, i))
-                t.bind("<Enter>", lambda e, t=t: t.config(bg=FARBEN["rand"]))
-                t.bind("<Leave>", lambda e, t=t: t.config(bg=FARBEN["bg_dunkel"]))
+                trenner[i].place(x=x, y=0, width=TRENNER, height=hoehe)
+                trenner[i].lift()
                 x += TRENNER
 
     def _trenner_ziehen(self, e, i):
@@ -390,8 +468,10 @@ class KachelnMixin:
         k = self._kachel_von(dok)
         if k is None:
             k = self._kachel_aktiv() or self._kacheln[0]
+            self._kachel_3d_weg(k)
             k.dok = dok
         self.canvas = k.canvas
+        self._ansicht3d = k.w3          # the other tiles keep their 3D view, standing still
 
     def _kachel_neues_dok(self, dok):
         """A new drawing (new tab) is opened while the tiles are shown: a tile of its own
@@ -403,6 +483,7 @@ class KachelnMixin:
             self._kacheln_anordnen()
         else:
             k = alt or self._kacheln[-1]
+            self._kachel_3d_weg(k)
             k.dok = dok
         self._kachel_wechsel(dok)
 
@@ -422,6 +503,8 @@ class KachelnMixin:
                 self._kacheln[min(i, len(self._kacheln) - 1)].anteil += k.anteil
             if k.canvas is self.canvas:
                 self.canvas = self._kachel_original      # until the next one is chosen
+            if k.w3 is not None and self._ansicht3d is k.w3:
+                self._ansicht3d = None
             k.rahmen.destroy()
         else:
             i = 0
@@ -432,7 +515,8 @@ class KachelnMixin:
             self._kacheln_anordnen()
             self._kachel_spaeter_zeichnen(n)
         if len(self._kacheln) < 2:
-            rest = self._kacheln[0].dok if self._kacheln else None
+            for x in self._kacheln:
+                self._kachel_3d_weg(x)
             self.canvas = self._kachel_original
             self.canvas.pack(fill=tk.BOTH, expand=True, before=self._kachel_feld)
             self._kachel_feld.destroy()
@@ -443,6 +527,7 @@ class KachelnMixin:
         self._kacheln_anordnen()
         naechste = self._kacheln[min(i, len(self._kacheln) - 1)]
         self.canvas = naechste.canvas
+        self._ansicht3d = naechste.w3
         return naechste.dok
 
     # ---------------------------------------------------- drawing an inactive tile
@@ -453,15 +538,20 @@ class KachelnMixin:
         aktiv = self._dokumente[self._dok_aktiv]
         if k.dok is aktiv:
             if k.canvas is self.canvas:
-                self.redraw(nur_ansicht=True)
+                if k.w3 is not None:
+                    k.w3.zeichne()
+                else:
+                    self.redraw(nur_ansicht=True)
             return
         self._dok_sichern(aktiv)
         extra = {a: getattr(self, a, None)
-                 for a in ("canvas", "temp_ids", "_bild_live", "_modell_stand", "_vp_fang_cache")}
+                 for a in ("canvas", "temp_ids", "_bild_live", "_modell_stand", "_vp_fang_cache",
+                           "_ansicht3d")}
         for f in _STILL:
             setattr(self, f, lambda *a, **kw: None)
         try:
             self.canvas = k.canvas
+            self._ansicht3d = k.w3
             for a, wert in k.dok.zustand.items():
                 setattr(self, a, wert)
             for v, wert in k.dok.variablen.items():
@@ -478,10 +568,13 @@ class KachelnMixin:
             except tk.TclError:
                 pass
             try:
-                self.redraw()
+                if k.w3 is not None:
+                    k.w3.zeichne()
+                else:
+                    self.redraw()
+                    k.bild_live = self._bild_live
             except Exception as ex:
                 print(f"[KatieCAD] Kachel: {ex}")
-            k.bild_live = self._bild_live
         finally:
             for f in _STILL:
                 try:
