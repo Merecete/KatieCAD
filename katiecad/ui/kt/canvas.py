@@ -81,13 +81,12 @@ _BLOCK = 400                     # items per block
 class _Block:
     """Up to _BLOCK consecutive items (stacking order). Simple lines of one colour that follow
     each other are drawn as one mesh; a change only rebuilds the block it is in."""
-    __slots__ = ("items", "g", "dirty", "alt")
+    __slots__ = ("items", "g", "dirty")
 
     def __init__(self):
         self.items = {}
         self.g = InstructionGroup()
         self.dirty = True
-        self.alt = False         # drawn under the view preview transform (kt_ansicht_vorschau)
 
 
 try:
@@ -498,7 +497,6 @@ class Canvas(T.BaseWidget):
         self._kt_tag_bindungen = {}
         self._kt_bloecke = []
         self._kt_flush_trigger = Clock.create_trigger(self._kt_flush, -1)
-        self._kt_vorschau = None        # (Translate, Scale) while a view preview is shown
         super().__init__(master, cnf, **kw)
         k = self._kt_k
         self._kt_g_items = InstructionGroup()
@@ -584,10 +582,10 @@ class Canvas(T.BaseWidget):
 
     def _kt_einreihen(self, it):
         b = self._kt_bloecke[-1] if self._kt_bloecke else None
-        if b is None or len(b.items) >= _BLOCK or b.alt:
+        if b is None or len(b.items) >= _BLOCK:
             b = _Block()
             self._kt_bloecke.append(b)
-            self._kt_g_items.add(b.g)           # after the preview transform: not moved
+            self._kt_g_items.add(b.g)
         b.items[it.id] = it
         it.blk = b
         self._kt_dirty(b)
@@ -1027,7 +1025,7 @@ class Canvas(T.BaseWidget):
                     w._kt_setzen(0, 0, 0, 0, sichtbar=False)
                     w._kt_lebt = False
         leer = [b for b in bloecke if not b.items]
-        if len(leer) == len(self._kt_bloecke) and self._kt_vorschau is None:
+        if len(leer) == len(self._kt_bloecke):
             self._kt_g_items.clear()
             for b in leer:
                 b.g.clear()
@@ -1041,43 +1039,8 @@ class Canvas(T.BaseWidget):
             if b.items:
                 self._kt_dirty(b)
 
-    # ---------------------------------------------------- view preview (KatieCAD zoom / pan)
-    def kt_ansicht_vorschau(self, faktor, dx, dy):
-        """Shows the items that exist now moved/scaled by the GPU: p' = faktor * p + (dx, dy).
-        Used while zooming / panning; the program redraws exactly afterwards
-        (kt_ansicht_ende). Items created meanwhile (cursor, markers) are not transformed."""
-        if self._kt_vorschau is None:
-            self._kt_flush()
-            t, sk = Translate(0, 0), Scale(1, 1, 1)
-            self._kt_vorschau = (t, sk)
-            for b in self._kt_bloecke:
-                b.alt = True
-            g = self._kt_g_items
-            g.clear()
-            g.add(PushMatrix())
-            g.add(t)
-            g.add(sk)
-            for b in self._kt_bloecke:
-                g.add(b.g)
-            g.add(PopMatrix())
-        t, sk = self._kt_vorschau
-        t.xy = (float(dx), float(dy))
-        sk.xyz = (float(faktor), float(faktor), 1.0)
-
-    def kt_ansicht_ende(self):
-        """Back to the normal display (the program has redrawn everything)."""
-        if self._kt_vorschau is None:
-            return
-        self._kt_vorschau = None
-        g = self._kt_g_items
-        g.clear()
-        for b in self._kt_bloecke:
-            b.alt = False
-            g.add(b.g)
-
     def _kt_neu_ordnen(self):
         """New stacking order: distribute all items over new blocks."""
-        self._kt_vorschau = None
         g = self._kt_g_items
         g.clear()
         for b in self._kt_bloecke:
