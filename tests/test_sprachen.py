@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Languages: German, English and Spanish have the same keys and placeholders."""
+"""Languages: German, English, Spanish and French have the same keys and placeholders."""
 import sys, os, re
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -13,21 +13,29 @@ def check(c, m):
     ok += 1
 
 T = I.TEXTE
-check(set(T) == {"de", "en", "es"}, "Sprachen de/en/es")
-for sp in ("en", "es"):
+check(set(T) == {"de", "en", "es", "fr"}, "Sprachen de/en/es/fr")
+for sp in ("en", "es", "fr"):
     check(set(T[sp]) == set(T["de"]), f"{sp}: gleiche Schluessel wie de: {sorted(set(T['de']) ^ set(T[sp]))[:5]}")
     schlecht = [k for k in T["en"] if sorted(re.findall(r"\{\w+(?:[!:][^}]*)?\}", T[sp][k])) != sorted(re.findall(r"\{\w+(?:[!:][^}]*)?\}", T["en"][k]))]
     check(not schlecht, f"{sp}: Platzhalter stimmen: {schlecht[:5]}")
     check(all(str(v).strip() for v in T[sp].values()), f"{sp}: keine leeren Texte")
-for k in ("menu.sprache.de", "menu.sprache.en", "menu.sprache.es"):
+for k in ("menu.sprache.de", "menu.sprache.en", "menu.sprache.es", "menu.sprache.fr"):
     check(all(k in T[sp] for sp in T), k)
 check("es" in C._UNTERSTUETZTE_SPRACHEN, "config kennt es")
+check("fr" in C._UNTERSTUETZTE_SPRACHEN, "config kennt fr")
 # fallback: Spanish -> English -> German
 I.SPRACHE["aktuell"] = "es"
 _alt = T["es"].pop("menu.datei")
 check(I.tr("menu.datei") == T["en"]["menu.datei"], "fehlender spanischer Text faellt auf Englisch zurueck")
 T["es"]["menu.datei"] = _alt
 check(I.tr("menu.datei") == "Archivo", "spanischer Text")
+I.SPRACHE["aktuell"] = "fr"
+_alt = T["fr"].pop("menu.datei")
+check(I.tr("menu.datei") == T["en"]["menu.datei"], "fehlender franzoesischer Text faellt auf Englisch zurueck")
+T["fr"]["menu.datei"] = _alt
+check(I.tr("menu.datei") == "Fichier", "franzoesischer Text")
+check(I.datum_text(__import__("datetime").date(2026, 10, 23)) == "23/10/2026", "franzoesisches Datum")
+I.SPRACHE["aktuell"] = "en"
 
 # every tr("txt.NNNN", pN=...) call passes the values for the placeholders of all three languages
 import ast, glob

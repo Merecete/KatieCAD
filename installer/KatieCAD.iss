@@ -1,7 +1,7 @@
 ; Inno Setup script - Windows installer for KatieCAD
-; Build:  iscc /DAppVersion=1.1.8 installer\KatieCAD.iss
+; Build:  iscc /DAppVersion=1.2.0 installer\KatieCAD.iss
 #ifndef AppVersion
-  #define AppVersion "1.1.8"
+  #define AppVersion "1.2.0"
 #endif
 
 [Setup]
@@ -34,9 +34,11 @@ ChangesAssociations=yes
 Name: "german"; MessagesFile: "compiler:Languages\German.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
+Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 
 [Messages]
 german.WelcomeLabel2=Dieser Assistent installiert [name/ver] auf Ihrem Computer.%n%nKatieCAD ist ein 2D-CAD-Programm mit Elektro-CAD, Schaltschrank-Planung und einfachem 3D – kostenlos und quelloffen (BSD-3-Clause-Lizenz).%n%nSchließen Sie vor dem Fortfahren bitte alle anderen Anwendungen.
+french.WelcomeLabel2=Cet assistant installe [name/ver] sur votre ordinateur.%n%nKatieCAD est un logiciel de DAO 2D avec schémas électriques, conception d'armoires et 3D simple – gratuit et open source (licence BSD à 3 clauses).%n%nVeuillez fermer toutes les autres applications avant de continuer.
 spanish.WelcomeLabel2=Este asistente instalará [name/ver] en su equipo.%n%nKatieCAD es un programa de CAD 2D con CAD eléctrico, planificación de armarios y 3D sencillo: gratuito y de código abierto (licencia BSD de 3 cláusulas).%n%nAntes de continuar, cierre las demás aplicaciones.
 english.WelcomeLabel2=This wizard installs [name/ver] on your computer.%n%nKatieCAD is a 2D CAD program with electrical CAD, cabinet planning and simple 3D - free and open source (BSD 3-Clause license).%n%nPlease close all other applications before you continue.
 
@@ -44,12 +46,15 @@ english.WelcomeLabel2=This wizard installs [name/ver] on your computer.%n%nKatie
 german.AssocFiles=KatieCAD-Dateien (.cadjson, .katieprj) mit KatieCAD öffnen (Doppelklick)
 english.AssocFiles=Open KatieCAD files (.cadjson, .katieprj) with KatieCAD (double click)
 spanish.AssocFiles=Abrir archivos de KatieCAD (.cadjson, .katieprj) con KatieCAD (doble clic)
+french.AssocFiles=Ouvrir les fichiers KatieCAD (.cadjson, .katieprj) avec KatieCAD (double-clic)
 german.FileCadjson=KatieCAD-Zeichnung
 english.FileCadjson=KatieCAD drawing
 spanish.FileCadjson=Dibujo de KatieCAD
+french.FileCadjson=Dessin KatieCAD
 german.FileProject=KatieCAD-Projekt
 english.FileProject=KatieCAD project
 spanish.FileProject=Proyecto de KatieCAD
+french.FileProject=Projet KatieCAD
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; Flags: unchecked

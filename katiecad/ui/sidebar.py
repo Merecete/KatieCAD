@@ -290,26 +290,37 @@ class Seitenleiste(ttk.Frame):
         p = self.app.projekt
         if idx is None or p is None:
             return
-        if str(idx) in self.tree.selection() and len(self.tree.selection()) > 1:
-            pass                        # right click inside a multiple selection
-        elif idx != p.aktiv and not self.app.blatt_wechseln(idx):
-            return
+        mehrfach = str(idx) in self.tree.selection() and len(self.tree.selection()) > 1
+
+        def dort(befehl):
+            """The sheet under the pointer becomes the current one when an action is chosen
+            (not already on the right click: "open in new window" must leave it alone)."""
+            def f():
+                if mehrfach or idx == p.aktiv or self.app.blatt_wechseln(idx):
+                    befehl()
+            return f
         m = tk.Menu(self, tearoff=0, bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
                     activebackground=FARBEN["cyan"],
                     activeforeground=FARBEN["bg_dunkel"])
+        if not mehrfach:
+            m.add_command(label=tr("sb.kontext.neuer_tab"),
+                          command=lambda: self.app.blatt_in_neuem_tab(idx))
+            m.add_command(label=tr("sb.kontext.neues_fenster"),
+                          command=lambda: self.app.blatt_in_neuem_fenster(idx))
+            m.add_separator()
         m.add_command(label=tr("sb.kontext.umbenennen"),
-                      command=lambda: self.app.blatt_umbenennen())
-        m.add_command(label=tr("sb.kontext.neu"), command=self.app.blatt_neu)
+                      command=dort(lambda: self.app.blatt_umbenennen()))
+        m.add_command(label=tr("sb.kontext.neu"), command=dort(self.app.blatt_neu))
         m.add_command(label=tr("sb.kontext.duplizieren"),
-                      command=self.app.blatt_duplizieren)
+                      command=dort(self.app.blatt_duplizieren))
         m.add_separator()
         m.add_command(label=tr("sb.kontext.hoch"),
-                      command=lambda: self.app.blatt_verschieben(-1))
+                      command=dort(lambda: self.app.blatt_verschieben(-1)))
         m.add_command(label=tr("sb.kontext.runter"),
-                      command=lambda: self.app.blatt_verschieben(+1))
+                      command=dort(lambda: self.app.blatt_verschieben(+1)))
         m.add_separator()
         m.add_command(label=tr("sb.kontext.loeschen"),
-                      command=self.app.blatt_loeschen)
+                      command=dort(self.app.blatt_loeschen))
         try:
             m.tk_popup(event.x_root, event.y_root)
         finally:

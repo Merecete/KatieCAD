@@ -47,6 +47,7 @@ from katiecad.common.i18n import tr, SPRACHE, setze_sprache, TEXTE, datum_text
 from katiecad.common.config import (lade_konfiguration, speichere_sprache,
                              speichere_konfiguration, konfig_ordner)
 from katiecad.fileio import sicherung as SICH
+from katiecad.common import fenster as FENSTER
 from katiecad.model import titleblock as TB
 from katiecad.model.project import (Projekt, ProjektFehler, PROJEKT_ENDUNG,
                               BLOCK_ENDUNG)
@@ -58,6 +59,7 @@ from katiecad.ui import icons as ICONS
 from katiecad.ui.ansicht3d import Ansicht3DMixin
 from katiecad.ui.aendern import AendernMixin
 from katiecad.ui.toolbar_dock import ToolbarDockMixin
+from katiecad.ui.tabs import TabsMixin
 from katiecad.model import geom2d as G2
 from katiecad.model import auswahl as AUSW
 from katiecad.electrical import nummerierung as NUM
@@ -252,7 +254,7 @@ _KULL_TYPEN = (Linie, Kreis, Bogen, Polylinie, Schraffur, Text)
 _KULL_WINZIG = (Linie, Kreis, Bogen, Polylinie)
 
 
-class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
+class CadApp(TabsMixin, AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
     def __init__(self, root):
         self.root = root
         if _MAC:
@@ -348,6 +350,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         }
 
         self.pan_start = None
+        self._modell_stand = None
+        self._ansicht_wartet = None
         self.letzter_punkt = None
         self.temp_ids = []
         self.aktuelle_polylinie = []
@@ -411,6 +415,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self._geraet_modus = False
 
         self._clipboard = []
+        self._clipboard_zeit = 0.0           # time of the copy (shared with other windows)
+        self._gesperrtes_blatt = None        # sheet file this window has locked
         self._clipboard_basispunkt = None
         self._clipboard_mit_basis = False
 
@@ -510,6 +516,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self._vp_sperre_var = tk.BooleanVar(value=False)
         self._vp_status_var = tk.StringVar(value="")
 
+        self._tabs_init()                    # several drawings as tabs (ui/tabs.py)
         self._build_ui()
         self._bind_events()
         self._zeichne_raster()
@@ -517,6 +524,11 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self._build_koord_bar()
 
         self.root.protocol("WM_DELETE_WINDOW", self.beenden)
+        self.root.bind("<Control-Tab>", lambda e: self.tab_wechsel_naechster(1))
+        self.root.bind("<Control-Shift-Tab>", lambda e: self.tab_wechsel_naechster(-1))
+        self.root.bind("<Control-ISO_Left_Tab>", lambda e: self.tab_wechsel_naechster(-1))
+        self.root.bind("<Control-w>", lambda e: (self.tab_schliessen(), "break")[1])
+        self.root.bind("<Control-W>", lambda e: (self.tab_schliessen(), "break")[1])
 
     # --------------------------------------------------------
     # Properties
@@ -595,13 +607,20 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         if p is not None and p.blaetter:
             b = p.blaetter[p.aktiv]
             basis = f"KatieCAD \u2013 {p.name} \u2013 {p.nummer(p.aktiv)} {b.name}"
+            if getattr(p, "nur_seiten", False):
+                basis += f" ({tr('titel.seitenfenster')})"
         if self._dirty:
             self.root.title(f"{basis} *")
         else:
             self.root.title(basis)
+        if self._tabs_da() and not self._tab_wechsel_laeuft:
+            self._tab_leiste_zeichnen()
 
     def beenden(self):
-        if self._dirty:
+        if self._tabs_da() and len(self._dokumente) > 1:
+            if not self.tabs_alle_klaeren():            # asks for every changed tab
+                return
+        elif self._dirty:
             antwort = messagebox.askyesnocancel(
                 tr("msg.beenden_titel"), self._speichern_frage_text("beenden"),
                 parent=self.root)
@@ -611,6 +630,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                 if not self.speichern():
                     return
         SICH.loeschen(konfig_ordner(), os.getpid())      # normal exit: no recovery needed
+        FENSTER.freigeben(getattr(self, "_gesperrtes_blatt", None))
+        self.tabs_sperren_freigeben()
         self.root.destroy()
 
     # --------------------------------------------------------
@@ -660,6 +681,10 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             except tk.TclError:
                 pass
         zeichenflaechen = {str(self.canvas)}
+        for k in getattr(self, "_kacheln", None) or ():
+            zeichenflaechen.add(str(k.canvas))
+        if getattr(self, "_kachel_original", None) is not None:
+            zeichenflaechen.add(str(self._kachel_original))
         v = getattr(self, "_ansicht3d", None)
         if v is not None and getattr(v, "canvas", None) is not None:
             zeichenflaechen.add(str(v.canvas))
@@ -893,6 +918,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self._clipboard = [el.to_dict() for el in self.auswahl]
         self._clipboard_basispunkt = None
         self._clipboard_mit_basis = False
+        self._zwischenablage_teilen()
         self.status.set(f"{len(self._clipboard)} " +
                         (tr("txt.0064")))
         return "break"
@@ -914,14 +940,39 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self._clipboard = [el.to_dict() for el in self.auswahl]
         self._clipboard_basispunkt = None
         self._clipboard_mit_basis = False
+        self._zwischenablage_teilen()
         self.auswahl_loeschen()
         self.status.set(f"{len(self._clipboard)} " +
                         (tr("txt.0065")))
         return "break"
 
+    def _zwischenablage_teilen(self):
+        """What was copied here can be pasted in every KatieCAD window (common/fenster.py)."""
+        self._clipboard_zeit = FENSTER.zwischenablage_schreiben(
+            konfig_ordner(), self._clipboard, self._clipboard_basispunkt,
+            self._clipboard_mit_basis)
+
+    def _zwischenablage_holen(self):
+        """Takes a newer copy made in another KatieCAD window."""
+        d = FENSTER.zwischenablage_lesen(konfig_ordner())
+        if d is None or d.get("pid") == os.getpid():
+            return
+        try:
+            zeit = float(d.get("zeit") or 0)
+        except (TypeError, ValueError):
+            return
+        if zeit <= getattr(self, "_clipboard_zeit", 0.0):
+            return
+        b = d.get("basis")
+        self._clipboard = [e for e in d["elemente"] if isinstance(e, dict)]
+        self._clipboard_basispunkt = (float(b[0]), float(b[1])) if b and len(b) >= 2 else None
+        self._clipboard_mit_basis = bool(d.get("mit_basis")) and self._clipboard_basispunkt is not None
+        self._clipboard_zeit = zeit
+
     def einfuegen(self, event=None):
         if self._paste_aktiv:
             self._paste_abbrechen()
+        self._zwischenablage_holen()
         if not self._clipboard:
             self.status.set(tr("msg.zwischenablage_leer"))
             return "break"
@@ -1125,6 +1176,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self.root.option_add('*Menu.foreground', FARBEN["cyan"])
         self.root.option_add('*Menu.activeBackground', FARBEN["cyan"])
         self.root.option_add('*Menu.activeForeground', FARBEN["bg_dunkel"])
+        # frame of the context menus drawn by the Kivy layer: like the drawing area's frame
+        self.root.option_add('*Menu.borderColor', FARBEN["rand"])
         # Drop-down lists of the comboboxes (otherwise light/inconsistent on Linux/Mac)
         self.root.option_add('*TCombobox*Listbox.background', FARBEN["bg_hell"])
         self.root.option_add('*TCombobox*Listbox.foreground', FARBEN["cyan"])
@@ -1142,6 +1195,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                           activebackground=FARBEN["cyan"],
                           activeforeground=FARBEN["bg_dunkel"])
         m_datei.add_command(label=tr("menu.datei.neu"), command=self.neu)
+        m_datei.add_command(label=tr("menu.datei.tab_schliessen"), command=self.tab_schliessen)
         m_datei.add_command(label=tr("menu.datei.oeffnen"), command=self.oeffnen)
         m_datei.add_command(label=tr("menu.datei.speichern"), command=self.speichern,
                             accelerator=tr("txt.0254"))
@@ -1408,6 +1462,11 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         m_ansicht.add_command(label=tr("menu.ansicht.zoom_grenzen"),
                               command=self.zoom_grenzen)
         m_ansicht.add_separator()
+        m_ansicht.add_checkbutton(label=tr("menu.ansicht.kacheln"),
+                                  variable=self._kacheln_var(), command=self.kacheln_umschalten)
+        m_ansicht.add_command(label=tr("menu.ansicht.kacheln_gleich"),
+                              command=self._kacheln_gleich)
+        m_ansicht.add_separator()
         m_ansicht.add_command(label=tr("menu.ansicht.reset"),
                               command=self._reset_view)
         menubar.add_cascade(label=tr("menu.ansicht"), menu=m_ansicht)
@@ -1512,7 +1571,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                             bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
                             activebackground=FARBEN["cyan"],
                             activeforeground=FARBEN["bg_dunkel"])
-        for _sp in ("de", "en", "es"):
+        for _sp in ("de", "en", "es", "fr"):
             m_sprache.add_radiobutton(label=tr("menu.sprache." + _sp), value=_sp,
                                       variable=self.sprache_var,
                                       command=lambda sp=_sp: self.sprache_wechseln(sp))
@@ -3093,8 +3152,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         v["zoom"] *= faktor
         v["ox"] = mx - x_mm_vor * v["zoom"]
         v["oy"] = my + y_mm_vor * v["zoom"]
-        self.redraw()
-        self._zeichne_raster()
+        self._ansicht_planen()
 
     def _zoom(self, faktor):
         v = self.view
@@ -3106,8 +3164,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         v["zoom"] *= faktor
         v["ox"] = mx - x_mm_vor * v["zoom"]
         v["oy"] = my + y_mm_vor * v["zoom"]
-        self.redraw()
-        self._zeichne_raster()
+        self._ansicht_neuzeichnen()
 
     def _reset_view(self):
         cw = self.canvas.winfo_width() or 1000
@@ -3177,8 +3234,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         v = self.view
         v["ox"] = ox + (event.x - x0)
         v["oy"] = oy + (event.y - y0)
-        self.redraw()
-        self._zeichne_raster()
+        self._ansicht_planen()
 
     @staticmethod
     def _vp_winkel_einrasten(a3, grenze=4.0):
@@ -3198,6 +3254,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         return alt != (yaw, pitch)
 
     def on_pan_end(self, event):
+        self._ansicht_sofort()
         self.pan_start = None
         self._vp_pan_start = None
         if getattr(self, "_vp_gedreht", False):
@@ -5770,9 +5827,14 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             ids = {id(e) for e in entfernt}
             self.auswahl = [e for e in self.auswahl if id(e) not in ids]
 
-    def redraw(self):
+    def redraw(self, nur_ansicht=False):
+        """Redraws the canvas. nur_ansicht=True is used for zoom/pan: the drawing itself did not
+        change, so the model recalculations (walls, cables, cross references, devices, title
+        blocks) are skipped - they only depend on the elements, never on the view."""
         _t0 = time.perf_counter()
         c = self.canvas
+        if nur_ansicht and self._modell_stand != self._modell_stand_jetzt():
+            nur_ansicht = False                # something changed meanwhile: recalculate as usual
         try:
             self._layer_anzeige_nachziehen()          # layer list follows the selection
         except (AttributeError, tk.TclError):
@@ -5784,28 +5846,30 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             except Exception:
                 pass
         self._bild_live = []                # keeps the PhotoImages of this frame
-        try:
-            wand_verknuepfen(self.elemente)
-        except Exception as ex:
-            print(f"[KatieCAD] Waende: {ex}")
-        try:
-            self._leitungen_automatisch()
-            if not self._ist_layout():
-                kabel_kreuzungen(self.elemente)
-        except Exception as ex:
-            print(f"[KatieCAD] Leitungen: {ex}")
-        try:
-            self._querverweise_aktualisieren()
-        except Exception as ex:
-            print(f"[KatieCAD] Querverweise: {ex}")
-        try:
-            self._geraete_aktualisieren()
-        except Exception as ex:
-            print(f"[KatieCAD] Geraete: {ex}")
-        try:
-            self._titelfelder_aktualisieren()
-        except Exception as ex:
-            print(f"[KatieCAD] Schriftkopf: {ex}")
+        if not nur_ansicht:
+            try:
+                wand_verknuepfen(self.elemente)
+            except Exception as ex:
+                print(f"[KatieCAD] Waende: {ex}")
+            try:
+                self._leitungen_automatisch()
+                if not self._ist_layout():
+                    kabel_kreuzungen(self.elemente)
+            except Exception as ex:
+                print(f"[KatieCAD] Leitungen: {ex}")
+            try:
+                self._querverweise_aktualisieren()
+            except Exception as ex:
+                print(f"[KatieCAD] Querverweise: {ex}")
+            try:
+                self._geraete_aktualisieren()
+            except Exception as ex:
+                print(f"[KatieCAD] Geraete: {ex}")
+            try:
+                self._titelfelder_aktualisieren()
+            except Exception as ex:
+                print(f"[KatieCAD] Schriftkopf: {ex}")
+            self._modell_stand = self._modell_stand_jetzt()
         _t1 = time.perf_counter()
         _t_raster = 0.0
         for tag in ("element", "blatt", "layout", "auswahl_highlight",
@@ -5846,6 +5910,37 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self._xref_dialog_aktualisieren()
         if getattr(self, "leistung_var", None) is not None and self.leistung_var.get():
             self._leistung_melden(_t1 - _t0, time.perf_counter() - _t1 - _t_raster, _t_raster)
+
+    def _modell_stand_jetzt(self):
+        """Cheap fingerprint of the model: if it differs from the one of the last full redraw,
+        the recalculations may not be skipped."""
+        return (len(self.elemente), len(self.layers), self._ist_layout())
+
+    def _ansicht_neuzeichnen(self):
+        """Redraw after a pure view change (zoom/pan/fit)."""
+        self._ansicht_wartet = None
+        self.redraw(nur_ansicht=True)
+        if self._ist_layout():
+            self._zeichne_raster()
+
+    def _ansicht_planen(self):
+        """Coalesces view changes: many wheel/motion events -> one redraw when Tk is idle."""
+        if getattr(self, "_ansicht_wartet", None) is not None:
+            return
+        try:
+            self._ansicht_wartet = self.root.after_idle(self._ansicht_neuzeichnen)
+        except Exception:
+            self._ansicht_neuzeichnen()
+
+    def _ansicht_sofort(self):
+        """Executes a pending view redraw immediately (e.g. when the mouse button is released)."""
+        w = getattr(self, "_ansicht_wartet", None)
+        if w is not None:
+            try:
+                self.root.after_cancel(w)
+            except Exception:
+                pass
+            self._ansicht_neuzeichnen()
 
     def _kull_fenster(self):
         """Visible area in mm (plus a margin) for the culling of large drawings."""
@@ -6493,7 +6588,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         if sl.ist_sichtbar():
             sl.ausblenden()
         else:
-            sl.einblenden(vor=self._ansicht3d if self._ansicht3d is not None else self.canvas)
+            sl.einblenden(vor=self._zeichenflaeche())
         try:
             cfg = lade_konfiguration()
             cfg["sidebar_sichtbar"] = sl.ist_sichtbar()
@@ -6714,6 +6809,9 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         """File > New: closes the current drawing and starts a new, empty single drawing.
         With an open project the WHOLE project is closed (sheets are managed in the side bar
         only). It never happens without asking."""
+        if self._tabs_da() and not self._tab_unberuehrt():
+            self.tab_neu()                     # the drawing in use stays open in its tab
+            return True
         p = self.projekt
         titel = tr("txt.0003")
         if p is not None:
@@ -6797,6 +6895,19 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         return True
 
     def oeffnen(self):
+        if self._tabs_da() and not self._tab_unberuehrt():
+            pfad = filedialog.askopenfilename(
+                filetypes=[(tr("txt.0199"), "*.cadjson"),
+                           (tr("txt.0198"), "*.*")])
+            if not pfad:
+                return
+            schon = self._tab_mit_datei(pfad)
+            if schon is not None:
+                self.tab_aktivieren(schon)
+                return
+            self.tab_neu()
+            self._einzeldatei_laden(pfad)
+            return
         if self._dirty:
             antwort = messagebox.askyesnocancel(
                 (tr("txt.0100")), self._speichern_frage_text("oeffnen"),
@@ -6847,7 +6958,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self._undo_reset()
         self.status.set((tr("txt.0030", p0=pfad)))
 
-    def datei_von_aussen_oeffnen(self, pfad):
+    def datei_von_aussen_oeffnen(self, pfad, blatt=None, nur_seiten=False):
         """A file handed over by the system (double click in the file manager, 'Open with',
         command line): .katieprj opens as project, anything else as a single drawing."""
         pfad = os.path.abspath(str(pfad))
@@ -6856,9 +6967,20 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                                  tr("msg.datei_fehlt", pfad=pfad), parent=self.root)
             return
         if pfad.lower().endswith(PROJEKT_ENDUNG):
-            if self._projekt_aenderungen_klaeren("wechseln"):
-                self.projekt_aus_datei_oeffnen(pfad)
+            if self._tabs_da() and not self._tab_unberuehrt():
+                self.projekt_aus_datei_oeffnen(pfad, blatt, nur_seiten, neuer_tab=True)
+            elif self._projekt_aenderungen_klaeren("wechseln"):
+                self.projekt_aus_datei_oeffnen(pfad, blatt, nur_seiten)
             return
+        if self._tabs_da():
+            schon = self._tab_mit_datei(pfad)
+            if schon is not None:
+                self.tab_aktivieren(schon)
+                return
+            if not self._tab_unberuehrt():
+                self.tab_neu()
+                self._einzeldatei_laden(pfad)
+                return
         if self._dirty:
             antwort = messagebox.askyesnocancel(
                 tr("txt.0100"), self._speichern_frage_text("oeffnen"), parent=self.root)
@@ -9051,6 +9173,7 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self._clipboard = [e.to_dict() for e in op["objekte"]]
         self._clipboard_basispunkt = op["basis"]
         self._clipboard_mit_basis = True
+        self._zwischenablage_teilen()
         n = len(self._clipboard)
         self._op_beenden(
             (tr("txt.0050", p0=n)))
@@ -9981,6 +10104,11 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         """Loads sheet `index` of the project into the work area."""
         p = self.projekt
         pfad = p.blatt_pfad(index)
+        alt = getattr(self, "_gesperrtes_blatt", None)
+        if alt and alt != pfad:
+            FENSTER.freigeben(alt)
+        FENSTER.sperren(pfad)                  # no other KatieCAD window opens it meanwhile
+        self._gesperrtes_blatt = pfad
         try:
             with open(pfad, "r", encoding="utf-8") as f:
                 daten = json.load(f)
@@ -10018,7 +10146,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self._update_titel()
 
     def projekt_erstellen(self):
-        if not self._projekt_aenderungen_klaeren("wechseln"):
+        neuer_tab = self._tabs_da() and not self._tab_unberuehrt()
+        if not neuer_tab and not self._projekt_aenderungen_klaeren("wechseln"):
             return
         start = lade_konfiguration().get("letzter_projektordner", "")
         if not start or not os.path.isdir(start):
@@ -10046,6 +10175,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                                  tr("msg.projekt.fehler", fehler=e),
                                  parent=self.root)
             return
+        if neuer_tab:
+            self.tab_neu()
         self.projekt = p
         self._einpolig_sync()
         self._undo_pro_blatt = {}
@@ -10055,7 +10186,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self.status.set(tr("msg.projekt.erstellt", name=p.name, pfad=p.ordner))
 
     def projekt_oeffnen(self):
-        if not self._projekt_aenderungen_klaeren("wechseln"):
+        neuer_tab = self._tabs_da() and not self._tab_unberuehrt()
+        if not neuer_tab and not self._projekt_aenderungen_klaeren("wechseln"):
             return
         start = lade_konfiguration().get("letzter_projektordner", "")
         kw = {"initialdir": start} if start and os.path.isdir(start) else {}
@@ -10065,9 +10197,19 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                        ("*.*", "*.*")], **kw)
         if not pfad:
             return
-        self.projekt_aus_datei_oeffnen(pfad)
+        self.projekt_aus_datei_oeffnen(pfad, neuer_tab=neuer_tab)
 
-    def projekt_aus_datei_oeffnen(self, pfad):
+    def projekt_aus_datei_oeffnen(self, pfad, blatt=None, nur_seiten=False, neuer_tab=False):
+        if self._tabs_da():
+            # this project open in a tab already: show it (one project object per window)
+            for i, dok in enumerate(self._dokumente):
+                q = self.projekt if i == self._dok_aktiv else dok.zustand.get("projekt")
+                if q is not None and os.path.normcase(os.path.abspath(q.projektdatei)) == \
+                        os.path.normcase(os.path.abspath(pfad)):
+                    self.tab_aktivieren(i)
+                    if blatt is not None and blatt != self.projekt.aktiv:
+                        self.blatt_wechseln(blatt)
+                    return True
         try:
             p = Projekt.laden(pfad)
         except ProjektFehler as e:
@@ -10090,6 +10232,19 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
                                  tr("msg.projekt.fehler", fehler=e),
                                  parent=self.root)
             return False
+        p.nur_seiten = bool(nur_seiten)
+        if blatt is not None and 0 <= blatt < len(p.blaetter):
+            p.aktiv = blatt
+        if FENSTER.gesperrt_von(p.blatt_pfad(p.aktiv)):
+            frei = [i for i in range(len(p.blaetter)) if not FENSTER.gesperrt_von(p.blatt_pfad(i))]
+            if not frei:
+                messagebox.showinfo(tr("msg.projekt.titel"),
+                                    tr("msg.fenster.gesperrt", name=p.blaetter[p.aktiv].name),
+                                    parent=self.root)
+                return False
+            p.aktiv = frei[0]
+        if neuer_tab:
+            self.tab_neu()
         self.projekt = p
         self._einpolig_sync()
         self._undo_pro_blatt = {}
@@ -10116,6 +10271,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
 
     def _projekt_zuruecksetzen(self):
         """Leave the project without asking; the work area becomes empty."""
+        FENSTER.freigeben(getattr(self, "_gesperrtes_blatt", None))
+        self._gesperrtes_blatt = None
         self.projekt = None
         self._einpolig_sync()
         self._undo_pro_blatt = {}
@@ -10244,6 +10401,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
 
     def projekt_eigenschaften(self):
         """Project data + revision table (used for title blocks on all sheets)."""
+        if self._nur_seiten_hinweis():
+            return
         p = self.projekt
         if p is None:
             self.status.set(tr("msg.projekt.kein_projekt"))
@@ -10292,6 +10451,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
 
     def projekt_umbenennen(self):
         """Rename project (project file and, if possible, the folder too)."""
+        if self._nur_seiten_hinweis():
+            return
         p = self.projekt
         if p is None:
             self.status.set(tr("msg.projekt.kein_projekt"))
@@ -10333,6 +10494,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self.status.set(tr("msg.projekt.geschlossen"))
 
     def projekt_loeschen(self):
+        if self._nur_seiten_hinweis():
+            return
         p = self.projekt
         offen = p is not None
         if not offen:
@@ -10375,6 +10538,69 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             self.status.set(tr("msg.projekt.geloescht", name=p.name))
 
     # ---- Sheets --------------------------------------------------
+    # ---- several windows (common/fenster.py) --------------------------------------
+    def blatt_in_neuem_fenster(self, index):
+        """Opens sheet `index` of the project in a new window (sheet window)."""
+        p = self.projekt
+        if p is None or not (0 <= index < len(p.blaetter)):
+            return
+        name = p.blaetter[index].name
+        if index == p.aktiv:
+            messagebox.showinfo(tr("msg.projekt.titel"), tr("msg.fenster.hier_offen", name=name),
+                                parent=self.root)
+            return
+        if FENSTER.gesperrt_von(p.blatt_pfad(index)):
+            messagebox.showinfo(tr("msg.projekt.titel"), tr("msg.fenster.gesperrt", name=name),
+                                parent=self.root)
+            return
+        if FENSTER.neues_fenster(p.projektdatei, f"--blatt={index}", "--seitenfenster"):
+            self.status.set(tr("msg.fenster.gestartet"))
+
+    def _nur_seiten_hinweis(self):
+        """In a sheet window the sheet list and project settings belong to the main window:
+        True (and a message) when the action has to be done there."""
+        p = self.projekt
+        if p is not None and getattr(p, "nur_seiten", False):
+            messagebox.showinfo(tr("msg.projekt.titel"), tr("msg.fenster.nur_seiten"),
+                                parent=self.root)
+            return True
+        return False
+
+    def _mehrere_seiten_hinweis(self):
+        """Actions that rewrite several sheets: not while other windows have sheets open."""
+        if self._nur_seiten_hinweis():
+            return True
+        p = self.projekt
+        if p is not None and any(FENSTER.gesperrt_von(p.blatt_pfad(i)) for i in range(len(p.blaetter))):
+            messagebox.showinfo(tr("msg.projekt.titel"), tr("msg.fenster.andere_offen"),
+                                parent=self.root)
+            return True
+        return False
+
+    def _seitenliste_auffrischen(self, index):
+        """Sheet window: takes the current sheet list from the project file (the main window
+        may have added, renamed or moved sheets). -> index of the same sheet, or None."""
+        p = self.projekt
+        if p is None or not getattr(p, "nur_seiten", False):
+            return index
+        datei = p.blaetter[index].datei
+        aktuell = p.blaetter[p.aktiv].datei
+        try:
+            neu = Projekt.laden(p.projektdatei)
+        except ProjektFehler:
+            return index
+        p.blaetter, p.daten, p.doku = neu.blaetter, neu.daten, neu.doku
+        p.naechste_id = neu.naechste_id
+        dateien = [b.datei for b in p.blaetter]
+        if aktuell in dateien:
+            p.aktiv = dateien.index(aktuell)
+        self.seitenleiste.aktualisieren()
+        if datei not in dateien:
+            messagebox.showinfo(tr("msg.projekt.titel"), tr("msg.fenster.blatt_weg"),
+                                parent=self.root)
+            return None
+        return dateien.index(datei)
+
     def blatt_wechseln(self, index):
         """Switches to sheet `index`; silently saves the current one.
         Returns: True on success."""
@@ -10383,6 +10609,21 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
             return False
         if index == p.aktiv:
             return True
+        index = self._seitenliste_auffrischen(index)
+        if index is None:
+            return False
+        if index == p.aktiv:
+            return True
+        if self._tabs_da():
+            schon = self._tab_mit_blatt(p, p.blaetter[index].datei)
+            if schon is not None and schon != self._dok_aktiv:
+                self.tab_aktivieren(schon)
+                return True
+        if FENSTER.gesperrt_von(p.blatt_pfad(index)):
+            messagebox.showinfo(tr("msg.projekt.titel"),
+                                tr("msg.fenster.gesperrt", name=p.blaetter[index].name),
+                                parent=self.root)
+            return False
         if not self._blatt_sichern():
             return False
         self._stacks_merken(p.blatt_pfad(p.aktiv))
@@ -10398,6 +10639,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         return True
 
     def blatt_neu(self):
+        if self._nur_seiten_hinweis():
+            return
         p = self.projekt
         if p is None:
             self.status.set(tr("msg.projekt.kein_projekt"))
@@ -10427,6 +10670,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
 
     def blatt_duplizieren(self):
         """Duplicates the active sheet completely (model, layouts, blocks)."""
+        if self._nur_seiten_hinweis():
+            return
         p = self.projekt
         if p is None:
             self.status.set(tr("msg.projekt.kein_projekt"))
@@ -10465,6 +10710,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         return idx or [p.aktiv]
 
     def blatt_loeschen(self):
+        if self._nur_seiten_hinweis():
+            return
         p = self.projekt
         if p is None:
             self.status.set(tr("msg.projekt.kein_projekt"))
@@ -10502,6 +10749,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
 
     def blatt_umbenennen(self, index=None):
         """Renames a sheet (default: the active one); possible at any time."""
+        if self._nur_seiten_hinweis():
+            return
         p = self.projekt
         if p is None:
             self.status.set(tr("msg.projekt.kein_projekt"))
@@ -10549,6 +10798,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
 
     def blatt_verschieben(self, delta):
         """Moves the selected sheets (one or several) up (-1) or down (+1)."""
+        if self._nur_seiten_hinweis():
+            return
         p = self.projekt
         if p is None:
             return
@@ -11647,6 +11898,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         """Gives devices with an incomplete designation ('-K', 'K?') the next
         free number (-K1, -K2 ...); numbers continue after the highest one
         in the whole project."""
+        if self._mehrere_seiten_hinweis():
+            return
         if self._ist_layout():
             self.status.set(tr("txt.0126"))
             return
@@ -11695,6 +11948,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
 
     def bauteilkatalog(self):
         """Parts catalogue (manufacturer / order number per TYP) of the project."""
+        if self._nur_seiten_hinweis():
+            return
         p = self.projekt
         if p is None:
             self.status.set(tr("msg.projekt.kein_projekt"))
@@ -11718,6 +11973,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
         self.status.set(tr("txt.0053", p0=len(dlg.result)))
 
     def dokumentation_erzeugen(self):
+        if self._mehrere_seiten_hinweis():
+            return
         p = self.projekt
         if p is None:
             self.status.set(tr("msg.projekt.kein_projekt"))
@@ -11840,6 +12097,8 @@ class CadApp(AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
     def dokumentation_excel(self):
         """Lists (device list, terminal diagram, cable plan, parts list ...) as ONE Excel
         workbook (.xlsx), one sheet per chosen list."""
+        if self._nur_seiten_hinweis():
+            return
         p = self.projekt
         if p is None:
             self.status.set(tr("msg.projekt.kein_projekt"))
@@ -12862,8 +13121,16 @@ def main():
     app = CadApp(root)
     # file handed over by the system: Windows/Linux as argument, macOS as an Apple event
     args = [a for a in sys.argv[1:] if a and not a.startswith("-")]
+    blatt = None
+    for a in sys.argv[1:]:
+        if a.startswith("--blatt="):
+            try:
+                blatt = int(a.split("=", 1)[1])
+            except ValueError:
+                pass
+    seitenfenster = "--seitenfenster" in sys.argv[1:]
     if args:
-        root.after(300, lambda: app.datei_von_aussen_oeffnen(args[0]))
+        root.after(300, lambda: app.datei_von_aussen_oeffnen(args[0], blatt, seitenfenster))
     try:
         root.createcommand("::tk::mac::OpenDocument",
                            lambda *f: f and app.datei_von_aussen_oeffnen(f[0]))
