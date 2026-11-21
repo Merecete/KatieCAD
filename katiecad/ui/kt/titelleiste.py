@@ -10,12 +10,15 @@ native frame stays: resizing at the edges, shadow and rounded corners as usual.
 
 macOS: close / minimise / zoom as the three coloured dots on the left, title centred.
 Windows / Linux: minimise / maximise / close on the right, close turns red on hover.
+With more than one monitor (Windows) a fourth button spreads the window over the work areas
+of all monitors - Windows itself can only maximise on one; a second click restores it.
 
 KATIECAD_TITELLEISTE=system keeps the title bar of the operating system.
 """
 
 import os
 import sys
+import time
 
 from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle, Line, Ellipse, InstructionGroup
@@ -32,6 +35,70 @@ def gewuenscht():
     return os.environ.get("KATIECAD_TITELLEISTE", "").strip().lower() != "system"
 
 
+_monitor_cache = [0.0, []]
+
+
+def monitore():
+    """Work areas (left, top, right, bottom) of all monitors, without the task bar.
+    Windows only (elsewhere: [] -> no button); cached for two seconds."""
+    if not sys.platform.startswith("win"):
+        return []
+    jetzt = time.monotonic()
+    if jetzt - _monitor_cache[0] < 2.0:
+        return _monitor_cache[1]
+    erg = []
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        class _MI(ctypes.Structure):
+            _fields_ = [("cbSize", wintypes.DWORD), ("rcMonitor", wintypes.RECT),
+                        ("rcWork", wintypes.RECT), ("dwFlags", wintypes.DWORD)]
+        CB = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HMONITOR, wintypes.HDC,
+                                ctypes.POINTER(wintypes.RECT), wintypes.LPARAM)
+
+        def cb(h, _dc, _r, _l):
+            mi = _MI()
+            mi.cbSize = ctypes.sizeof(_MI)
+            if ctypes.windll.user32.GetMonitorInfoW(h, ctypes.byref(mi)):
+                w = mi.rcWork
+                erg.append((w.left, w.top, w.right, w.bottom))
+            return True
+        ctypes.windll.user32.EnumDisplayMonitors(None, None, CB(cb), 0)
+    except Exception:
+        erg = []
+    _monitor_cache[0], _monitor_cache[1] = jetzt, erg
+    return erg
+
+
+def alle_monitore():
+    """Bounding box of the work areas of all monitors."""
+    m = monitore()
+    if not m:
+        return None
+    return (min(a[0] for a in m), min(a[1] for a in m), max(a[2] for a in m), max(a[3] for a in m))
+
+
+def _fenster_rechteck(neu=None):
+    """Window rectangle (left, top, right, bottom) in screen pixels; with `neu` it is set
+    exactly (SetWindowPos: Kivy's left/top/size add the hidden system frame)."""
+    try:
+        import ctypes
+        from ctypes import wintypes
+        hwnd = Window.get_window_info().window
+        u = ctypes.windll.user32
+        if neu is not None:
+            if neu is None or len(neu) != 4 or None in neu:
+                return None
+            x0, y0, x1, y1 = (int(v) for v in neu)
+            u.SetWindowPos(hwnd, 0, x0, y0, x1 - x0, y1 - y0, 0x0004 | 0x0010)   # NOZORDER|NOACTIVATE
+        r = wintypes.RECT()
+        u.GetWindowRect(hwnd, ctypes.byref(r))
+        return r.left, r.top, r.right, r.bottom
+    except Exception:
+        return None
+
+
 def _heller(f, faktor):
     return tuple(min(1.0, c * faktor) for c in f[:3]) + (1.0,)
 
@@ -44,6 +111,8 @@ class Titelleiste(Widget):
         self.gedrueckt = None
         self.aktiv = True
         self.maximiert = False
+        self.gespannt = False          # spread over all monitors
+        self._vorher = None            # (left, top, width, height, maximised) before that
         self._g = InstructionGroup()
         self.canvas.add(self._g)
         self._symbol = None
@@ -55,8 +124,11 @@ class Titelleiste(Widget):
         w = int(self.root_tk._kt_fenster_w) - r
         if MAC:
             return [("zu", l + 8, l + 28), ("min", l + 28, l + 48), ("max", l + 48, l + 68)]
-        return [("min", w - 3 * KNOPF_B, w - 2 * KNOPF_B), ("max", w - 2 * KNOPF_B, w - KNOPF_B),
-                ("zu", w - KNOPF_B, w)]
+        k = [("min", w - 3 * KNOPF_B, w - 2 * KNOPF_B), ("max", w - 2 * KNOPF_B, w - KNOPF_B),
+             ("zu", w - KNOPF_B, w)]
+        if len(monitore()) > 1 or self.gespannt:
+            k.insert(0, ("alle", w - 4 * KNOPF_B, w - 3 * KNOPF_B))
+        return k
 
     def knopf_bei(self, x, y):
         y -= self.root_tk._kt_rand[1]
@@ -93,12 +165,49 @@ class Titelleiste(Widget):
             if name == "min":
                 Window.minimize()
             elif name == "max":
+                self.gespannt = False
                 Window.restore() if self.maximiert else Window.maximize()
+            elif name == "alle":
+                self.alle_umschalten()
             elif name == "zu":
                 if self.root_tk._kt_k_schliessen() is False:
                     pass
         except Exception:
             pass
+
+    def alle_umschalten(self):
+        """Spreads the window over all monitors / restores the size it had before."""
+        from kivy.clock import Clock
+        if self.gespannt:
+            self.gespannt = False
+            vorher, self._vorher = self._vorher, None
+            if vorher:
+                rect, maxi = vorher
+                _fenster_rechteck(rect)
+                if maxi:
+                    Clock.schedule_once(lambda dt: Window.maximize(), 0.05)
+            self.zeichnen()
+            return
+        flaeche = alle_monitore()
+        rect = _fenster_rechteck()
+        if not flaeche or rect is None:
+            return
+        self.gespannt = True
+
+        def jetzt(_dt=None):
+            _fenster_rechteck(flaeche)
+            self.zeichnen()
+        if self.maximiert:                       # first back to a normal window
+            self._vorher = (None, True)
+            Window.restore()
+
+            def merken_und_spannen(_dt):
+                self._vorher = (_fenster_rechteck(), True)
+                jetzt()
+            Clock.schedule_once(merken_und_spannen, 0.1)
+        else:
+            self._vorher = (rect, False)
+            jetzt()
 
     # ---------------------------------------------------- drawing
     def _farben(self):
@@ -181,7 +290,13 @@ class Titelleiste(Widget):
                 g.add(Rectangle(pos=(x0, y0 + 1), size=(x1 - x0, HOEHE - 1)))
             g.add(Color(*((1, 1, 1, 1) if aktiv and name == "zu" else text)))
             cx, cy = int((x0 + x1) / 2) + 0.5, int(y0 + HOEHE / 2) + 0.5
-            if name == "min":
+            if name == "alle":
+                for dx in (-7, 1):                         # two screens side by side
+                    g.add(Line(rectangle=(cx + dx, cy - 3, 6, 6), width=1))
+                if self.gespannt:                          # filled while spread
+                    g.add(Rectangle(pos=(cx - 7, cy - 3), size=(6, 6)))
+                    g.add(Rectangle(pos=(cx + 1, cy - 3), size=(6, 6)))
+            elif name == "min":
                 g.add(Line(points=[cx - 5, cy, cx + 5, cy], width=1))
             elif name == "max":
                 if self.maximiert:                        # restore: two overlapping squares
