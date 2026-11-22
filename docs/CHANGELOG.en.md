@@ -1,6 +1,7 @@
 # Changes
 
 ## 1.2.0
+- Fix: **Kivy logo instead of the KatieCAD logo** in the macOS Dock (and window): the KatieCAD icon is now set for the Kivy window
 - New: **Block browser bar: adjustable heights:** the folder list and the preview can be resized in height with two splitter bars (the block list always keeps some room); the heights are remembered
 - Fix: **Missing texts:** "Dock as bar" in the block browser and the menu entry View > Block browser bar (off / left / right) had no text in any of the four languages and showed the key (`dlg.bb.andocken`)
 - Change: **Own title bar on the Mac too:** the main window has its own title bar there again (buttons on the left, title in the middle); if macOS does not move the window by itself, KatieCAD moves it while the bar is dragged. `KATIECAD_TITELLEISTE=system` still gives the one of the system

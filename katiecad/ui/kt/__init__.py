@@ -61,6 +61,17 @@ def _kivy_vorbereiten():
     if os.environ.get("KATIECAD_TITELLEISTE", "").strip().lower() != "system":
         Config.set("graphics", "custom_titlebar", "1")
     Config.set("kivy", "keyboard_mode", "system")
+    try:                                        # window / Dock icon: KatieCAD logo, not the Kivy one
+        _basen = [getattr(sys, "_MEIPASS", ""), os.path.dirname(sys.executable),
+                  os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
+                      os.path.abspath(__file__)))))]
+        for _b in _basen:
+            _png = os.path.join(_b, "KatieCAD.png") if _b else ""
+            if _png and os.path.isfile(_png):
+                Config.set("kivy", "window_icon", _png)
+                break
+    except Exception:
+        pass
     for k in list(Config.options("input")):
         if k != "mouse":
             Config.remove_option("input", k)                 # no touch providers (wm_touch ...)

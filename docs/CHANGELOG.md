@@ -1,6 +1,7 @@
 # Änderungen
 
 ## 1.2.0
+- Fix: **Kivy-Logo statt KatieCAD-Logo** im macOS-Dock (und in der Fensterleiste): das KatieCAD-Symbol wird jetzt für das Kivy-Fenster gesetzt
 - Neu: **Block-Browser-Leiste: Höhen einstellbar:** Ordnerliste und Vorschau lassen sich über zwei Trennleisten in der Höhe ziehen (die Blockliste behält immer Platz); die Höhen werden gemerkt
 - Fix: **Fehlende Texte:** „Als Leiste andocken“ im Block-Browser und der Menüeintrag Ansicht > Block-Browser-Leiste (aus / links / rechts) hatten in allen vier Sprachen keinen Text und zeigten den Schlüssel (`dlg.bb.andocken`)
 - Änderung: **Eigene Titelleiste auch auf dem Mac:** Das Hauptfenster hat dort wieder die eigene Titelleiste (Knöpfe links, Titel in der Mitte); lässt macOS das Ziehen nicht selbst zu, verschiebt KatieCAD das Fenster beim Ziehen der Leiste. Mit `KATIECAD_TITELLEISTE=system` gibt es weiter die des Systems

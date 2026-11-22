@@ -13126,6 +13126,13 @@ def fenstersymbol_setzen(root):
             except Exception:
                 pass
     png = _symbol_datei("KatieCAD.png")
+    if png and getattr(tk, "KT_SCHICHT", False):
+        try:                       # Kivy window: SDL icon (also the Dock icon on macOS)
+            from kivy.core.window import Window
+            Window.set_icon(png)
+            return
+        except Exception as e:
+            print(f"[KatieCAD] Fenstersymbol nicht gesetzt: {e}")
     if png:
         try:
             if PILLOW_VERFUEGBAR:
