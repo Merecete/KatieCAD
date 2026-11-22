@@ -1,6 +1,7 @@
 # Änderungen
 
 ## 1.2.0
+- Fix: **Schriften auf dem Mac:** KatieCAD findet jetzt die Systemschriften (macOS hat kein `fc-list`) und holt fehlende Zeichen wie `⋮⋮` aus Apple Symbols; das Schließen-„X“ der Dialoge wird als zwei Linien gezeichnet statt als Schriftzeichen (war ein Kästchen)
 - Fix: **Kivy-Oberfläche auf dem Mac (Retina):** Auf Retina-Bildschirmen war alles halb so groß wie unter Tk, weil Kivy in echten Pixeln rechnet; KatieCAD schaltet dort jetzt den hochauflösenden Modus ab (`KATIECAD_RETINA=1` lässt ihn an), und das Fenster wird nie größer als der Bildschirm (sonst war die Menüleiste abgeschnitten)
 - Neu: **Umgebungsvariable `KATIECAD_SKALIERUNG`:** vergrößert oder verkleinert die Schriftgrößen der Kivy-Oberfläche (z. B. `1.25`), falls sie auf einem Bildschirm zu klein wirkt
 - Fix: **Kivy-Oberfläche auf dem Mac:** Die Menüleiste fehlte (Kivy hat keine macOS-Menüleiste, jetzt zeichnet KatieCAD seine eigene Leiste wie unter Windows und Linux); die Titelleiste ist auf dem Mac standardmäßig die des Systems (die eigene ließ sich dort nicht verschieben, `KATIECAD_TITELLEISTE=eigen` schaltet sie ein); die Darstellung wird nie kleiner als bei 96 dpi berechnet (macOS meldet 72 dpi, alles war zu klein)

@@ -79,6 +79,60 @@ def _unix_fonts():
     return erg
 
 
+def _mac_fonts():
+    """macOS has no fc-list: reads the family and style names of the font files in the system
+    folders with fontTools (first font of a collection). The result is cached in
+    ~/Library/Caches/KatieCAD/fontindex.json and reused while the folders are unchanged."""
+    import json
+    ordner = ["/System/Library/Fonts", "/System/Library/Fonts/Supplemental", "/Library/Fonts",
+              os.path.expanduser("~/Library/Fonts")]
+    stempel = []
+    for o in ordner:
+        try:
+            stempel.append([o, os.stat(o).st_mtime_ns, len(os.listdir(o))])
+        except OSError:
+            stempel.append([o, 0, 0])
+    cache = os.path.expanduser("~/Library/Caches/KatieCAD/fontindex.json")
+    try:
+        with open(cache, encoding="utf-8") as f:
+            d = json.load(f)
+        if d.get("stempel") == stempel:
+            return [tuple(x) for x in d["fonts"]]
+    except (OSError, ValueError, KeyError):
+        pass
+    erg = []
+    try:
+        from fontTools.ttLib import TTFont
+    except ImportError:
+        return []
+    for o in ordner:
+        try:
+            namen = sorted(os.listdir(o))
+        except OSError:
+            continue
+        for n in namen:
+            if not n.lower().endswith((".ttf", ".otf", ".ttc")):
+                continue
+            pfad = os.path.join(o, n)
+            try:
+                f = TTFont(pfad, fontNumber=0, lazy=True)
+                nm = f["name"]
+                fam = (nm.getDebugName(16) or nm.getDebugName(1) or "").strip()
+                stil = (nm.getDebugName(17) or nm.getDebugName(2) or "Regular").strip()
+                f.close()
+            except Exception:
+                continue
+            if fam:
+                erg.append((f"{fam} {stil}" if stil.lower() != "regular" else fam, pfad))
+    try:
+        os.makedirs(os.path.dirname(cache), exist_ok=True)
+        with open(cache, "w", encoding="utf-8") as f:
+            json.dump({"stempel": stempel, "fonts": erg}, f)
+    except OSError:
+        pass
+    return erg
+
+
 _STILE = (("bold italic", "bolditalic"), ("bold oblique", "bolditalic"),
           ("bold", "bold"), ("italic", "italic"), ("oblique", "italic"), ("regular", "regular"))
 
@@ -93,7 +147,8 @@ def _familien_laden():
         return _familien
     _familien = {}
     try:
-        liste = _windows_fonts() if sys.platform.startswith("win") else _unix_fonts()
+        liste = (_windows_fonts() if sys.platform.startswith("win")
+                 else _mac_fonts() if sys.platform == "darwin" else _unix_fonts())
     except Exception:
         liste = []
     for name, datei in liste:
@@ -166,7 +221,8 @@ def _kivy_name(familie):
 # ------------------------------------------------------------
 _abdeckung_cache = {}
 _ERSATZ = ("Segoe UI Symbol", "Segoe UI Emoji", "Arial Unicode MS", "DejaVu Sans",
-           "Noto Sans Symbols", "Noto Sans Symbols2", "Symbola")
+           "Noto Sans Symbols", "Noto Sans Symbols2", "Symbola",
+           "Apple Symbols", "Menlo", "Zapf Dingbats")        # macOS
 
 
 def _abdeckung(kname):

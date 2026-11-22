@@ -2530,11 +2530,11 @@ class Toplevel(Wm, BaseWidget):
                 if tex is not None:
                     fontmod.text_zeichnen(g, tex, vg, (kx + 10, int(ky + ah - TITEL_H / 2 - tex.size[1] / 2)),
                                           tex.size)
-                x_tex = fontmod.text_textur("✕", ("Segoe UI", 10))
-                if x_tex is not None:
-                    fontmod.text_zeichnen(g, x_tex, vg, (kx + aw - 22 - x_tex.size[0] / 2,
-                                                         int(ky + ah - TITEL_H / 2 - x_tex.size[1] / 2)),
-                                          x_tex.size)
+                # close "X": drawn as two lines, so it does not depend on a font having U+2715
+                cx, cy = kx + aw - 22, ky + ah - TITEL_H / 2
+                g.add(Color(*vg))
+                g.add(Line(points=[cx - 5, cy - 5, cx + 5, cy + 5], width=1.2))
+                g.add(Line(points=[cx - 5, cy + 5, cx + 5, cy - 5], width=1.2))
                 g.add(Color(*bg))
                 g.add(Rectangle(pos=(kx + 1, ky + 1), size=(self._kt_w, self._kt_h)))
             else:
