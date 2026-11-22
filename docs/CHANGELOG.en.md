@@ -1,6 +1,7 @@
 # Changes
 
 ## 1.2.0
+- Change: **Own title bar on the Mac too:** the main window has its own title bar there again (buttons on the left, title in the middle); if macOS does not move the window by itself, KatieCAD moves it while the bar is dragged. `KATIECAD_TITELLEISTE=system` still gives the one of the system
 - Fix: **Fonts on the Mac:** KatieCAD now finds the system fonts (macOS has no `fc-list`) and takes missing characters such as `⋮⋮` from Apple Symbols; the close "X" of dialogs is drawn as two lines instead of a character (it was a box)
 - Fix: **Kivy interface on the Mac (Retina):** on Retina screens everything was half as big as under Tk because Kivy counts in real pixels; KatieCAD now turns the high-dpi mode off there (`KATIECAD_RETINA=1` keeps it on), and the window is never larger than the screen (otherwise the menu bar was cut off)
 - New: **Environment variable `KATIECAD_SKALIERUNG`:** enlarges or reduces the font sizes of the Kivy interface (e.g. `1.25`) if it looks too small on a screen

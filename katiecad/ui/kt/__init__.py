@@ -58,8 +58,7 @@ def _kivy_vorbereiten():
     Config.set("graphics", "maxfps", "60")
     # own title bar (titelleiste.py) - must be set before the window exists, so the module
     # (which needs the window) is not imported here
-    w = os.environ.get("KATIECAD_TITELLEISTE", "").strip().lower()
-    if w == "eigen" or (w != "system" and sys.platform != "darwin"):
+    if os.environ.get("KATIECAD_TITELLEISTE", "").strip().lower() != "system":
         Config.set("graphics", "custom_titlebar", "1")
     Config.set("kivy", "keyboard_mode", "system")
     for k in list(Config.options("input")):

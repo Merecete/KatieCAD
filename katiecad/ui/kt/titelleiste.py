@@ -32,14 +32,9 @@ MAC = sys.platform == "darwin"
 
 
 def gewuenscht():
-    """Own title bar? Default: yes, except on macOS (the window could not be moved there yet);
-    KATIECAD_TITELLEISTE=system / eigen forces the one or the other."""
-    w = os.environ.get("KATIECAD_TITELLEISTE", "").strip().lower()
-    if w == "system":
-        return False
-    if w == "eigen":
-        return True
-    return not MAC
+    """Own title bar? Default: yes on every system; KATIECAD_TITELLEISTE=system uses the one of
+    the operating system."""
+    return os.environ.get("KATIECAD_TITELLEISTE", "").strip().lower() != "system"
 
 
 _monitor_cache = [0.0, []]
@@ -117,6 +112,7 @@ class Titelleiste(Widget):
         super().__init__(size_hint=(None, None), **kw)
         self.root_tk = root
         self.hover = None             # "min" / "max" / "zu" under the pointer
+        self.mac_zug = None           # macOS: (x, y) while the bar is dragged by hand
         self.gedrueckt = None
         self.aktiv = True
         self.maximiert = False
@@ -163,7 +159,26 @@ class Titelleiste(Widget):
     def runter(self, x, y):
         self.gedrueckt = self.knopf_bei(x, y)
         self.zeichnen()
+        if self.gedrueckt is None and MAC and 0 <= y - self.root_tk._kt_rand[1] < HOEHE:
+            # If the system hit test already moves the window, this click never arrives here;
+            # if it does not, the window is moved by hand (see zug()).
+            self.mac_zug = (x, y)
+            return True
         return self.gedrueckt is not None
+
+    def zug(self, x, y):
+        """macOS: mouse moved with the button held on the bar -> moves the window by the
+        difference (the window moves with the pointer, so every step is a small correction)."""
+        if self.mac_zug is None:
+            return False
+        dx, dy = x - self.mac_zug[0], y - self.mac_zug[1]
+        if dx or dy:
+            try:
+                Window.left += dx
+                Window.top += dy
+            except Exception:
+                pass
+        return True
 
     def los(self, x, y):
         """Mouse button released at (x, y): runs the button only if the release is on the same

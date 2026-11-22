@@ -2079,6 +2079,8 @@ class Tk(Wm, Misc, GeometrieMixin):
         on (implicit grab).
         """
         x, y = self._kt_maus_tk()
+        if self._kt_leiste is not None and self._kt_leiste.zug(x, y):
+            return                      # macOS: window dragged by its own title bar
         if self._kt_titel_drag is not None:
             top, dx, dy = self._kt_titel_drag
             if not top._kt_zerstoert:
@@ -2173,6 +2175,10 @@ class Tk(Wm, Misc, GeometrieMixin):
         num = {"left": 1, "middle": 2, "right": 3, "mouse4": 4, "mouse5": 5}.get(button, 1)
         if self._kt_titel_drag is not None:
             self._kt_titel_drag = None
+            self._kt_knoepfe.discard(num)
+            return
+        if self._kt_leiste is not None and self._kt_leiste.mac_zug is not None:
+            self._kt_leiste.mac_zug = None
             self._kt_knoepfe.discard(num)
             return
         if self._kt_leiste is not None and self._kt_leiste.gedrueckt is not None:
