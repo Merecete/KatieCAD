@@ -31,7 +31,7 @@ _bildschirm = [None]
 
 
 def auf_bildschirm(w, h):
-    """macOS: limits a wished window size to the screen (menu bar and Dock are left out). A
+    """macOS: limits a wished window size to the screen (menu bar, Dock and window frame are left out). A
     window larger than the screen is shrunk by the system, but Kivy does not notice, so the
     top of the program would be cut off. Elsewhere / if the size is unknown: unchanged."""
     import sys
@@ -53,7 +53,7 @@ def auf_bildschirm(w, h):
     sw, sh = _bildschirm[0]
     if sw <= 0 or sh <= 0:
         return w, h
-    return min(w, sw - 20), min(h, sh - 130)
+    return min(w, sw - 40), min(h, sh - 200)
 
 
 def alles_neu():
