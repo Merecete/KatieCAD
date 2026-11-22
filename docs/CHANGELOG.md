@@ -1,6 +1,8 @@
 # Änderungen
 
 ## 1.2.0
+- Neu: **Block-Browser-Leiste: Höhen einstellbar:** Ordnerliste und Vorschau lassen sich über zwei Trennleisten in der Höhe ziehen (die Blockliste behält immer Platz); die Höhen werden gemerkt
+- Fix: **Fehlende Texte:** „Als Leiste andocken“ im Block-Browser und der Menüeintrag Ansicht > Block-Browser-Leiste (aus / links / rechts) hatten in allen vier Sprachen keinen Text und zeigten den Schlüssel (`dlg.bb.andocken`)
 - Änderung: **Eigene Titelleiste auch auf dem Mac:** Das Hauptfenster hat dort wieder die eigene Titelleiste (Knöpfe links, Titel in der Mitte); lässt macOS das Ziehen nicht selbst zu, verschiebt KatieCAD das Fenster beim Ziehen der Leiste. Mit `KATIECAD_TITELLEISTE=system` gibt es weiter die des Systems
 - Fix: **Schriften auf dem Mac:** KatieCAD findet jetzt die Systemschriften (macOS hat kein `fc-list`) und holt fehlende Zeichen wie `⋮⋮` aus Apple Symbols; das Schließen-„X“ der Dialoge wird als zwei Linien gezeichnet statt als Schriftzeichen (war ein Kästchen)
 - Fix: **Kivy-Oberfläche auf dem Mac (Retina):** Auf Retina-Bildschirmen war alles halb so groß wie unter Tk, weil Kivy in echten Pixeln rechnet; KatieCAD schaltet dort jetzt den hochauflösenden Modus ab (`KATIECAD_RETINA=1` lässt ihn an), und das Fenster wird nie größer als der Bildschirm (sonst war die Menüleiste abgeschnitten)

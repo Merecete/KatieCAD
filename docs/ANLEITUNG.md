@@ -250,6 +250,10 @@ Symbol). Menü **Blöcke**:
 - **Block/Gerät einfügen (I)** öffnet den Block-Browser. Doppelklick auf einen Block
   setzt ihn in die Zeichnung. Die Blöcke sind normale Dateien (`*.katieblock`) in
   den Ordnern, die der Browser anzeigt (auch der Projektordner `Bloecke`).
+  Über **Ansicht > Block-Browser-Leiste** (oder den Knopf „Als Leiste andocken“) lässt er sich
+  links oder rechts an die Zeichenfläche andocken. Die Höhen von Ordnerliste und Vorschau
+  änderst du, indem du die dünnen Trennleisten darunter bzw. darüber mit der Maus ziehst
+  (die Breite über den Rand zur Zeichnung); alles wird gemerkt.
 - **Block auflösen (X)** zerlegt einen Block wieder.
 - **Block/Gerät als Datei speichern / aus Datei laden** (ein gemeinsamer Menüeintrag unter Blöcke; der doppelte Eintrag im Elektro-Menü entfällt).
 - **Attribut definieren (ATTDEF)**: ein Textfeld im Symbol, dessen Wert je

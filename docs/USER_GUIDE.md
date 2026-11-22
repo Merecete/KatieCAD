@@ -248,6 +248,10 @@ A **block** is a reusable group of objects (for example a symbol). **Blocks** me
 - **Insert block/device (I)** opens the block browser. A double click on a block places it
   in the drawing. Blocks are ordinary files (`*.katieblock`) in the folders shown by
   the browser (including the project folder `Bloecke`).
+  With **View > Block browser bar** (or the button "Dock as bar") it can be docked to the left
+  or right of the drawing area. Change the heights of the folder list and the preview by
+  dragging the thin splitter bars below the folder list and above the preview (the width
+  with the edge next to the drawing); everything is remembered.
 - **Explode block (X)** breaks a block apart again; attributes stay attributes (the current value becomes the default). While dragging a line end grip, object snap and Ortho work.
 - **Save block/device to file / load block from file** (one shared entry in the Blocks menu; the duplicate entry in the Electrical menu is gone).
 - **Define attribute (ATTDEF)**: a text field inside the symbol whose value differs
