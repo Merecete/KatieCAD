@@ -30,6 +30,7 @@ from katiecad.ui.kt.geometry import (GeometrieMixin, pack_req, pack_anordnen, gr
                                      grid_anordnen, place_anordnen)
 
 TkVersion = 8.6
+KT_SCHICHT = True              # marks this module as the Kivy layer (app.py asks for it)
 TclVersion = 8.6
 wantobjects = 1
 

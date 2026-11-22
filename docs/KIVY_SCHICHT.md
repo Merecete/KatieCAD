@@ -33,7 +33,8 @@ von `main.py` / `katiecad/__main__.py`):
 | normal | Kivy |
 | Umgebungsvariable `KATIECAD_UI=tk` | echtes Tk wie früher |
 | Kivy fehlt oder kann kein OpenGL-Fenster öffnen | automatisch echtes Tk |
-| `KATIECAD_TITELLEISTE=system` | Kivy, aber mit der Titelleiste des Betriebssystems |
+| `KATIECAD_TITELLEISTE=system` | Kivy, aber mit der Titelleiste des Betriebssystems (auf dem Mac der Standard) |
+| `KATIECAD_TITELLEISTE=eigen` | Kivy mit eigener Titelleiste, auch auf dem Mac (dort noch nicht fertig: Fenster lässt sich nicht verschieben) |
 
 Die Tk-Variante ist **keine Altlast**, sondern die Rückfallebene: Auf Rechnern ohne
 brauchbares OpenGL startet KatieCAD damit trotzdem. Sie darf deshalb nicht entfernt werden,

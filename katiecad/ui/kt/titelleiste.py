@@ -32,7 +32,14 @@ MAC = sys.platform == "darwin"
 
 
 def gewuenscht():
-    return os.environ.get("KATIECAD_TITELLEISTE", "").strip().lower() != "system"
+    """Own title bar? Default: yes, except on macOS (the window could not be moved there yet);
+    KATIECAD_TITELLEISTE=system / eigen forces the one or the other."""
+    w = os.environ.get("KATIECAD_TITELLEISTE", "").strip().lower()
+    if w == "system":
+        return False
+    if w == "eigen":
+        return True
+    return not MAC
 
 
 _monitor_cache = [0.0, []]

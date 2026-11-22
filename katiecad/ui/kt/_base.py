@@ -16,6 +16,7 @@ def skalierung():
             dpi = float(Window.dpi) or 96.0
         except Exception:
             pass
+        dpi = max(dpi, 96.0)         # macOS reports 72 dpi (points): text would be 25 % too small
         _skal[0] = dpi / 72.0
     return _skal[0]
 

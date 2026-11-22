@@ -1667,6 +1667,8 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         menu bar at the top of the screen. KATIECAD_NATIVE_MENU=1 forces the native bar."""
         if os.environ.get("KATIECAD_NATIVE_MENU"):
             return False
+        if getattr(tk, "KT_SCHICHT", False):
+            return True            # Kivy layer: no native menu bar exists, also not on the Mac
         try:
             return self.root.tk.call("tk", "windowingsystem") in ("x11", "win32")
         except tk.TclError:
