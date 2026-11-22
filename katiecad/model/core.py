@@ -151,10 +151,31 @@ MIN_VP_GROESSE = 10.0
 PASTE_OFFSET_MM = 10.0
 
 TEXT_BREITE = 0.72
+def _linux_ui_schrift():
+    """UI font on Linux: a lighter, narrower sans font when installed (DejaVu Sans looks heavy
+    and wide next to Segoe UI); DejaVu Sans otherwise. KATIECAD_SCHRIFT=<family> overrides."""
+    import os
+    wunsch = os.environ.get("KATIECAD_SCHRIFT", "").strip()
+    if wunsch:
+        return wunsch
+    for familie, dateien in (("Noto Sans", ("NotoSans-Regular", "NotoSans[wdth,wght]")),
+                             ("Open Sans", ("OpenSans-Regular", "OpenSans[wdth,wght]")),
+                             ("Liberation Sans", ("LiberationSans-Regular",))):
+        for wurzel in ("/usr/share/fonts", "/usr/local/share/fonts",
+                       os.path.expanduser("~/.local/share/fonts"), os.path.expanduser("~/.fonts")):
+            try:
+                for ordner, _d, namen in os.walk(wurzel):
+                    if any(n.startswith(d) for n in namen for d in dateien):
+                        return familie
+            except Exception:
+                pass
+    return "DejaVu Sans"
+
+
 # UI font per platform (Segoe UI exists only on Windows)
 UI_SCHRIFT = ("Segoe UI" if sys.platform.startswith("win")
               else "Helvetica Neue" if sys.platform == "darwin"
-              else "DejaVu Sans")
+              else _linux_ui_schrift())
 TEXT_ZEILE = 1.65
 CAD_VERSALHOEHE = 0.72
 LW_PX_FAKTOR = 6.5

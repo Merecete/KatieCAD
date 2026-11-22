@@ -34,6 +34,7 @@ von `main.py` / `katiecad/__main__.py`):
 | Umgebungsvariable `KATIECAD_UI=tk` | echtes Tk wie früher |
 | Kivy fehlt oder kann kein OpenGL-Fenster öffnen | automatisch echtes Tk |
 | `KATIECAD_TITELLEISTE=system` | Kivy, aber mit der Titelleiste des Betriebssystems |
+| `KATIECAD_SCHRIFT=<Name>` | Linux, Schriftfamilie der Oberfläche (Standard: Noto Sans / Open Sans / Liberation Sans, sonst DejaVu Sans) |
 | `KATIECAD_SKALIERUNG=1.25` | Kivy, Schriftgrößen um den Faktor vergrößert (0,5 bis 3), falls die Oberfläche auf einem Bildschirm zu klein wirkt |
 
 Die Tk-Variante ist **keine Altlast**, sondern die Rückfallebene: Auf Rechnern ohne

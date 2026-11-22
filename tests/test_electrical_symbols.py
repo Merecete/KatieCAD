@@ -136,7 +136,7 @@ check(order.index("elektro") == order.index("bloecke") + 1, f"Menue-Reihenfolge:
 check("Segoe UI" not in src.replace('UI_SCHRIFT = ', ''), "keine fest verdrahtete Windows-Schrift mehr")
 check(not re.search(r"(?<![a-z])tk\.Button\(", src), "keine tk.Button (Farbe wird unter macOS ignoriert)")
 check('c.bind(f"<Button-{r}>"' in src and "BTN_RECHTS" in src, "Maustasten plattformabhaengig")
-check(core.UI_SCHRIFT in ("Segoe UI", "Helvetica Neue", "DejaVu Sans"), "UI_SCHRIFT")
+check(core.UI_SCHRIFT in ("Segoe UI", "Helvetica Neue", "DejaVu Sans", "Noto Sans", "Open Sans", "Liberation Sans"), "UI_SCHRIFT")
 print(f"{ok} Checks bestanden")
 
 # ---- free text positions (mask, terminal, pin, device block) ----
