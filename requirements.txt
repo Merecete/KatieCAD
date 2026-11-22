@@ -2,4 +2,4 @@ ezdxf
 Pillow>=10.3.0
 ezdwg>=0.19.2
 pypdf>=5.0.0
-kivy>=2.3.0
+kivy>=2.3.0,<3.0

@@ -61,6 +61,30 @@ def _kivy_vorbereiten():
             Config.remove_option("input", k)                 # no touch providers (wm_touch ...)
 
 
+# Kivy versions the layer was written and tested for: (minimum, first version NOT tested).
+KIVY_GETESTET = ((2, 3, 0), (3, 0, 0))
+
+
+def _kivy_version_pruefen():
+    """Warns in the log when the installed Kivy is outside the tested range. The layer replaces
+    tkinter and relies on Kivy details, so a new major version may break it silently."""
+    try:
+        import kivy
+        teile = []
+        for t in kivy.__version__.replace("-", ".").split(".")[:3]:
+            digits = "".join(c for c in t if c.isdigit())
+            teile.append(int(digits) if digits else 0)
+        v = tuple(teile + [0] * (3 - len(teile)))
+        lo, hi = KIVY_GETESTET
+        if not (lo <= v < hi):
+            print(f"[KatieCAD] Warnung: Kivy {kivy.__version__} liegt ausserhalb des getesteten "
+                  f"Bereichs {'.'.join(map(str, lo))} bis <{'.'.join(map(str, hi))}. "
+                  f"Bei Problemen: KATIECAD_UI=tk startet die Tk-Oberflaeche.")
+    except Exception as e:                      # never block the start because of this check
+        print(f"[KatieCAD] Kivy-Version nicht pruefbar: {e!r}")
+
+
+
 def installieren():
     """Puts the layer in place of tkinter: imports the real tkinter first (the native file and
     colour dialogs still need it, see dlgmod.py), opens the Kivy window (raises if that is not
@@ -102,4 +126,5 @@ def installieren():
         PIL.ImageTk = it
     except ImportError:
         pass
+    _kivy_version_pruefen()
     _installiert[0] = True
