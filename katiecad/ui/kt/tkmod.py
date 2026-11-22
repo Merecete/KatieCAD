@@ -1587,6 +1587,8 @@ class Tk(Wm, Misc, GeometrieMixin):
         if self._kt_geo_gesetzt:
             w, h = self._kt_geo_gesetzt
             h += self._kt_titel_h             # geometry() means the content, as under Tk
+            if self is _base.ROOT[0]:
+                w, h = _base.auf_bildschirm(w, h)       # macOS: never larger than the screen
             try:
                 Window.size = (w, h)
             except Exception:

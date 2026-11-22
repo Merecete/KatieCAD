@@ -39,6 +39,11 @@ def _kivy_vorbereiten():
     """
     os.environ.setdefault("KIVY_NO_ARGS", "1")            # the file argument is ours
     os.environ.setdefault("KIVY_NO_FILELOG", "1")
+    if sys.platform == "darwin" and not os.environ.get("KATIECAD_RETINA"):
+        # Kivy counts in real pixels, the program in points (like Tk): on a Retina display
+        # everything would be half as big. Without the high-dpi mode both agree (text a bit
+        # softer). KATIECAD_RETINA=1 keeps the high-dpi mode.
+        os.environ.setdefault("SDL_VIDEO_HIGHDPI_DISABLED", "1")
     os.environ.setdefault("KIVY_LOG_MODE", "PYTHON")
     if "KIVY_NO_CONSOLELOG" not in os.environ and not os.environ.get("KATIECAD_KIVY_LOG"):
         os.environ["KIVY_NO_CONSOLELOG"] = "1"

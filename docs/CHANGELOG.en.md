@@ -1,6 +1,8 @@
 # Changes
 
 ## 1.2.0
+- Fix: **Kivy interface on the Mac (Retina):** on Retina screens everything was half as big as under Tk because Kivy counts in real pixels; KatieCAD now turns the high-dpi mode off there (`KATIECAD_RETINA=1` keeps it on), and the window is never larger than the screen (otherwise the menu bar was cut off)
+- New: **Environment variable `KATIECAD_SKALIERUNG`:** enlarges or reduces the font sizes of the Kivy interface (e.g. `1.25`) if it looks too small on a screen
 - Fix: **Kivy interface on the Mac:** the menu bar was missing (Kivy has no macOS menu bar, KatieCAD now draws its own bar like on Windows and Linux); the title bar is the system one on the Mac by default (the own one could not be moved there, `KATIECAD_TITELLEISTE=eigen` turns it on); the display is never scaled below 96 dpi (macOS reports 72 dpi, everything was too small)
 - Change: **Kivy version range:** `requirements.txt` now allows Kivy 2.3 up to (not including) 3.0; if KatieCAD starts with a version outside the tested range, a warning is written to the log (fallback with `KATIECAD_UI=tk`)
 - New: **Several drawings as tabs:** *New*, *Open* and *Open project* open the drawing in a new tab instead of replacing the current one (an empty, unused drawing is reused). Project sheets can be opened in tabs of their own with a right click in the side bar. Every tab has its own drawing, selection and undo history; tabs can be dragged to reorder them; switch with a click or Ctrl+Tab, close with ✕, middle click or Ctrl+W (asking about unsaved changes). The tab bar appears as soon as more than one drawing is open

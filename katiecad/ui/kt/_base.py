@@ -17,8 +17,43 @@ def skalierung():
         except Exception:
             pass
         dpi = max(dpi, 96.0)         # macOS reports 72 dpi (points): text would be 25 % too small
-        _skal[0] = dpi / 72.0
+        faktor = 1.0
+        try:                       # manual correction, e.g. KATIECAD_SKALIERUNG=1.25 (0.5 ... 3)
+            import os
+            faktor = min(3.0, max(0.5, float(os.environ.get("KATIECAD_SKALIERUNG", "1") or 1)))
+        except ValueError:
+            pass
+        _skal[0] = dpi / 72.0 * faktor
     return _skal[0]
+
+
+_bildschirm = [None]
+
+
+def auf_bildschirm(w, h):
+    """macOS: limits a wished window size to the screen (menu bar and Dock are left out). A
+    window larger than the screen is shrunk by the system, but Kivy does not notice, so the
+    top of the program would be cut off. Elsewhere / if the size is unknown: unchanged."""
+    import sys
+    if not sys.platform == "darwin":
+        return w, h
+    if _bildschirm[0] is None:
+        _bildschirm[0] = (0, 0)
+        try:
+            import subprocess
+            erg = subprocess.run(
+                ["osascript", "-e",
+                 'tell application "Finder" to get bounds of window of desktop'],
+                capture_output=True, text=True, timeout=5).stdout
+            z = [int(t) for t in erg.replace(",", " ").split()]
+            if len(z) == 4:
+                _bildschirm[0] = (z[2] - z[0], z[3] - z[1])
+        except Exception:
+            pass
+    sw, sh = _bildschirm[0]
+    if sw <= 0 or sh <= 0:
+        return w, h
+    return min(w, sw - 20), min(h, sh - 130)
 
 
 def alles_neu():
