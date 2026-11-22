@@ -13157,6 +13157,15 @@ def main():
     root = tk.Tk()
     fenstersymbol_setzen(root)
     app = CadApp(root)
+    if sys.platform == "darwin" and getattr(tk, "KT_SCHICHT", False):
+        def _ueber_menue(versuch=0):           # "About KatieCAD" in the app menu -> own info window
+            try:
+                from katiecad.ui.kt import macmenu
+                if not macmenu.ueber_umleiten(app.zeige_info_fenster) and versuch < 5:
+                    root.after(700, lambda: _ueber_menue(versuch + 1))
+            except Exception as ex:
+                print(f"[KatieCAD] Info-Menue: {ex}")
+        root.after(700, _ueber_menue)
     # file handed over by the system: Windows/Linux as argument, macOS as an Apple event
     args = [a for a in sys.argv[1:] if a and not a.startswith("-")]
     blatt = None
