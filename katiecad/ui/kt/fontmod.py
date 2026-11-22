@@ -54,6 +54,11 @@ def _windows_fonts():
     return erg
 
 
+# fontconfig style names that mean the normal cut (DejaVu calls it "Book", others "Roman" ...);
+# without this "DejaVu Sans" had no regular cut and the BOLD file was used for all normal text
+_NORMALSTILE = ("regular", "book", "roman", "normal", "text")
+
+
 def _unix_fonts():
     """Installed fonts on Linux / macOS as (name, file) pairs from fontconfig (`fc-list`); the
     style is appended to the family unless it is "Regular". Empty list if fc-list is missing.
@@ -75,7 +80,7 @@ def _unix_fonts():
             continue
         if not datei.lower().endswith((".ttf", ".otf", ".ttc")):
             continue
-        erg.append((f"{fam} {stil}" if stil and stil.lower() != "regular" else fam, datei.strip()))
+        erg.append((f"{fam} {stil}" if stil and stil.lower() not in _NORMALSTILE else fam, datei.strip()))
     return erg
 
 
