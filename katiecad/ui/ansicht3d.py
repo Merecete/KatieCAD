@@ -22,7 +22,7 @@ from katiecad.ui import meldung as messagebox
 from katiecad.common.i18n import tr
 from katiecad.model.core import (FARBEN, UI_SCHRIFT, Koerper3D, Gruppe3D, Skizze3D, kanal_rechteck, kanal_kette, kanal_versatz, kanal_aus_koerper, kanal_formstueck, Bemassung3D, Text3D, Viewport,
                                  quader, zylinder, kegel, pyramide, kugel)
-VERDECKT_SCHNELL_S = 0.05      # hidden-line run faster than this: stay hidden while navigating
+VERDECKT_SCHNELL_S = 0.15      # hidden-line run faster than this (seconds): stay hidden while navigating
 from katiecad.model import geom3d as G
 from katiecad.model import szene3d as S
 from katiecad.model import schrank as SCHR
