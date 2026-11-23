@@ -342,9 +342,10 @@ on the line with the number); then the field does not appear twice.
 - **Automatic:** if two connection points (pins, junctions, terminals, cross
   references) lie exactly above each other or side by side and their directions
   match, the red wire appears by itself. It disappears again if you remove one of
-  the points. If one of the two points is labelled **PE** or **PEN** (pin text or terminal
-  number, case does not matter), the automatic wire is drawn **dashed** for **PE** and **dash-dot** for **PEN** (PEN wins
-  when one end is PEN and the other e.g. a device pin called "PE").
+  the points. If any point of a connected wire net (wires joined through
+  junctions) is labelled **PE** or **PEN** (pin text, terminal number or cross reference, case
+  does not matter), **all** automatic wires of that net are drawn **dashed** for **PE** and
+  **dash-dot** for **PEN** (PEN wins when both occur in the net). Devices do not connect their pins.
 - **By hand:** tool **Draw wire (LEITUNG)**, then click two connections one after the
   other.
 - If you place a pin, device, terminal or junction **on** an existing wire, the wire

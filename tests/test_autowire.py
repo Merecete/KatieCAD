@@ -122,4 +122,22 @@ pc.wert = "2"
 pb.wert = "N"
 L.leitungen_automatisch(elp)
 check(all(l.linientyp == "Volllinie (schmal)" for l in elp if isinstance(l, core.Leitung)), "nicht mehr PE -> durchgezogen")
+# whole net: PE cross reference at one end of a rail with junctions -> every piece dashed,
+# PEN anywhere in the net -> every piece dash-dot; a separate net stays solid
+qv = core.Querverweis(300, 0, "PE", "ankommend", 0)      # tip at (305, 0)
+v1 = core.Verbindung(320, 0, arme=[180, 0, 90], punkt=True)
+v2 = core.Verbindung(340, 0, arme=[180, 0, 90], punkt=True)
+pin1, pin2 = VP(320, 20, wert="PE"), VP(340, 20, wert="PE")
+fremd1, fremd2 = VP(500, 60, wert="1"), VP(500, 90, wert="2")
+elq = [qv, v1, v2, pin1, pin2, fremd1, fremd2]
+L.leitungen_automatisch(elq)
+lq = [e for e in elq if isinstance(e, core.Leitung)]
+check(len(lq) >= 4, "Schiene: Leitungen entstehen (%d)" % len(lq))
+mit = [l for l in lq if l.y1 < 25 and l.x1 < 400 and l.x2 < 400]
+check(mit and all(l.linientyp == L.PE_LINIENTYP for l in mit), "ganzes PE-Netz gestrichelt")
+fr = [l for l in lq if l.x1 >= 400]
+check(fr and all(l.linientyp == "Volllinie (schmal)" for l in fr), "anderes Netz durchgezogen")
+pin2.wert = "PEN"
+L.leitungen_automatisch(elq)
+check(all(l.linientyp == L.PEN_LINIENTYP for l in mit), "PEN im Netz -> ganzes Netz strichpunktiert")
 print(f"{ok} Checks bestanden")

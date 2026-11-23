@@ -681,12 +681,17 @@ def _auto_anker(elemente):
             out.append((ux, uy, {270}, bid, besitzer))
         elif isinstance(k, Querverweis):
             # Connection lies on the side facing away from the text
+            name = _ist_pe(getattr(k, "text", ""))
             if k.art == "abgehend":
                 bx, by = k.basis_punkt()
                 out.append((bx, by, {(k.richtung + 180) % 360}, bid, besitzer))
+                if name:
+                    merke(bx, by, name)
             else:
                 sx, sy = k.spitze_punkt()
                 out.append((sx, sy, {k.richtung}, bid, besitzer))
+                if name:
+                    merke(sx, sy, name)
 
     for el in elemente:
         if isinstance(el, BlockReferenz):
@@ -739,6 +744,62 @@ def gewuenschte_leitungen(elemente):
     return soll
 
 
+def _netz_schluessel(x, y):
+    return (round(x, 1), round(y, 1))
+
+
+def pe_linientypen_setzen(elemente, pe):
+    """Whole wire nets: every automatic wire of a net that contains a point labelled PE (pin,
+    terminal number, cross reference) is dashed, with a PEN point dash-dot (PEN wins). Nets are
+    wires joined at their ends and through junctions (dot: all arms; crossing without dot:
+    opposite arms only). Devices do not connect their pins. Other wires of a type set here are
+    taken back. `pe`: {(x, y) rounded to 0.01: "PE" | "PEN"}."""
+    eltern = {}
+
+    def finde(a):
+        eltern.setdefault(a, a)
+        while eltern[a] != a:
+            eltern[a] = eltern[eltern[a]]
+            a = eltern[a]
+        return a
+
+    def verbinde(a, b):
+        ra, rb = finde(a), finde(b)
+        if ra != rb:
+            eltern[ra] = rb
+
+    leitungen = [l for l in elemente if isinstance(l, Leitung)]
+    for l in leitungen:
+        verbinde(_netz_schluessel(l.x1, l.y1), _netz_schluessel(l.x2, l.y2))
+    for v in elemente:
+        if not isinstance(v, Verbindung):
+            continue
+        arme = {d: _netz_schluessel(x, y) for (x, y, d) in v.anschluesse()}
+        if len(arme) == 4 and not v.punkt:
+            for d in (0, 90):
+                if d in arme and d + 180 in arme:
+                    verbinde(arme[d], arme[d + 180])
+        else:
+            ks = list(arme.values())
+            for k in ks[1:]:
+                verbinde(ks[0], k)
+    netz_name = {}
+    for (x, y), name in pe.items():
+        r = finde(_netz_schluessel(x, y))
+        if name == "PEN" or r not in netz_name:
+            netz_name[r] = name
+    for l in leitungen:
+        if not l.auto:
+            continue
+        name = netz_name.get(finde(_netz_schluessel(l.x1, l.y1)))
+        if name == "PEN":
+            l.linientyp = PEN_LINIENTYP
+        elif name == "PE":
+            l.linientyp = PE_LINIENTYP
+        elif l.linientyp in _PE_TYPEN:
+            l.linientyp = "Volllinie (schmal)"
+
+
 def _seg_key(x1, y1, x2, y2):
     a, b = (round(x1, 2), round(y1, 2)), (round(x2, 2), round(y2, 2))
     return (a, b) if a <= b else (b, a)
@@ -754,19 +815,7 @@ def leitungen_automatisch(elemente):
     soll = {}
     for (x1, y1, x2, y2, bes) in gewuenschte_leitungen(elemente):
         soll.setdefault(_seg_key(x1, y1, x2, y2), (x1, y1, x2, y2, bes))
-    pe = getattr(_auto_anker, "pe", {})               # set by gewuenschte_leitungen just before
-
-    def _linientyp(l, x1, y1, x2, y2):
-        """Wire to a PEN point: dash-dot; to a PE point: dashed (PEN wins when both ends differ,
-        so a PEN wire to a device pin that is just called "PE" stays PEN). Otherwise a type set
-        here is taken back."""
-        namen = {pe.get((round(x1, 2), round(y1, 2))), pe.get((round(x2, 2), round(y2, 2)))}
-        if "PEN" in namen:
-            l.linientyp = PEN_LINIENTYP
-        elif "PE" in namen:
-            l.linientyp = PE_LINIENTYP
-        elif l.linientyp in _PE_TYPEN:
-            l.linientyp = "Volllinie (schmal)"
+    pe = dict(getattr(_auto_anker, "pe", {}))         # set by gewuenschte_leitungen just before
     vorhanden = {}
     weg = []
     uebrig = []                                  # do not match exactly
@@ -779,7 +828,6 @@ def leitungen_automatisch(elemente):
                 weg.append(l)
                 continue
             l.auto = True
-            _linientyp(l, *soll[k][:4])
             vorhanden[k] = l
         else:
             uebrig.append(l)
@@ -800,7 +848,6 @@ def leitungen_automatisch(elemente):
             else:
                 l.x1, l.y1, l.x2, l.y2 = soll[treffer][:4]
                 l.auto = True
-                _linientyp(l, *soll[treffer][:4])
                 vorhanden[treffer] = l
         elif l.auto:
             weg.append(l)                        # no longer possible
@@ -810,10 +857,9 @@ def leitungen_automatisch(elemente):
     for k, (x1, y1, x2, y2, bes) in soll.items():
         if k in vorhanden:
             continue
-        nl = Leitung(x1, y1, x2, y2, auto=True, layer=E_LINES)
-        _linientyp(nl, x1, y1, x2, y2)
-        elemente.append(nl)
+        elemente.append(Leitung(x1, y1, x2, y2, auto=True, layer=E_LINES))
         neu += 1
+    pe_linientypen_setzen(elemente, pe)
     return neu, len(weg), weg
 
 
