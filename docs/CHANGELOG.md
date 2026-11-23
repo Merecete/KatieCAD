@@ -1,6 +1,7 @@
 # Änderungen
 
 ## 1.2.1
+- Fix: **3D verdeckte Ansicht ohne Flackern:** beim Drehen, Verschieben und Zoomen bleibt die Ansicht im verdeckten Modus, wenn die Berechnung schnell genug ist (normale Modelle); nur bei sehr großen Modellen wird weiterhin kurz das Drahtmodell gezeigt
 - Neu: **Speichern und Speichern unter:** *Datei › Speichern* (Strg+S) schreibt eine Zeichnung, die schon eine Datei hat, ohne Nachfrage in genau diese Datei; nur eine neue Zeichnung fragt nach dem Namen. Neu: *Datei › Speichern unter…* (Strg+Umschalt+S) fragt immer nach der Datei
 - Neu: **Zeichenreihenfolge:** *Bearbeiten › Zeichenreihenfolge* und Rechtsklickmenü: gewählte Objekte in den Vordergrund / Hintergrund oder eine Ebene nach vorn / hinten (was über was liegt); auch im Layout, rückgängig machbar
 - Fix: **Sprache umschalten:** ein gerade angezeigter Hilfetext (Tooltip) blieb nach dem Wechsel der Sprache als Kasten im alten Text stehen; Tooltips werden jetzt geschlossen, wenn ihr Knopf verschwindet

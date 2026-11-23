@@ -13,6 +13,7 @@ also pulls closed 2D shapes up or down into solids ("push/pull").
 
 import math
 import re
+import time
 from copy import deepcopy
 import tkinter as tk
 from tkinter import ttk
@@ -21,6 +22,7 @@ from katiecad.ui import meldung as messagebox
 from katiecad.common.i18n import tr
 from katiecad.model.core import (FARBEN, UI_SCHRIFT, Koerper3D, Gruppe3D, Skizze3D, kanal_rechteck, kanal_kette, kanal_versatz, kanal_aus_koerper, kanal_formstueck, Bemassung3D, Text3D, Viewport,
                                  quader, zylinder, kegel, pyramide, kugel)
+VERDECKT_SCHNELL_S = 0.05      # hidden-line run faster than this: stay hidden while navigating
 from katiecad.model import geom3d as G
 from katiecad.model import szene3d as S
 from katiecad.model import schrank as SCHR
@@ -452,6 +454,7 @@ class Ansicht3D(tk.Frame):
         self.verdeckt_var = z["verdeckt"]          # hide hidden edges
         self._verdeckt_cache = None                # (signature, result of the hidden-line run)
         self._verdeckt_aktuell = None              # result used by the current drawing
+        self._verdeckt_dauer = None                # seconds of the last real hidden-line run
         self._ruhe_id = None                       # wheel zoom: draw fast until it stops
         self.breite, self.hoehe = 900, 600
         self._drag = None
@@ -728,8 +731,14 @@ class Ansicht3D(tk.Frame):
 
     # ---- hidden edges ----------------------------------------------------
     def _verdeckt_an(self):
-        """Hidden edges are removed - but not while the view is being turned or zoomed."""
-        if not self.verdeckt_var.get() or self._ruhe_id is not None:
+        """Hidden edges are removed. While the view is turned or zoomed the fast wireframe is only
+        used when the hidden-line run is slow (big model); with a quick run (the usual case) the
+        view stays in hidden mode all the time - no flicker to wireframe and back."""
+        if not self.verdeckt_var.get():
+            return False
+        if self._verdeckt_dauer is None or self._verdeckt_dauer < VERDECKT_SCHNELL_S:
+            return True
+        if self._ruhe_id is not None:
             return False
         d = self._drag
         return not (d and d.get("art") in ("orbit", "pan"))
@@ -742,10 +751,14 @@ class Ansicht3D(tk.Frame):
     def _verdeckt_ergebnis(self, paare, offen):
         """{id(element): (visible polylines, hidden polylines)} - cached as long as camera,
         window size and bodies stay the same."""
-        c = [self._verdeckt_cache] if self._verdeckt_cache else []
+        alt = self._verdeckt_cache
+        c = [alt] if alt else []
+        t0 = time.perf_counter()
         erg = S.verdeckt_ergebnis(paare, offen, self.kamera, *self._mitte(), cache=c,
                                   signatur_extra=(self.breite, self.hoehe))
         self._verdeckt_cache = c[0] if c else None
+        if self._verdeckt_cache is not alt:            # really computed (no cache hit)
+            self._verdeckt_dauer = time.perf_counter() - t0
         return erg
 
     def _achsenkreuz(self):

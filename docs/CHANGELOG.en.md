@@ -1,6 +1,7 @@
 # Changes
 
 ## 1.2.1
+- Fix: **3D hidden-line view without flicker:** while rotating, panning and zooming the view stays in hidden mode when the calculation is fast enough (normal models); only very large models still show the wireframe briefly
 - New: **Save and Save as:** *File › Save* (Ctrl+S) writes a drawing that already has a file to exactly that file without asking; only a new drawing asks for a name. New: *File › Save as…* (Ctrl+Shift+S) always asks for the file
 - New: **Draw order:** *Edit › Draw order* and the right-click menu: bring the selected objects to the front / send to the back or one step forward / backward (what lies on top of what); also in a layout, can be undone
 - Fix: **Changing the language:** a help tip (tooltip) that was showing stayed on screen in the old language as a box after switching; tooltips are now closed when their button disappears
