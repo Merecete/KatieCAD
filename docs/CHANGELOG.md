@@ -1,6 +1,7 @@
 # Änderungen
 
 ## 1.2.1
+- Neu: **3D: Drehen im Rechtsklickmenü:** im 3D-Fenster gibt es im Rechtsklickmenü der Auswahl **Drehen** (nur um die Z-Achse, durch den Manipulator-Ursprung) und **3D drehen** (Achse X, Y oder Z wählbar)
 - Neu: **PE / PEN Linientyp:** automatische Leitungen eines ganzen Netzes (über Verbindungen verbunden), in dem ein Anschlusspunkt, eine Klemme oder ein Querverweis mit „PE“ oder „PEN“ beschriftet ist, werden automatisch gezeichnet: PE als Strichlinie, PEN als Strichpunktlinie (PEN gewinnt gegen PE); ändert sich die Beschriftung, wird sie wieder durchgezogen
 - Fix: **3D verdeckte Ansicht ohne Flackern:** beim Drehen, Verschieben und Zoomen bleibt die Ansicht im verdeckten Modus, wenn die Berechnung schnell genug ist (normale Modelle); nur bei sehr großen Modellen wird weiterhin kurz das Drahtmodell gezeigt
 - Neu: **Speichern und Speichern unter:** *Datei › Speichern* (Strg+S) schreibt eine Zeichnung, die schon eine Datei hat, ohne Nachfrage in genau diese Datei; nur eine neue Zeichnung fragt nach dem Namen. Neu: *Datei › Speichern unter…* (Strg+Umschalt+S) fragt immer nach der Datei

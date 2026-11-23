@@ -283,20 +283,25 @@ class TextDialog3D(tk.Toplevel):
 class DrehDialog(tk.Toplevel):
     """Axis (X/Y/Z) and angle for rotating 3D objects. result = (axis, degrees)."""
 
-    def __init__(self, parent):
+    def __init__(self, parent, nur_z=False):
         super().__init__(parent)
         self.result = None
-        self.title(tr("d3.drehen.titel"))
+        self.title(tr("d3.drehen.titel_z" if nur_z else "d3.drehen.titel"))
         self.transient(parent)
         self.configure(bg=FARBEN["bg_mittel"])
         self.resizable(False, False)
         f = ttk.Frame(self, padding=12)
         f.pack(fill=tk.BOTH, expand=True)
-        ttk.Label(f, text=tr("d3.drehen.achse")).grid(row=0, column=0, columnspan=3, sticky=tk.W)
         self.achse = tk.StringVar(value="z")
-        for i, a in enumerate(("x", "y", "z")):
-            ttk.Radiobutton(f, text=a.upper(), value=a, variable=self.achse
-                            ).grid(row=1, column=i, padx=8, pady=4)
+        if nur_z:                                    # plain "Rotate": only about the Z axis
+            ttk.Label(f, text=tr("d3.drehen.achse_z")).grid(row=0, column=0, columnspan=3,
+                                                              sticky=tk.W)
+        else:
+            ttk.Label(f, text=tr("d3.drehen.achse")).grid(row=0, column=0, columnspan=3,
+                                                            sticky=tk.W)
+            for i, a in enumerate(("x", "y", "z")):
+                ttk.Radiobutton(f, text=a.upper(), value=a, variable=self.achse
+                                ).grid(row=1, column=i, padx=8, pady=4)
         ttk.Label(f, text=tr("d3.drehen.winkel"), wraplength=320).grid(
             row=2, column=0, columnspan=3, sticky=tk.W, pady=(8, 2))
         self.winkel = tk.StringVar(value="90")
@@ -2181,12 +2186,12 @@ class Ansicht3D(tk.Frame):
         self.zeichne()
         self.info_var.set(tr("d3.msg.loch_erzeugt") if n else tr("d3.msg.loch_ausserhalb"))
 
-    def drehen_dialog(self):
-        """Rotate the selection about X, Y or Z through the manipulator origin."""
+    def drehen_dialog(self, nur_z=False):
+        """Rotate the selection about X, Y or Z (nur_z: only Z) through the manipulator origin."""
         if not self.app.auswahl:
             self.info_var.set(tr("d3.msg.nichts_drehbar"))
             return
-        dlg = DrehDialog(self.app.root)
+        dlg = DrehDialog(self.app.root, nur_z=nur_z)
         self.app.root.wait_window(dlg)
         if not dlg.result:
             return
@@ -2333,6 +2338,8 @@ class Ansicht3D(tk.Frame):
             m.add_command(label=tr("d3.ctx.kopieren"), command=self._ctx_kopieren)
             m.add_command(label=tr("d3.ctx.kopieren_bp"),
                           command=lambda: self.punkt_verschieben(True))
+            m.add_command(label=tr("d3.ctx.drehen"), command=lambda: self.drehen_dialog(True))
+            m.add_command(label=tr("d3.ctx.drehen3d"), command=self.drehen_dialog)
             if len([x for x in self.app.auswahl if S.ist_3d(x)]) >= 2:
                 m.add_command(label=tr("d3.ctx.verschmelzen"), command=self.verschmelzen)
             m.add_command(label=tr("d3.ctx.layer_aus"), command=self._ctx_layer_aus)

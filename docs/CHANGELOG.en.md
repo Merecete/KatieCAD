@@ -1,6 +1,7 @@
 # Changes
 
 ## 1.2.1
+- New: **3D: Rotate in the right-click menu:** in the 3D window the right-click menu of a selection offers **Rotate** (only about the Z axis, through the manipulator origin) and **Rotate 3D** (axis X, Y or Z selectable)
 - New: **PE / PEN line type:** automatic wires of a whole net (joined through junctions) that contains a connection point, terminal or cross reference labelled "PE" or "PEN" are drawn automatically: PE dashed, PEN dash-dot (PEN wins over PE); if the label changes, the wire becomes solid again
 - Fix: **3D hidden-line view without flicker:** while rotating, panning and zooming the view stays in hidden mode when the calculation is fast enough (normal models); only very large models still show the wireframe briefly
 - New: **Save and Save as:** *File › Save* (Ctrl+S) writes a drawing that already has a file to exactly that file without asking; only a new drawing asks for a name. New: *File › Save as…* (Ctrl+Shift+S) always asks for the file
