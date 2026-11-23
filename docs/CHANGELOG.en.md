@@ -1,9 +1,11 @@
 # Changes
 
-## 1.2.0
+## 1.2.1
 - Fix: **Changing the language:** a help tip (tooltip) that was showing stayed on screen in the old language as a box after switching; tooltips are now closed when their button disappears
 - Fix: **Linux: everything was bold:** fonts that fontconfig reports with the style "Book" (DejaVu Sans) or "Roman" were not recognised as the normal cut, so the bold file was used for all normal text
 - Fix: **Linux: font and block browser:** the interface font on Linux is now Noto Sans / Open Sans / Liberation Sans when installed (DejaVu Sans looked much heavier and wider than Segoe UI; selectable with `KATIECAD_SCHRIFT=<name>`); the "Dock" button in the block browser is shorter so it no longer overlaps other buttons
+
+## 1.2.0
 - Change: **macOS: "About KatieCAD" in the application menu** now opens the KatieCAD info window instead of the standard macOS panel
 - Fix: **Kivy logo instead of the KatieCAD logo** in the macOS Dock (and window): the KatieCAD icon is now set for the Kivy window
 - New: **Block browser bar: adjustable heights:** the folder list and the preview can be resized in height with two splitter bars (the block list always keeps some room); the heights are remembered

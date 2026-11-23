@@ -35,8 +35,8 @@ Meldet das Skript „NOT INSTALLED“ oder „WITHOUT licence file“, vor dem R
 2. Als Paket (Debian/Ubuntu): `installer/build_deb.sh 1.1.0` → `release/KatieCAD-1.1.0-Linux-amd64.deb`,
    installieren mit `sudo apt install ./release/KatieCAD-1.1.0-Linux-amd64.deb`
    (legt das Programm nach `/opt/katiecad`, Startmenü-Eintrag und Befehl `katiecad`).
-3. Als **AppImage** (eine einzelne Datei, ohne Ordner und ohne Installation): `installer/build_appimage.sh 1.2.0`
-   → `release/KatieCAD-1.2.0-Linux-x86_64.AppImage` (lädt bei Bedarf `appimagetool` 1.9.0 (SHA-256-geprüft) mit curl, wget oder python3; braucht das Programm `file`, Debian/Ubuntu: `sudo apt install file`; läuft ohne FUSE).
+3. Als **AppImage** (eine einzelne Datei, ohne Ordner und ohne Installation): `installer/build_appimage.sh 1.2.1`
+   → `release/KatieCAD-1.2.1-Linux-x86_64.AppImage` (lädt bei Bedarf `appimagetool` 1.9.0 (SHA-256-geprüft) mit curl, wget oder python3; braucht das Programm `file`, Debian/Ubuntu: `sudo apt install file`; läuft ohne FUSE).
    Starten: `chmod +x KatieCAD-*.AppImage && ./KatieCAD-*.AppImage`.
    Alternativ den Ordner `dist/KatieCAD` kopieren, er ist ohne Installation lauffähig.
 
