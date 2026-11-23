@@ -102,4 +102,16 @@ blk = core.BlockReferenz(0, 0, "R", [VP(0, 5, wert="x", richtungen=[90])], winke
 check([k for k in blk.aufgeloest() if isinstance(k, VP)][0].richtungen == [180], "Block-Drehung dreht Pin-Richtungen")
 pn = VP(5, 5)
 check(pn.richtungen is None and VP(**{k: v for k, v in pn.to_dict().items() if k != "typ"}).richtungen is None, "Altwert None bleibt erhalten")
+# wires to a PE / PEN point are dashed, others not; relabelling takes it back
+pa, pb, pc = VP(100, 10, wert="L1"), VP(100, 50, wert="PE"), VP(100, 90, wert="2")
+elp = [pa, pb, pc]
+L.leitungen_automatisch(elp)
+ls = sorted([e for e in elp if isinstance(e, core.Leitung)], key=lambda e: e.y1)
+check(len(ls) == 2 and all(l.linientyp == L.PE_LINIENTYP for l in ls), "Leitungen an PE gestrichelt")
+pb.wert = "pen"
+L.leitungen_automatisch(elp)
+check(all(l.linientyp == L.PE_LINIENTYP for l in elp if isinstance(l, core.Leitung)), "PEN (klein) auch")
+pb.wert = "N"
+L.leitungen_automatisch(elp)
+check(all(l.linientyp == "Volllinie (schmal)" for l in elp if isinstance(l, core.Leitung)), "nicht mehr PE -> durchgezogen")
 print(f"{ok} Checks bestanden")

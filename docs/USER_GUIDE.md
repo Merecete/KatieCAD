@@ -342,7 +342,8 @@ on the line with the number); then the field does not appear twice.
 - **Automatic:** if two connection points (pins, junctions, terminals, cross
   references) lie exactly above each other or side by side and their directions
   match, the red wire appears by itself. It disappears again if you remove one of
-  the points.
+  the points. If one of the two points is labelled **PE** or **PEN** (pin text or terminal
+  number, case does not matter), the automatic wire is drawn **dashed**.
 - **By hand:** tool **Draw wire (LEITUNG)**, then click two connections one after the
   other.
 - If you place a pin, device, terminal or junction **on** an existing wire, the wire

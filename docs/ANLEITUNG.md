@@ -345,7 +345,9 @@ Symbole aus der Bibliothek „12 Single-pole“ haben stattdessen das Attribut *
 - **Automatisch:** Liegen zwei Anschlusspunkte (Pins, Verbindungen, Klemmen,
   Querverweise) genau waagerecht oder senkrecht untereinander und passen ihre
   Richtungen, entsteht die rote Leitung von selbst. Sie verschwindet wieder, wenn
-  du einen der Punkte wegnimmst.
+  du einen der Punkte wegnimmst. Ist einer der beiden Punkte mit **PE** oder **PEN**
+  beschriftet (Pin-Text oder Klemmennummer, Groß-/Kleinschreibung egal), wird die
+  automatische Leitung **gestrichelt** gezeichnet.
 - **Von Hand:** Werkzeug **Leitung zeichnen (LEITUNG)**, dann nacheinander zwei
   Anschlüsse anklicken.
 - Setzt du einen Pin, ein Gerät, eine Klemme oder eine Verbindung **auf** eine

@@ -638,13 +638,24 @@ def _pin_richtung(pin, kanten):
     return {d[0][2]}
 
 
+PE_NAMEN = ("PE", "PEN")
+PE_LINIENTYP = "Strichlinie (verdeckt)"          # wires to PE / PEN points are drawn dashed
+
+
+def _ist_pe(text):
+    return str(text or "").strip().upper() in PE_NAMEN
+
+
 def _auto_anker(elemente):
     """[(x, y, allowed_directions|None, owner_id, owner, binds_in)]"""
     out = []
+    pe_punkte = set()                    # (x, y) rounded: connection points labelled PE / PEN
 
     def sammle(k, besitzer, kanten):
         bid = id(besitzer)
         if isinstance(k, Verbindungspunkt):
+            if _ist_pe(getattr(k, "wert", "") or getattr(k, "inhalt", "")):
+                pe_punkte.add((round(k.x, 2), round(k.y, 2)))
             out.append((k.x, k.y, _pin_richtung(k, kanten), bid, besitzer))
         elif isinstance(k, Verbindung):
             for (ax, ay, d) in k.anschluesse():
@@ -652,6 +663,8 @@ def _auto_anker(elemente):
         elif isinstance(k, Klemme):
             ox, oy = k.anschluss_oben()
             ux, uy = k.anschluss_unten()
+            if _ist_pe((getattr(k, "werte", None) or {}).get("NUM", "")):
+                pe_punkte.update({(round(ox, 2), round(oy, 2)), (round(ux, 2), round(uy, 2))})
             out.append((ox, oy, {90}, bid, besitzer))
             out.append((ux, uy, {270}, bid, besitzer))
         elif isinstance(k, Querverweis):
@@ -671,6 +684,7 @@ def _auto_anker(elemente):
                 sammle(k, el, kanten)
         else:
             sammle(el, el, None)
+    _auto_anker.pe = pe_punkte
     return out
 
 
@@ -728,6 +742,17 @@ def leitungen_automatisch(elemente):
     soll = {}
     for (x1, y1, x2, y2, bes) in gewuenschte_leitungen(elemente):
         soll.setdefault(_seg_key(x1, y1, x2, y2), (x1, y1, x2, y2, bes))
+    pe = getattr(_auto_anker, "pe", set())            # set by gewuenschte_leitungen just before
+
+    def _pe_stueck(x1, y1, x2, y2):
+        return (round(x1, 2), round(y1, 2)) in pe or (round(x2, 2), round(y2, 2)) in pe
+
+    def _linientyp(l, x1, y1, x2, y2):
+        """Wire to a PE / PEN point: dashed; otherwise a dashed type set here is taken back."""
+        if _pe_stueck(x1, y1, x2, y2):
+            l.linientyp = PE_LINIENTYP
+        elif l.linientyp == PE_LINIENTYP:
+            l.linientyp = "Volllinie (schmal)"
     vorhanden = {}
     weg = []
     uebrig = []                                  # do not match exactly
@@ -740,6 +765,7 @@ def leitungen_automatisch(elemente):
                 weg.append(l)
                 continue
             l.auto = True
+            _linientyp(l, *soll[k][:4])
             vorhanden[k] = l
         else:
             uebrig.append(l)
@@ -760,6 +786,7 @@ def leitungen_automatisch(elemente):
             else:
                 l.x1, l.y1, l.x2, l.y2 = soll[treffer][:4]
                 l.auto = True
+                _linientyp(l, *soll[treffer][:4])
                 vorhanden[treffer] = l
         elif l.auto:
             weg.append(l)                        # no longer possible
@@ -769,7 +796,9 @@ def leitungen_automatisch(elemente):
     for k, (x1, y1, x2, y2, bes) in soll.items():
         if k in vorhanden:
             continue
-        elemente.append(Leitung(x1, y1, x2, y2, auto=True, layer=E_LINES))
+        nl = Leitung(x1, y1, x2, y2, auto=True, layer=E_LINES)
+        _linientyp(nl, x1, y1, x2, y2)
+        elemente.append(nl)
         neu += 1
     return neu, len(weg), weg
 
