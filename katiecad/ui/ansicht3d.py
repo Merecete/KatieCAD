@@ -443,7 +443,7 @@ def _vorzeichen(k):
 
 
 class Ansicht3D(tk.Frame):
-    MODI = ("flaeche", "linie", "kreis", "rechteck", "poly", "bem", "kanal", "kanalverb", "pivot", "text", "messen", "verschieben", "strecken")
+    MODI = ("flaeche", "linie", "kreis", "rechteck", "poly", "bem", "kanal", "kanalverb", "pivot", "text", "messen", "verschieben", "strecken", "drehen")
     SKIZZEN = ("linie", "kreis", "rechteck", "poly")
 
     def __init__(self, app, master=None):
@@ -974,6 +974,38 @@ class Ansicht3D(tk.Frame):
         self.modus_setzen("verschieben")
         self.info_var.set(tr("d3.modus.kopieren" if kopie else "d3.modus.verschieben"))
 
+    def punkt_drehen(self):
+        """ROTATE in 3D like in 2D: base point (snaps), then the angle with the mouse (direction
+        base point -> mouse, seen from above) or typed in the input line; about the vertical
+        axis through the base point."""
+        if not [x for x in self.app.auswahl if hasattr(x, "drehen3") or hasattr(x, "drehen")]:
+            self.info_var.set(tr("d3.msg.nichts_drehbar"))
+            return
+        self.modus_setzen("drehen")
+
+    def _dreh_winkel(self, p0, q):
+        """Angle in degrees (counter-clockwise seen from +Z) of the direction p0 -> q in the
+        XY plane; with ORTHO in steps of 90 degrees. None if q lies above / below p0."""
+        dx, dy = q[0] - p0[0], q[1] - p0[1]
+        if math.hypot(dx, dy) < 1e-9:
+            return None
+        w = math.degrees(math.atan2(dy, dx))
+        if self.app.ortho.get():
+            w = round(w / 90.0) * 90.0
+        return w
+
+    def _drehen_fertig(self, p0, winkel):
+        self.app._snapshot()
+        n = S.drehen3d(self.app.auswahl, p0, S.ACHSEN["z"], winkel)
+        self._skiz = None
+        self._modus_ende()
+        self.app.redraw()
+        self.zeichne()
+        if n:
+            self.info_var.set(tr("d3.msg.gedreht", n=n, achse="Z", winkel="%g" % round(winkel, 2)))
+        else:
+            self.info_var.set(tr("d3.msg.nichts_drehbar"))
+
     def punkt_strecken(self):
         """STRETCH in 3D: base point, then the target point (or a typed distance). The axis
         is the dominant direction of the movement; the face of the selection on the side of
@@ -1106,7 +1138,7 @@ class Ansicht3D(tk.Frame):
             return
         h = {"fang": None, "flaeche": None}
         erste = self._skiz is None
-        if m in ("bem", "pivot", "messen", "verschieben", "strecken"):
+        if m in ("bem", "pivot", "messen", "verschieben", "strecken", "drehen"):
             h["fang"] = self._fang_raum(e)
             fl = self._flaeche_unter(e) if self.zustand.get("auto", True) else None
             h["flaeche"] = fl[1] if fl else None
@@ -1326,6 +1358,20 @@ class Ansicht3D(tk.Frame):
                 self.info_var.set(tr("d3.msg.verschieben_p2"))
             elif G.v_len(G.v_sub(p, sk["pts"][0])) > 1e-9:
                 self._punkt_verschieben_fertig(G.v_sub(p, sk["pts"][0]))
+            self.zeichne()
+        elif m == "drehen":
+            p = self._raum_punkt(e)
+            if p is None:
+                self.info_var.set(tr("d3.msg.keine_ebene"))
+                return
+            sk = self._skiz
+            if sk is None:
+                self._skiz = {"form": "drehen", "pts": [p]}
+                self.info_var.set(tr("d3.msg.drehen_p2"))
+            else:
+                w = self._dreh_winkel(sk["pts"][0], p)
+                if w is not None:
+                    self._drehen_fertig(sk["pts"][0], w)
             self.zeichne()
         elif m == "strecken":
             p = self._raum_punkt(e)
@@ -1591,6 +1637,30 @@ class Ansicht3D(tk.Frame):
                 self._text3(G.v_mul(G.v_add(sk["pts"][0], q), 0.5),
                             f"{G.v_len(d) / self.app._einh_faktor():.2f} {self.app.einheit.get()}",
                             gelb, "vorschau")
+            return
+        if sk["form"] == "drehen":
+            q = self._raum_punkt(self._maus)
+            if q:
+                p0 = sk["pts"][0]
+                self._linie(p0, q, gelb, 1, (4, 3), "vorschau")
+                w = self._dreh_winkel(p0, q)
+                if w is not None:
+                    for el in self.app.auswahl:
+                        if not (hasattr(el, "drehen3") or hasattr(el, "drehen")):
+                            continue
+                        k = deepcopy(el)
+                        if hasattr(k, "drehen3"):
+                            k.drehen3(p0, S.ACHSEN["z"], w)
+                        else:
+                            k.drehen(p0[0], p0[1], w)
+                        if S.ist_3d(k):
+                            for nz in k.netze():
+                                for (i, j) in nz.kanten:
+                                    self._linie(nz.punkte[i], nz.punkte[j], gelb, 1, (4, 3), "vorschau")
+                        else:
+                            for zug, geschl in S.zuege3(k):
+                                self._polylinie(zug, gelb, 1, (4, 3), "vorschau", geschl)
+                    self._text3(q, f"{w:.2f}°", gelb, "vorschau")
             return
         if sk["form"] == "strecken":
             q = self._raum_punkt(self._maus)
@@ -1974,6 +2044,26 @@ class Ansicht3D(tk.Frame):
         'x,y' on the work plane; then circle: radius, rectangle: 'width,height' (or 'width x
         height'), line: 'length' or 'length<angle', polyline: 'x,y' or '@dx,dy'. -> True if used."""
         m = self._modus
+        if m == "drehen":
+            sk = self._skiz
+            zahl = self._zahl_tippen(text)
+            if sk is not None and zahl is not None:            # typed angle (degrees, CCW)
+                self.wert_var.set("")
+                self._drehen_fertig(sk["pts"][0], zahl)
+                return True
+            if sk is None:                                     # typed base point "x,y[,z]"
+                try:
+                    f = self.app._einh_faktor()
+                    a = [float(v.replace(",", ".")) * f for v in re.split(r"[;\s]+", text.strip()) if v]
+                    if len(a) in (2, 3):
+                        self._skiz = {"form": "drehen", "pts": [tuple(a) + ((0.0,) if len(a) == 2 else ())]}
+                        self.info_var.set(tr("d3.msg.drehen_p2"))
+                        self.zeichne()
+                        return True
+                except ValueError:
+                    pass
+            self.info_var.set(tr("d3.msg.zahl"))
+            return True
         if (m == "strecken" and self._skiz and self._skiz.get("form") == "strecken"
                 and self._zahl_tippen(text) is not None):
             # typed stretch distance along the axis of the current mouse direction (default Z)
@@ -2338,7 +2428,7 @@ class Ansicht3D(tk.Frame):
             m.add_command(label=tr("d3.ctx.kopieren"), command=self._ctx_kopieren)
             m.add_command(label=tr("d3.ctx.kopieren_bp"),
                           command=lambda: self.punkt_verschieben(True))
-            m.add_command(label=tr("d3.ctx.drehen"), command=lambda: self.drehen_dialog(True))
+            m.add_command(label=tr("d3.ctx.drehen"), command=self.punkt_drehen)
             m.add_command(label=tr("d3.ctx.drehen3d"), command=self.drehen_dialog)
             if len([x for x in self.app.auswahl if S.ist_3d(x)]) >= 2:
                 m.add_command(label=tr("d3.ctx.verschmelzen"), command=self.verschmelzen)
