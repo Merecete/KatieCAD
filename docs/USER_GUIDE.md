@@ -413,7 +413,8 @@ changes in them are lost; your drawing sheets stay untouched.
 
 | Key | Function |
 |---|---|
-| Ctrl+S | Save (in a project without prompting) |
+| Ctrl+S | Save (without prompting when the drawing already has a file, and in a project) |
+| Ctrl+Shift+S | Save as |
 | Ctrl+P | Print |
 | Ctrl+Z / Ctrl+Y | Undo / Redo |
 | Ctrl+C / Ctrl+X / Ctrl+V | Copy / Cut / Paste |

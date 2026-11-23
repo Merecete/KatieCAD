@@ -1203,6 +1203,8 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         m_datei.add_command(label=tr("menu.datei.oeffnen"), command=self.oeffnen)
         m_datei.add_command(label=tr("menu.datei.speichern"), command=self.speichern,
                             accelerator=tr("txt.0254"))
+        m_datei.add_command(label=tr("menu.datei.speichern_unter"), command=self.speichern_unter,
+                            accelerator=tr("txt.0254").replace("+S", "+Umschalt+S" if SPRACHE["aktuell"] == "de" else "+Shift+S"))
         m_datei.add_checkbutton(label=tr("menu.datei.bak"), variable=self.bak_var,
                                 command=self._bak_umschalten)
         m_datei.add_command(label=tr("menu.datei.autosave"), command=self._autosave_einstellen)
@@ -2861,7 +2863,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         self.root.bind("<Control-p>", lambda e: self.drucken())
         self.root.bind("<Control-P>", lambda e: self.drucken())
         self.root.bind("<Control-s>", lambda e: self.speichern())
-        self.root.bind("<Control-S>", lambda e: self.speichern())
+        self.root.bind("<Control-S>", lambda e: self.speichern_unter())
         self.root.bind("<Control-f>", lambda e: self.suchen_ersetzen())
         self.root.bind("<Control-F>", lambda e: self.suchen_ersetzen())
         self.root.bind("<Control-b>", lambda e: self.block_liste())
@@ -6892,14 +6894,31 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         return True
 
     def speichern(self):
+        """Save: a project saves without asking, a single drawing that has a file is written
+        to that file; only a drawing without a file asks for a name (like Save as)."""
         if self.projekt is not None:
             return self.projekt_speichern()
+        if self._datei_pfad:
+            return self._einzeldatei_schreiben(self._datei_pfad)
+        return self.speichern_unter()
+
+    def speichern_unter(self):
+        """Save as: always asks for the file; the drawing then belongs to the new file."""
+        if self.projekt is not None:
+            return self.projekt_speichern()          # a project has its own files
+        start = {}
+        if self._datei_pfad:
+            start = dict(initialdir=os.path.dirname(self._datei_pfad),
+                         initialfile=os.path.basename(self._datei_pfad))
         pfad = filedialog.asksaveasfilename(
             defaultextension=".cadjson",
             filetypes=[(tr("txt.0199"), "*.cadjson"),
-                       (tr("txt.0198"), "*.*")])
+                       (tr("txt.0198"), "*.*")], **start)
         if not pfad:
             return False
+        return self._einzeldatei_schreiben(pfad)
+
+    def _einzeldatei_schreiben(self, pfad):
         daten = self._zeichnung_daten()
         try:
             self._json_atomar_schreiben(pfad, daten)       # atomic; keeps the .bak

@@ -420,7 +420,8 @@ unverändert.
 
 | Taste | Funktion |
 |---|---|
-| Strg+S | Speichern (im Projekt ohne Nachfrage) |
+| Strg+S | Speichern (ohne Nachfrage, wenn die Zeichnung schon eine Datei hat, und im Projekt) |
+| Strg+Umschalt+S | Speichern unter |
 | Strg+P | Drucken |
 | Strg+Z / Strg+Y | Rückgängig / Wiederholen |
 | Strg+C / Strg+X / Strg+V | Kopieren / Ausschneiden / Einfügen |
