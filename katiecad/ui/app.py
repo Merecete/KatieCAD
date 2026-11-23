@@ -741,6 +741,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         self._retranslate_ui()
 
     def _retranslate_ui(self):
+        Tooltip.alle_schliessen()            # no tip of a rebuilt (destroyed) button stays behind
         self._build_menu()
         self._build_toolbars()
         self._toolbar_anordnen()

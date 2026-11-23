@@ -105,10 +105,24 @@ def farb_swatch(parent, farbe, command, width=4):
 class Tooltip:
     """Small help text below a widget after the mouse rested on it."""
 
+    _aktive = []                  # tooltips currently showing (to close them when widgets are rebuilt)
+
+    @classmethod
+    def alle_schliessen(cls):
+        """Closes every visible tooltip. Needed when widgets are destroyed while the mouse is on
+        them (language change rebuilds the toolbars): no <Leave> comes then and the tip stays."""
+        for t in list(cls._aktive):
+            t._weg()
+        cls._aktive.clear()
+
     def __init__(self, widget, text, verzoegerung=500):
         self.widget, self.text, self.verz = widget, text, verzoegerung
         self._id = None
         self._fenster = None
+        try:
+            widget.bind("<Destroy>", self._weg, add="+")
+        except Exception:
+            pass
         widget.bind("<Enter>", self._planen, add="+")
         widget.bind("<Leave>", self._weg, add="+")
         widget.bind("<ButtonPress>", self._weg, add="+")
@@ -131,6 +145,7 @@ class Tooltip:
                      bd=0, padx=7, pady=3, highlightthickness=1,
                      highlightbackground=FARBEN["cyan_dunkel"]).pack()
             self._fenster = w
+            Tooltip._aktive.append(self)
         except tk.TclError:
             self._fenster = None
 
@@ -147,6 +162,8 @@ class Tooltip:
             except tk.TclError:
                 pass
             self._fenster = None
+        if self in Tooltip._aktive:
+            Tooltip._aktive.remove(self)
 
 
 class ScrollFrame(ttk.Frame):
