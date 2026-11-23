@@ -1,6 +1,7 @@
 # Changes
 
 ## 1.2.1
+- Fix: **Windows installer with welcome page:** the installer shows the start page "Welcome to the KatieCAD Setup Wizard" with the large banner on the left again (Inno Setup hides it by default)
 - New: **3D: Rotate like in 2D:** in the right-click menu of a selection: **Rotate** = click the base point (with object snap), then set the angle with the mouse (preview, ORTHO = 90° steps) or type the degrees in the input line; the rotation is about the vertical axis through the base point. **Rotate 3D** still opens the dialog (axis X, Y or Z)
 - New: **PE / PEN line type:** automatic wires of a whole net (joined through junctions) that contains a connection point, terminal or cross reference labelled "PE" or "PEN" are drawn automatically: PE dashed, PEN dash-dot (PEN wins over PE); if the label changes, the wire becomes solid again
 - Fix: **3D hidden-line view without flicker:** while rotating, panning and zooming the view stays in hidden mode when the calculation is fast enough (normal models); only very large models still show the wireframe briefly

@@ -22,6 +22,9 @@ Compression=lzma2
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64compatible
 WizardStyle=modern
+; Welcome page with the large banner at the left ("Welcome to the KatieCAD Setup Wizard"):
+; Inno Setup 6 hides it by default
+DisableWelcomePage=no
 SetupIconFile=..\KatieCAD.ico
 ; Banner images (made by tools\make_installer_images.py from KatieCAD_Setup_Banner.png);
 ; several sizes for the Windows scaling steps 100 % to 250 %
