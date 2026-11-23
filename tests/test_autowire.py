@@ -110,7 +110,15 @@ ls = sorted([e for e in elp if isinstance(e, core.Leitung)], key=lambda e: e.y1)
 check(len(ls) == 2 and all(l.linientyp == L.PE_LINIENTYP for l in ls), "Leitungen an PE gestrichelt")
 pb.wert = "pen"
 L.leitungen_automatisch(elp)
-check(all(l.linientyp == L.PE_LINIENTYP for l in elp if isinstance(l, core.Leitung)), "PEN (klein) auch")
+check(all(l.linientyp == L.PEN_LINIENTYP for l in elp if isinstance(l, core.Leitung)), "PEN (klein): strichpunkt")
+pc.wert = "PE"                 # device pin "PE" at the other end of a PEN wire: PEN wins
+L.leitungen_automatisch(elp)
+ls = sorted([e for e in elp if isinstance(e, core.Leitung)], key=lambda e: e.y1)
+check(ls[1].linientyp == L.PEN_LINIENTYP and ls[0].linientyp == L.PEN_LINIENTYP, "PEN gewinnt gegen PE")
+pb.wert = "PE"
+L.leitungen_automatisch(elp)
+check(ls[1].linientyp == L.PE_LINIENTYP, "PE - PE: strichlinie")
+pc.wert = "2"
 pb.wert = "N"
 L.leitungen_automatisch(elp)
 check(all(l.linientyp == "Volllinie (schmal)" for l in elp if isinstance(l, core.Leitung)), "nicht mehr PE -> durchgezogen")

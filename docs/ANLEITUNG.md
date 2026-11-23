@@ -347,7 +347,8 @@ Symbole aus der Bibliothek „12 Single-pole“ haben stattdessen das Attribut *
   Richtungen, entsteht die rote Leitung von selbst. Sie verschwindet wieder, wenn
   du einen der Punkte wegnimmst. Ist einer der beiden Punkte mit **PE** oder **PEN**
   beschriftet (Pin-Text oder Klemmennummer, Groß-/Kleinschreibung egal), wird die
-  automatische Leitung **gestrichelt** gezeichnet.
+  automatische Leitung gezeichnet: bei **PE** gestrichelt, bei **PEN** strichpunktiert
+  (PEN gewinnt, wenn ein Ende PEN und das andere z. B. ein Geräteanschluss „PE“ ist).
 - **Von Hand:** Werkzeug **Leitung zeichnen (LEITUNG)**, dann nacheinander zwei
   Anschlüsse anklicken.
 - Setzt du einen Pin, ein Gerät, eine Klemme oder eine Verbindung **auf** eine

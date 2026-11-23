@@ -639,23 +639,33 @@ def _pin_richtung(pin, kanten):
 
 
 PE_NAMEN = ("PE", "PEN")
-PE_LINIENTYP = "Strichlinie (verdeckt)"          # wires to PE / PEN points are drawn dashed
+PE_LINIENTYP = "Strichlinie (verdeckt)"          # wire to a PE point: dashed
+PEN_LINIENTYP = "Strichpunktlinie (Achse)"       # wire to a PEN point: dash-dot (wins over PE)
+_PE_TYPEN = (PE_LINIENTYP, PEN_LINIENTYP)
 
 
 def _ist_pe(text):
-    return str(text or "").strip().upper() in PE_NAMEN
+    """"PE" / "PEN" (any case) -> that name, otherwise None."""
+    t = str(text or "").strip().upper()
+    return t if t in PE_NAMEN else None
 
 
 def _auto_anker(elemente):
     """[(x, y, allowed_directions|None, owner_id, owner, binds_in)]"""
     out = []
-    pe_punkte = set()                    # (x, y) rounded: connection points labelled PE / PEN
+    pe_punkte = {}                       # (x, y) rounded -> "PE" | "PEN" (PEN wins at one point)
+
+    def merke(x, y, name):
+        k = (round(x, 2), round(y, 2))
+        if name == "PEN" or k not in pe_punkte:
+            pe_punkte[k] = name
 
     def sammle(k, besitzer, kanten):
         bid = id(besitzer)
         if isinstance(k, Verbindungspunkt):
-            if _ist_pe(getattr(k, "wert", "") or getattr(k, "inhalt", "")):
-                pe_punkte.add((round(k.x, 2), round(k.y, 2)))
+            name = _ist_pe(getattr(k, "wert", "") or getattr(k, "inhalt", ""))
+            if name:
+                merke(k.x, k.y, name)
             out.append((k.x, k.y, _pin_richtung(k, kanten), bid, besitzer))
         elif isinstance(k, Verbindung):
             for (ax, ay, d) in k.anschluesse():
@@ -663,8 +673,10 @@ def _auto_anker(elemente):
         elif isinstance(k, Klemme):
             ox, oy = k.anschluss_oben()
             ux, uy = k.anschluss_unten()
-            if _ist_pe((getattr(k, "werte", None) or {}).get("NUM", "")):
-                pe_punkte.update({(round(ox, 2), round(oy, 2)), (round(ux, 2), round(uy, 2))})
+            name = _ist_pe((getattr(k, "werte", None) or {}).get("NUM", ""))
+            if name:
+                merke(ox, oy, name)
+                merke(ux, uy, name)
             out.append((ox, oy, {90}, bid, besitzer))
             out.append((ux, uy, {270}, bid, besitzer))
         elif isinstance(k, Querverweis):
@@ -742,16 +754,18 @@ def leitungen_automatisch(elemente):
     soll = {}
     for (x1, y1, x2, y2, bes) in gewuenschte_leitungen(elemente):
         soll.setdefault(_seg_key(x1, y1, x2, y2), (x1, y1, x2, y2, bes))
-    pe = getattr(_auto_anker, "pe", set())            # set by gewuenschte_leitungen just before
-
-    def _pe_stueck(x1, y1, x2, y2):
-        return (round(x1, 2), round(y1, 2)) in pe or (round(x2, 2), round(y2, 2)) in pe
+    pe = getattr(_auto_anker, "pe", {})               # set by gewuenschte_leitungen just before
 
     def _linientyp(l, x1, y1, x2, y2):
-        """Wire to a PE / PEN point: dashed; otherwise a dashed type set here is taken back."""
-        if _pe_stueck(x1, y1, x2, y2):
+        """Wire to a PEN point: dash-dot; to a PE point: dashed (PEN wins when both ends differ,
+        so a PEN wire to a device pin that is just called "PE" stays PEN). Otherwise a type set
+        here is taken back."""
+        namen = {pe.get((round(x1, 2), round(y1, 2))), pe.get((round(x2, 2), round(y2, 2)))}
+        if "PEN" in namen:
+            l.linientyp = PEN_LINIENTYP
+        elif "PE" in namen:
             l.linientyp = PE_LINIENTYP
-        elif l.linientyp == PE_LINIENTYP:
+        elif l.linientyp in _PE_TYPEN:
             l.linientyp = "Volllinie (schmal)"
     vorhanden = {}
     weg = []
