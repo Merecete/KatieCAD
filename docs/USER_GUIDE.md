@@ -470,6 +470,8 @@ Edit › Properties opens a window for the current selection, also mixed (lines,
 ## Scale and mirror
 **Edit › Scale** (command `SCALE`/`SC`, also in the right-click menu): select objects, Enter, pick the base point, enter the factor (e.g. `2` or `0.5`). Blocks are scaled with their size; fixed-size electrical elements (junctions, cross references, masks, terminals) keep their size and only move to the new position.
 
+**Draw order:** what lies on top of what follows the order in which objects are drawn (the last one drawn is on top). Select objects, then **Edit › Draw order** (also in the right-click menu): **Bring to front**, **Bring forward**, **Send backward** or **Send to back**. The order among the selected objects is kept; in a layout it applies to the layout's objects. Undo with Ctrl+Z.
+
 **Edit › Mirror** (command `MIRROR`/`MI`, also in the right-click menu): select objects, Enter, pick two points of the mirror line (live preview), then decide whether the originals are deleted. Texts stay readable (not mirrored); blocks including pins and labels are mirrored correctly and remain devices.
 
 ## Whole project as one DXF / DWG file

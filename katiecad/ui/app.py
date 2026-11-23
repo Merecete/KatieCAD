@@ -1304,6 +1304,10 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                             command=lambda: self._op_start("scale"))
         m_bearb.add_command(label=tr("menu.bearbeiten.spiegeln"),
                             command=lambda: self._op_start("mirror"))
+        m_bearb.add_cascade(label=tr("menu.bearbeiten.reihenfolge"),
+                            menu=self._reihenfolge_menue(
+                                m_bearb, tearoff=0, bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
+                                activebackground=FARBEN["cyan"], activeforeground=FARBEN["bg_dunkel"]))
         m_bearb.add_command(label=tr("menu.bearbeiten.strecken"),
                             command=lambda: self._op_start("stretch"))
         m_bearb.add_command(label=tr("menu.bearbeiten.reihe"),
@@ -9573,6 +9577,8 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                           command=lambda: self._op_start("scale"))
             m.add_command(label=tr("menu.bearbeiten.spiegeln"),
                           command=lambda: self._op_start("mirror"))
+            m.add_cascade(label=tr("menu.bearbeiten.reihenfolge"),
+                          menu=self._reihenfolge_menue(m, **stil))
             if any(isinstance(e, BlockReferenz) and e.attribut_definitionen()
                    for e in self.auswahl):
                 m.add_command(label=tr("menu.bloecke.attedit"),
@@ -9627,6 +9633,55 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         m.add_command(label=(tr("txt.0125")),
                       command=self.zoom_grenzen)
         self._menue_zeigen(m, event.x_root, event.y_root)
+
+    @staticmethod
+    def reihenfolge_aendern(liste, auswahl, modus):
+        """Changes the drawing order (list order = order of drawing: the last is on top) of the
+        `auswahl` objects inside `liste`, in place. modus: "vorn" (to the front), "hinten" (to
+        the back), "vor" / "zurueck" (one step). The order among the selected objects is kept.
+        Returns True when something changed."""
+        ids = {id(e) for e in auswahl}
+        alt = list(liste)
+        if modus in ("vorn", "hinten"):
+            sel = [e for e in alt if id(e) in ids]
+            rest = [e for e in alt if id(e) not in ids]
+            neu = rest + sel if modus == "vorn" else sel + rest
+        else:
+            neu = list(alt)
+            if modus == "vor":
+                for i in range(len(neu) - 2, -1, -1):
+                    if id(neu[i]) in ids and id(neu[i + 1]) not in ids:
+                        neu[i], neu[i + 1] = neu[i + 1], neu[i]
+            else:
+                for i in range(1, len(neu)):
+                    if id(neu[i]) in ids and id(neu[i - 1]) not in ids:
+                        neu[i], neu[i - 1] = neu[i - 1], neu[i]
+        if all(a is b for a, b in zip(alt, neu)):
+            return False
+        liste[:] = neu
+        return True
+
+    def zeichenreihenfolge(self, modus):
+        """Selected objects to the front / back or one step up / down (what lies above what)."""
+        if not self.auswahl:
+            self.status.set(tr("msg.reihenfolge.waehlen"))
+            return
+        liste = self.layout_elemente if self._ist_layout() else self.elemente
+        self._snapshot()
+        if self.reihenfolge_aendern(liste, self.auswahl, modus):
+            self.redraw()
+            self.status.set(tr("msg.reihenfolge.ok", n=len(self.auswahl)))
+        else:
+            self.status.set(tr("msg.reihenfolge.keine"))
+
+    def _reihenfolge_menue(self, eltern, **stil):
+        """Submenu "Draw order" (context menu and Edit menu)."""
+        sm = tk.Menu(eltern, **stil)
+        for modus, key in (("vorn", "vorn"), ("vor", "vor"), ("zurueck", "zurueck"),
+                           ("hinten", "hinten")):
+            sm.add_command(label=tr("menu.bearbeiten.reihenfolge." + key),
+                           command=lambda m=modus: self.zeichenreihenfolge(m))
+        return sm
 
     def texte_zuruecksetzen(self):
         """Puts the freely moved texts of the selected objects (terminals,

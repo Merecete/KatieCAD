@@ -481,6 +481,10 @@ Neue Objekte starten standardmäßig mit **Von Layer** – ändert man die Farbe
 
 Bearbeiten › Eigenschaften öffnet ein Fenster für die aktuelle Auswahl – auch gemischt (Linien, Texte, Symbole …): Layer, Farbe (oder „Von Layer“), Linientyp, Linienstärke und – sobald Texte dabei sind – Texthöhe, Winkel und Schriftart. Unterschiedliche Werte zeigt das Feld als *VERSCHIEDEN*; eine Änderung gilt sofort für alle gewählten Objekte.
 
+## Zeichenreihenfolge
+
+Was über was liegt, bestimmt die Reihenfolge, in der die Objekte gezeichnet werden (das zuletzt gezeichnete liegt oben). Objekte wählen, dann **Bearbeiten › Zeichenreihenfolge** (auch im Rechtsklickmenü): **In den Vordergrund**, **Eine Ebene nach vorn**, **Eine Ebene nach hinten** oder **In den Hintergrund**. Die Reihenfolge der gewählten Objekte untereinander bleibt erhalten; im Layout gilt es für die Objekte des Layouts. Rückgängig mit Strg+Z.
+
 ## Skalieren und Spiegeln
 **Bearbeiten › Skalieren** (Befehl `SKALIEREN`/`SC`, auch im Rechtsklickmenü): Objekte wählen, Enter, Basispunkt klicken, Faktor eingeben (z. B. `2` oder `0,5`). Blöcke werden mit ihrer Größe skaliert; fest dimensionierte Elektro-Elemente (Verbindungen, Querverweise, Masken, Klemmen) behalten ihre Größe und wandern nur an die neue Position.
 
