@@ -9,7 +9,7 @@ and does the maths of the 3D manipulator (X/Y/Z arrows).
 import copy
 import math
 
-from katiecad.model.core import (Wand, Oeffnung, Koerper3D, Gruppe3D, Skizze3D, Bemassung3D, Text3D, Linie, Rechteck,
+from katiecad.model.core import (Wand, Oeffnung, Decke, Koerper3D, Gruppe3D, Skizze3D, Bemassung3D, Text3D, Linie, Rechteck,
                                  Polylinie, Kreis, Bogen, Ellipse, ZUSAMMENGESETZT, bogen_punkte,
                                  bogen_sweep, profil_aus_element, extrusion)
 from katiecad.model import geom3d as G
@@ -33,6 +33,8 @@ def _wand_sig(el):
     if isinstance(el, Wand):
         return (tuple(tuple(p) for p in el.punkte), el.geschlossen, el.dicke, el.ausrichtung,
                 el.hoehe, tuple(tuple(o) for o in getattr(el, "_oeff3", [])))
+    if isinstance(el, Decke):
+        return (tuple(tuple(p) for p in el.punkte), el.art, el.dicke, el.hoehe)
     return (el.x, el.y, el.winkel, el.breite, el.hoehe, el.bruestung, el.dicke, el.ausrichtung,
             el.art, tuple(el._lage()))
 
@@ -41,7 +43,7 @@ def virtuelle_netze(el):
     """Meshes of the building elements that are solids in the 3D view only: a wall (with its
     height, open at doors / windows) and the door leaf / window pane. [] for everything else.
     Computed from the plan data (nothing is saved), cached on the element."""
-    if isinstance(el, Wand):
+    if isinstance(el, (Wand, Decke)):
         quads = None
     elif isinstance(el, Oeffnung) and el.art != "durchbruch":
         quads = None
@@ -54,6 +56,11 @@ def virtuelle_netze(el):
     netze = []
     if isinstance(el, Wand):
         netze = wand_netze([s for s in el.stuecke3d() if s[2] - s[1] > 1e-6])
+    elif isinstance(el, Decke):
+        if len(el.punkte) >= 3:
+            za, zb = el.z_bereich()
+            netze = [Koerper3D("prisma", profil=[tuple(p) for p in el.punkte], z0=za,
+                               hoehe=zb - za).netz()]
     else:
         cx, cy, ux, uy, ol, orr = el._lage()
         nx, ny = -uy, ux
@@ -761,6 +768,11 @@ def _kreis_fang(c, r, u, v, out):
 
 def _el_fang(el, out):
     if isinstance(el, Bemassung3D):
+        return
+    if isinstance(el, Decke):
+        za, zb = el.z_bereich()
+        for x, y in el.punkte:
+            out.append(((x, y, 0.0), "end"))
         return
     if isinstance(el, Wand):                      # centre line of the wall (to join walls)
         for x, y in el.punkte:

@@ -77,7 +77,7 @@ from katiecad.model.core import (
     BEFEHLE, PdfSeite, ist_dunkel,
     E_DEVICES, E_LINES, E_CABLE, E_CLAMPS, E_PIN, ELEKTRO_LAYER, FTEXT_LAYER,
     Layer, Layout, Element, Linie, Kreis, Bogen, Rechteck, Polylinie, Text,
-    Ellipse, Spline, Wand, Kabelkanal, kanal_kette, kanal_versatz, KANAL_LAYER, KANAL_LAYER_FARBE, kanal_formstueck, kanal_aus_koerper, _variantenname, Oeffnung, Raum, RAUM_LAYER, RAUM_LAYER_FARBE, WAND_LAYER, WAND_LAYER_FARBE,
+    Ellipse, Spline, Wand, Kabelkanal, kanal_kette, kanal_versatz, KANAL_LAYER, KANAL_LAYER_FARBE, kanal_formstueck, kanal_aus_koerper, _variantenname, Oeffnung, Raum, RAUM_LAYER, RAUM_LAYER_FARBE, Decke, DECKE_LAYER, DECKE_LAYER_FARBE, DECKE_VORGABE, WAND_LAYER, WAND_LAYER_FARBE,
     wand_verknuepfen, wand_in_linien, wand_verbinden, wand_schliessen,
     Bemassung, Viewport, Schraffur, Bild, konturen_aus_elementen, bereich_an_punkt,
     AttributDefinition, Leitung, Verbindungspunkt, Querverweis,
@@ -102,7 +102,7 @@ from katiecad.ui.dialogs import (
     _BlockNameDialog, _BlockAuswahlDialog, BlockBrowserDialog,
     BlockSpeichernDialog, ImportZielDialog, XrefDialog,
     ProjektNeuDialog, AttributDefinitionDialog, BlockAttributeDialog,
-    MasstextDialog, WandDialog, KanalDialog, OeffnungDialog, RaumDialog, BauteilkatalogDialog, SchnellauswahlDialog, SuchenErsetzenDialog, QuerverweisDialog, PruefungDialog, EigenschaftenPalette, VerbindungspunkteDialog, ProjektDruckDialog,
+    MasstextDialog, WandDialog, KanalDialog, OeffnungDialog, RaumDialog, DeckeDialog, BauteilkatalogDialog, SchnellauswahlDialog, SuchenErsetzenDialog, QuerverweisDialog, PruefungDialog, EigenschaftenPalette, VerbindungspunkteDialog, ProjektDruckDialog,
     VerbindungspunktDialog, VerbindungDialog, FestMaskeDialog,
     KoordinatenfeldDialog,
     TitleBlockDialog, DokumentationDialog, ListenAuswahlDialog, SchriftenDialog, ProjektEigenschaftenDialog,
@@ -1398,6 +1398,8 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         m_einf.add_command(label=tr("menu.wand.schraffur"), command=self.wand_schraffur_umschalten)
         m_einf.add_command(label=tr("menu.einfuegen.raum"),
                            command=lambda: self._werkzeug_aus_menue("raum"))
+        m_einf.add_command(label=tr("menu.einfuegen.decke"),
+                           command=lambda: self._werkzeug_aus_menue("decke"))
         m_einf.add_command(label=tr("menu.einfuegen.kanal"),
                            command=lambda: self._werkzeug_aus_menue("kanal"))
         m_einf.add_command(label=tr("menu.einfuegen.kanalverb"),
@@ -1718,7 +1720,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         tb = self.tbB
         self._leisten_griff(tb, "bau")
         ttk.Label(tb, text=tr("tb.bau"), style="Title.TLabel").pack(side=tk.LEFT, padx=(0, 4))
-        for key in ("wand", "tuer", "fenster", "durchbruch", "wandverb", "raum", "kanal", "kanalverb"):
+        for key in ("wand", "tuer", "fenster", "durchbruch", "wandverb", "raum", "decke", "kanal", "kanalverb"):
             self._werkzeug_knopf(tb, key, FARBEN["cyan"])
 
         # --- Toolbar electrical (own bar) ---
@@ -2255,6 +2257,8 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         elif wz == "raum":
             self._raum_layer_sicherstellen()
             self.status.set(tr("msg.raum.klick"))
+        elif wz == "decke":
+            self._decke_werkzeug_start()
 
     def _bem_art_starten(self, art):
         """Activates the dimension tool with radius/diameter preselected."""
@@ -2871,6 +2875,70 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         self.root.bind("<g>", self.zoom_grenzen)
         self.root.bind("<G>", self.zoom_grenzen)
         self.entry_eingabe.bind("<Tab>", self._on_tab)
+        self._eingabe_text_schutz()
+        self.root.bind_all("<ButtonRelease>", lambda e: self.root.after(40, self._eingabe_fokus_pruefen),
+                           add="+")
+        self.root.after(600, self._eingabe_fokus_pflegen)
+
+    # ---- command line: always ready for typing ---------------------------
+    def _eingabe_hat_text(self):
+        """True while the command line has the focus and contains text (then keys such as
+        Delete, G, Ctrl+C/V act on the text, not on the drawing)."""
+        try:
+            return (self.root.focus_get() is self.entry_eingabe
+                    and bool(self.entry_eingabe.get()))
+        except Exception:
+            return False
+
+    def _eingabe_text_schutz(self):
+        """Global shortcuts (Delete, G, Ctrl+...) do nothing while text is typed in the line."""
+        def schuetzen(taste, name):
+            ziel = getattr(self, name)
+            self.root.bind(taste, lambda e, z=ziel: None if self._eingabe_hat_text() else z(e))
+        for taste, name in (("<g>", "zoom_grenzen"), ("<G>", "zoom_grenzen"),
+                            ("<Control-c>", "kopieren"), ("<Control-C>", "kopieren"),
+                            ("<Control-x>", "ausschneiden"), ("<Control-X>", "ausschneiden"),
+                            ("<Control-v>", "einfuegen"), ("<Control-V>", "einfuegen")):
+            schuetzen(taste, name)
+        for taste, f in (("<Delete>", lambda e: self.auswahl_loeschen()),
+                         ("<Control-a>", lambda e: self.alle_markieren()),
+                         ("<Control-A>", lambda e: self.alle_markieren()),
+                         ("<Control-z>", lambda e: self.undo()),
+                         ("<Control-Z>", lambda e: self.undo()),
+                         ("<Control-y>", lambda e: self.redo())):
+            self.root.bind(taste, lambda e, f=f: None if self._eingabe_hat_text() else f(e))
+
+    _EINGABE_FELDER = ("Entry", "TEntry", "Text", "TCombobox", "Spinbox", "TSpinbox",
+                       "Listbox", "Treeview")
+
+    def _eingabe_fokus_pruefen(self):
+        """The command line gets the keyboard focus whenever no extra window is open and no
+        other input field (or list) is being used."""
+        try:
+            e = self.entry_eingabe
+            if not e.winfo_viewable():
+                return
+            for w in self.root.winfo_children():           # dialogs / extra windows
+                if isinstance(w, tk.Toplevel) and w.winfo_viewable():
+                    return
+            if self.root.grab_current() is not None:
+                return
+            f = self.root.focus_get()
+            if f is e:
+                return
+            if f is not None and (isinstance(f, tk.Menu)
+                                  or f.winfo_class() in self._EINGABE_FELDER):
+                return
+            e.focus_set()
+        except Exception:
+            pass
+
+    def _eingabe_fokus_pflegen(self):
+        self._eingabe_fokus_pruefen()
+        try:
+            self.root.after(400, self._eingabe_fokus_pflegen)
+        except Exception:
+            pass
 
     def _on_tab(self, event):
         self.entry_eingabe.insert(tk.INSERT, "  ")
@@ -2915,7 +2983,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             self.status.set(tr("txt.0072"))
             self.redraw()
             return
-        if wz_e in ("wand", "raum", "kanal") and self.aktuelle_polylinie:
+        if wz_e in ("wand", "raum", "decke", "kanal") and self.aktuelle_polylinie:
             # a wall / room in progress is discarded; the tool stays active (a second ESC
             # with nothing in progress goes back to the selection)
             self.aktuelle_polylinie = []
@@ -2926,7 +2994,8 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             self._eingabe_zuruecksetzen()
             self._update_eingabe_hinweis()
             self.redraw()
-            self.status.set(tr({"wand": "msg.wand.klick", "kanal": "msg.kanal.klick"}.get(wz_e, "msg.raum.klick")))
+            self.status.set(tr({"wand": "msg.wand.klick", "kanal": "msg.kanal.klick",
+                                "decke": "msg.decke.klick"}.get(wz_e, "msg.raum.klick")))
             return
         if self._griff_drag_el is not None:
             self._griff_drag_el = None
@@ -3736,7 +3805,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             return None
         tol = 12.0 / self._ctx_skala()
         liste = self._ctx_liste()
-        if self.aktuelle_polylinie and self.aktives_werkzeug.get() in ("polylinie", "spline", "wand", "raum", "kanal"):
+        if self.aktuelle_polylinie and self.aktives_werkzeug.get() in ("polylinie", "spline", "wand", "raum", "decke", "kanal"):
             liste = list(liste) + [Polylinie(list(self.aktuelle_polylinie))]
         res = self._finde_snap_in_liste(liste, x, y, tol, ref)
         if res is None and self._ctx()[0] == "layout":
@@ -4717,12 +4786,12 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             self._wand_verbinden_klick(pt)
         elif werkzeug == "kanalverb":
             self._kanal_verb_klick(pt)
-        elif werkzeug in ("polylinie", "spline", "wand", "raum", "kanal"):
+        elif werkzeug in ("polylinie", "spline", "wand", "raum", "decke", "kanal"):
             if lp is None or not self.aktuelle_polylinie:
                 self.aktuelle_polylinie = [pt]
             else:
                 p0 = self.aktuelle_polylinie[0]
-                schluss_tol = 12.0 / self.view["zoom"] if werkzeug == "raum" else 1e-9
+                schluss_tol = 12.0 / self.view["zoom"] if werkzeug in ("raum", "decke") else 1e-9
                 if (len(self.aktuelle_polylinie) >= 3
                         and math.hypot(pt[0] - p0[0], pt[1] - p0[1]) < schluss_tol):
                     self._polylinie_abschliessen(geschlossen=True)
@@ -5264,6 +5333,9 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         if isinstance(el, Kabelkanal):
             self._kanal_bearbeiten(el)
             return
+        if isinstance(el, Decke):
+            self._decke_bearbeiten(el)
+            return
         if isinstance(el, Wand):
             self._wand_bearbeiten(el)
             return
@@ -5601,6 +5673,57 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         daten["linientyp"] = "Volllinie (schmal)"
         return daten
 
+    # ---- floor / ceiling -------------------------------------------------
+    _decke_art = "decke"
+    _decke_dicke = DECKE_VORGABE["decke"][0]
+    _decke_hoehe = DECKE_VORGABE["decke"][1]
+
+    def _decke_layer_daten(self):
+        daten = self._layer_daten()
+        if DECKE_LAYER not in self.layers:
+            self.layers[DECKE_LAYER] = Layer(DECKE_LAYER, DECKE_LAYER_FARBE[0], DECKE_LAYER_FARBE[1])
+            try:
+                self.layer_cb.config(values=list(self.layers.keys()))
+            except Exception:
+                pass
+        daten["layer"] = DECKE_LAYER
+        daten["eig_farbe"] = False
+        daten["farbe"] = self.layers[DECKE_LAYER].farbe
+        daten["staerke"] = None
+        daten["linientyp"] = "Strichlinie (verdeckt)"
+        return daten
+
+    def _decke_werkzeug_start(self):
+        """Floor / ceiling tool: ask kind, thickness and height, then click the corner points."""
+        dlg = DeckeDialog(self.root, self._decke_art, self._decke_dicke, self._decke_hoehe)
+        if dlg.result is None:
+            self.aktives_werkzeug.set("auswahl")
+            self._werkzeug_toolbar()
+            return
+        self._decke_art = dlg.result["art"]
+        self._decke_dicke = dlg.result["dicke"]
+        self._decke_hoehe = dlg.result["hoehe"]
+        self._decke_layer_daten()
+        self.status.set(tr("msg.decke.klick"))
+
+    def _decke_neu(self, punkte):
+        self._snapshot()
+        d = Decke(punkte, art=self._decke_art, dicke=self._decke_dicke, hoehe=self._decke_hoehe,
+                  **self._decke_layer_daten())
+        self._ziel_liste().append(d)
+        self.auswahl = [d]
+        self.redraw()
+        self.status.set(tr("msg.decke.fertig", art=tr("dlg.decke.art." + d.art)))
+
+    def _decke_bearbeiten(self, el):
+        dlg = DeckeDialog(self.root, el.art, el.dicke, el.hoehe, neu=False)
+        if dlg.result is None:
+            return
+        self._snapshot()
+        for k, v in dlg.result.items():
+            setattr(el, k, v)
+        self.redraw()
+
     def _raum_neu(self, punkte):
         """Room frame from the clicked corners, then ask number and name."""
         self._snapshot()
@@ -5809,6 +5932,16 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         self.redraw()
 
     def _polylinie_abschliessen(self, geschlossen=False):
+        if self.aktives_werkzeug.get() == "decke":           # floor / ceiling: closed polygon
+            punkte = list(self.aktuelle_polylinie)
+            self.aktuelle_polylinie = []
+            self.letzter_punkt = None
+            if len(punkte) >= 3:
+                self._decke_neu(punkte)
+            else:
+                self.status.set(tr("msg.raum.zu_wenig"))
+                self.redraw()
+            return
         if self.aktives_werkzeug.get() == "raum":            # room: closed polygon of >= 3 corners
             punkte = list(self.aktuelle_polylinie)
             self.aktuelle_polylinie = []
@@ -7060,6 +7193,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             if typ == "oeffnung":   return Oeffnung(**d)
             if typ == "kabelkanal": return Kabelkanal(**d)
             if typ == "raum":       return Raum(**d)
+            if typ == "decke":      return Decke(**d)
             if typ == "text":       return Text(**d)
             if typ == "bemassung":  return Bemassung(**d)
             if typ == "viewport":   return Viewport(**d)
@@ -7505,6 +7639,8 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             h(text=((tr("txt.0286") if self.letzter_punkt is None else (tr("txt.0287") if self.kreis_modus.get() == "radius" else tr("txt.0288")))))
         elif w == "raum":
             h(text=tr("msg.raum.hinweis"))
+        elif w == "decke":
+            h(text=tr("msg.decke.hinweis"))
         elif w == "rechteck":
             h(text=((tr("txt.0289") if self.letzter_punkt is None else tr("txt.0290"))))
         elif w == "bogen":
@@ -7571,7 +7707,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         einh = self._einh_faktor()
         try:
             wort = text.upper()
-            if w in ("polylinie", "spline", "wand", "raum", "kanal") and self.aktuelle_polylinie and wort in (
+            if w in ("polylinie", "spline", "wand", "raum", "decke", "kanal") and self.aktuelle_polylinie and wort in (
                     "S", "SCHLIESSEN", "C", "CLOSE"):
                 self._polylinie_abschliessen(geschlossen=True)
                 self.letzter_punkt = None
@@ -7601,7 +7737,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                 self._eingabe_kreis(text, einh)
             elif w == "rechteck":
                 self._eingabe_rechteck(text, einh)
-            elif w in ("polylinie", "spline", "wand", "raum", "kanal"):
+            elif w in ("polylinie", "spline", "wand", "raum", "decke", "kanal"):
                 self._eingabe_polylinie(text, einh)
             elif w in ("bogen", "bemassung", "ellipse"):
                 self._eingabe_punkt_werkzeug(text, einh)
@@ -8559,7 +8695,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                 txt = (f"R {r / einh:.2f}" if self.kreis_modus.get() == "radius"
                        else f"D {2 * r / einh:.2f}")
                 label(lp[0] + r, lp[1], txt)
-        elif w == "raum" and self.aktuelle_polylinie:
+        elif w in ("raum", "decke") and self.aktuelle_polylinie:
             pts = list(self.aktuelle_polylinie) + [pt]
             zeige(Polylinie(pts, geschlossen=len(pts) >= 3))
             a = self.aktuelle_polylinie[-1]
@@ -9421,7 +9557,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
     def _eingabe_leer(self):
         if self._op is not None:
             self._op_rechtsklick()
-        elif (self.aktives_werkzeug.get() in ("polylinie", "spline", "wand", "raum", "kanal")
+        elif (self.aktives_werkzeug.get() in ("polylinie", "spline", "wand", "raum", "decke", "kanal")
               and self.aktuelle_polylinie):
             self._polylinie_abschliessen(geschlossen=False)
             self.letzter_punkt = None

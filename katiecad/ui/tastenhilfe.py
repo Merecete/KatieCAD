@@ -140,6 +140,7 @@ BESCHREIBUNG = {
     "tool:polylinie": ("Polylinie", "Polyline"),
     "tool:querverweis": ("Querverweis", "Cross reference"),
     "tool:raum": ("Raum", "Room"),
+    "tool:decke": ("Boden / Decke", "Floor / ceiling"),
     "tool:kanal": ("Kabelkanal zeichnen (2D/3D)", "Draw cable duct (2D/3D)"),
     "tool:kanalverb": ("Kabelkanäle verbinden", "Join cable ducts"),
     "tool:rechteck": ("Rechteck", "Rectangle"),

@@ -724,6 +724,7 @@ BEFEHLE = {
     "WANDVERBINDEN": "wand:verbinden", "WALLJOIN": "wand:verbinden", "VERBINDEN": "wand:verbinden",
     "WANDSCHRAFFUR": "wand:schraffur", "WALLHATCH": "wand:schraffur",
     "RAUM": "tool:raum", "ROOM": "tool:raum",
+    "DECKE": "tool:decke", "BODEN": "tool:decke", "CEILING": "tool:decke", "FLOOR": "tool:decke",
     "KANAL": "tool:kanal", "KABELKANAL": "tool:kanal", "DUCT": "tool:kanal",
     "KANALVERBINDEN": "tool:kanalverb", "DUCTJOIN": "tool:kanalverb",
     "RECHTECK": "tool:rechteck", "REC": "tool:rechteck", "RECTANG": "tool:rechteck",
@@ -6638,3 +6639,42 @@ def _sp_raum(e, ax, ay, bx, by):
 
 
 _inst(Raum, skalieren=_sk_raum, spiegeln=_sp_raum)
+
+
+DECKE_LAYER = "Decken"
+DECKE_LAYER_FARBE = ("#d9a066", 0.25)             # colour, line weight of the automatic slab layer
+DECKE_ARTEN = ("boden", "decke")
+DECKE_VORGABE = {"boden": (200.0, 0.0), "decke": (200.0, 2500.0)}     # (thickness, height) in mm
+
+
+class Decke(Polylinie):
+    """Floor slab / ceiling: closed outline `punkte` (plan), thickness `dicke` and `hoehe`.
+    art "boden": `hoehe` is the TOP edge (the slab goes down); art "decke": `hoehe` is the
+    UNDERSIDE (the slab goes up). Flat outline in 2D, solid in the 3D view."""
+
+    def __init__(self, punkte, geschlossen=True, art="decke", dicke=200.0, hoehe=2500.0, **kw):
+        kw.pop("_netz3d", None)
+        super().__init__(punkte, True, **kw)
+        self.typ = "decke"
+        self.art = art if art in DECKE_ARTEN else "decke"
+        self.dicke = max(1.0, float(dicke))
+        self.hoehe = float(hoehe)
+
+    def z_bereich(self):
+        """(z_from, z_to) of the slab."""
+        if self.art == "boden":
+            return self.hoehe - self.dicke, self.hoehe
+        return self.hoehe, self.hoehe + self.dicke
+
+    def to_dict(self):
+        d = super().to_dict()
+        d.pop("_netz3d", None)
+        return d
+
+
+def _sk_decke(e, cx, cy, f):
+    _sk_poly(e, cx, cy, f)
+    e.dicke *= f
+
+
+_inst(Decke, skalieren=_sk_decke, spiegeln=lambda e, ax, ay, bx, by: _sp_poly(e, ax, ay, bx, by))

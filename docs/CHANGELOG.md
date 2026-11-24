@@ -1,6 +1,8 @@
 # Änderungen
 
 ## 1.2.1
+- Neu: **Boden / Decke:** neues Werkzeug in der Leiste „Bau“ (Einfügen › Boden / Decke, Befehl `DECKE` / `BODEN`): erst Art (Boden oder Decke), **Dicke** und **Höhe** wählen (Boden: Höhe = Oberkante, die Platte liegt darunter; Decke: Höhe = Unterkante, die Platte liegt darüber), dann die Eckpunkte klicken wie beim Raum; ein Klick auf den ersten Punkt (oder Enter) erzeugt die Platte. In 2D gestrichelter Umriss auf der Ebene „Decken“, in 3D als Körper; funktioniert auch direkt in der 3D-Ansicht. Doppelklick ändert Art, Dicke und Höhe
+- Neu: **Befehlszeile immer aktiv:** die Eingabezeile bekommt den Tastaturfokus automatisch zurück, solange kein Nebenfenster offen ist und kein anderes Eingabefeld benutzt wird; Entf, G und Strg+C/V/X/A/Z/Y wirken nicht auf die Zeichnung, solange Text in der Zeile steht
 - Neu: **Bauwerkzeuge in 3D:** Wand, Tür, Fenster, Durchbruch, Wände verbinden und Raum (gleiche Symbole der Leiste „Bau“) funktionieren auch direkt in der 3D-Ansicht (Wand/Raum: Punkte auf dem Boden mit Objektfang/ORTHO/Eingabezeile; Tür/Fenster: auf die Wand klicken). Doppelklick öffnet dieselben Eigenschaften wie in 2D, Rechtsklickmenü mit Scharnier/Öffnungsrichtung, Z-Pfeil ändert die Höhe vom Boden
 - Fix: **Wand in 3D aus einem Stück:** keine überflüssigen Trennlinien mehr an Türen und Fenstern
 - Neu: **Wände, Türen und Fenster in 3D:** jede Wand hat eine **Wandhöhe** (Standard 2500 mm, im Wanddialog vor dem Zeichnen und per Doppelklick) und erscheint in der 3D-Ansicht als Körper (auch verdeckte Ansicht, Auswahl, Rahmenwahl, Fang). Türen und Fenster schneiden ihre Öffnung in die Wand; beim Fenster heißt „Brüstung“ jetzt **Höhe vom Boden**; Türblatt und Scheibe als dünne Platten. Alte Dateien: 2500 mm

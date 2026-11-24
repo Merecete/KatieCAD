@@ -20,7 +20,7 @@ from tkinter import ttk
 from katiecad.ui import meldung as messagebox
 
 from katiecad.common.i18n import tr
-from katiecad.model.core import (FARBEN, UI_SCHRIFT, Wand, Oeffnung, Koerper3D, Gruppe3D, Skizze3D, kanal_rechteck, kanal_kette, kanal_versatz, kanal_aus_koerper, kanal_formstueck, Bemassung3D, Text3D, Viewport,
+from katiecad.model.core import (FARBEN, UI_SCHRIFT, Wand, Oeffnung, Decke, Koerper3D, Gruppe3D, Skizze3D, kanal_rechteck, kanal_kette, kanal_versatz, kanal_aus_koerper, kanal_formstueck, Bemassung3D, Text3D, Viewport,
                                  quader, zylinder, kegel, pyramide, kugel)
 VERDECKT_SCHNELL_S = 0.15      # hidden-line run faster than this (seconds): stay hidden while navigating
 from katiecad.model import geom3d as G
@@ -32,8 +32,8 @@ from katiecad.ui.dialogs import _modal, _LayoutNameDialog
 WERKZEUG_3D = {"linie": "linie", "polylinie": "poly", "kreis": "kreis", "rechteck": "rechteck",
                "bemassung": "bem", "text": "text", "kanal": "kanal", "kanalverb": "kanalverb",
                "wand": "wand", "tuer": "tuer", "fenster": "fenster", "durchbruch": "durchbruch",
-               "wandverb": "wandverb", "raum": "raum"}
-BAU_PUNKTE = ("wand", "raum")                       # building tools: corner points on the floor
+               "wandverb": "wandverb", "raum": "raum", "decke": "decke"}
+BAU_PUNKTE = ("wand", "raum", "decke")                       # building tools: corner points on the floor
 BAU_OEFFNUNG = ("tuer", "fenster", "durchbruch")    # click on a wall
 BAU_MODI = BAU_PUNKTE + BAU_OEFFNUNG + ("wandverb",)
 
@@ -1165,7 +1165,7 @@ class Ansicht3D(tk.Frame):
                 self.info_var.set(tr("d3.msg.keine_ebene"))
                 return
             app._zeichnen_werkzeug_anwenden(r[0][0], r[0][1])
-            self.info_var.set(tr("msg.raum.hinweis" if m == "raum" else "msg.wand.klick"))
+            self.info_var.set(tr({"raum": "msg.raum.hinweis", "decke": "msg.decke.hinweis"}.get(m, "msg.wand.klick")))
             self.zeichne()
             return
         treffer = S.wand_treffer(self._sichtbare(), self.kamera, *self._mitte(), e.x, e.y)
@@ -1210,8 +1210,20 @@ class Ansicht3D(tk.Frame):
                         self._linie(nz.punkte[i], nz.punkte[j], gelb, 1, (4, 3), "vorschau")
             except Exception:
                 pass
-        self._polylinie([(x, y, 0.0) for x, y in pts], gelb, 1, (4, 3), "vorschau",
-                        self._modus == "raum" and len(pts) >= 3)
+        z = 0.0
+        if self._modus == "decke":
+            z = self.app._decke_hoehe
+        self._polylinie([(x, y, z) for x, y in pts], gelb, 1, (4, 3), "vorschau",
+                        self._modus in ("raum", "decke") and len(pts) >= 3)
+        if self._modus == "decke" and len(pts) >= 3:
+            try:
+                d = Decke(pts, art=self.app._decke_art, dicke=self.app._decke_dicke,
+                          hoehe=self.app._decke_hoehe)
+                for nz in S.virtuelle_netze(d):
+                    for (i, j) in nz.kanten:
+                        self._linie(nz.punkte[i], nz.punkte[j], gelb, 1, (4, 3), "vorschau")
+            except Exception:
+                pass
         if r and len(pts) >= 2:
             a = pts[-2]
             f = self.app._einh_faktor()

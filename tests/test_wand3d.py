@@ -65,7 +65,7 @@ check(Fz.bruestung == 700, "Fenster per Z-Pfeil hoeher")
 S.verschieben_achse([Fz], "z", -5000)
 check(Fz.bruestung == 0, "nicht unter den Boden")
 from katiecad.ui import ansicht3d as A3
-check(set(A3.BAU_MODI) == {"wand", "raum", "tuer", "fenster", "durchbruch", "wandverb"} and all(m in A3.Ansicht3D.MODI for m in A3.BAU_MODI), "Bau-Modi")
+check(set(A3.BAU_MODI) == {"wand", "raum", "decke", "tuer", "fenster", "durchbruch", "wandverb"} and all(m in A3.Ansicht3D.MODI for m in A3.BAU_MODI), "Bau-Modi")
 for sp in ("de", "en", "es", "fr"):
     for m in A3.BAU_MODI:
         check(i18n.TEXTE[sp].get("d3.modus." + m), f"i18n d3.modus.{m} {sp}")
@@ -85,3 +85,52 @@ _pa = {(round(p[0]), round(p[1])) for p, a in S.fang_kandidaten([_W2]) if abs(p[
 check((0, 0) in _pa and (4000, 0) in _pa, "Fang: Wandachse")
 for sp in ("de", "en", "es", "fr"):
     check(i18n.TEXTE[sp].get("d3.fang.achse"), "i18n achse " + sp)
+
+# ---- floor / ceiling (Decke) ----
+from katiecad.ui import dialogs as _dlg
+_dk = core.Decke([(0, 0), (4000, 0), (4000, 3000), (0, 3000)], art="decke", dicke=200, hoehe=2500)
+check(_dk.typ == "decke" and _dk.geschlossen and _dk.z_bereich() == (2500, 2700), "Decke z-Bereich")
+_bd = core.Decke([(0, 0), (4000, 0), (4000, 3000)], art="boden", dicke=250, hoehe=0)
+check(_bd.z_bereich() == (-250, 0), "Boden z-Bereich (Oberkante)")
+_n = S.virtuelle_netze(_dk)
+check(len(_n) == 1 and min(p[2] for p in _n[0].punkte) == 2500 and max(p[2] for p in _n[0].punkte) == 2700, "Decke als 3D-Koerper")
+_d = _dk.to_dict(); check("_netz3d" not in _d and _d["typ"] == "decke", "to_dict")
+_d.pop("typ"); check(core.Decke(**_d).dicke == 200, "Round-Trip")
+check(core.Decke(**{**_d, "art": "xyz"}).art == "decke", "ungueltige Art")
+check(S.hat_netze(_dk) and S.zuege3(_dk) == [], "Decke: 3D-Koerper, nicht flach")
+_dk.hoehe = 3000
+check(min(p[2] for p in S.virtuelle_netze(_dk)[0].punkte) == 3000, "Cache folgt der Hoehe")
+_e = core.Decke([(0, 0), (10, 0), (10, 10)]); _e.skalieren(0, 0, 2) if hasattr(_e, "skalieren") else None
+from katiecad.ui import app as _app
+check(A3.BAU_PUNKTE.count("decke") == 1 and A3.WERKZEUG_3D["decke"] == "decke", "3D-Werkzeug decke")
+for sp in ("de", "en", "es", "fr"):
+    for k in ("tb.wz.decke", "menu.einfuegen.decke", "dlg.decke.titel_vorgabe", "dlg.decke.titel", "dlg.decke.art", "dlg.decke.art.boden",
+              "dlg.decke.art.decke", "dlg.decke.dicke", "dlg.decke.hoehe.boden", "dlg.decke.hoehe.decke", "dlg.decke.hinweis",
+              "msg.decke.klick", "msg.decke.hinweis", "msg.decke.fertig", "d3.modus.decke"):
+        check(i18n.TEXTE[sp].get(k), f"i18n {k} {sp}")
+print("test_wand3d Decke OK", ok)
+
+# ---- command line always ready ----
+from unittest.mock import MagicMock
+import katiecad.ui.app as _A
+def _app_fokus(fokus_widget, toplevels=(), grab=None):
+    a = _A.CadApp.__new__(_A.CadApp)
+    a.root = MagicMock(); a.entry_eingabe = MagicMock()
+    a.entry_eingabe.winfo_viewable.return_value = True
+    a.root.winfo_children.return_value = list(toplevels)
+    a.root.grab_current.return_value = grab
+    a.root.focus_get.return_value = fokus_widget
+    return a
+_c = MagicMock(); _c.winfo_class.return_value = "Canvas"
+_a = _app_fokus(_c); _a._eingabe_fokus_pruefen()
+check(_a.entry_eingabe.focus_set.called, "Fokus: Zeichenflaeche -> Befehlszeile")
+_f = MagicMock(); _f.winfo_class.return_value = "TEntry"
+_a = _app_fokus(_f); _a._eingabe_fokus_pruefen()
+check(not _a.entry_eingabe.focus_set.called, "Fokus: anderes Eingabefeld bleibt")
+_a = _app_fokus(_c, grab=object()); _a._eingabe_fokus_pruefen()
+check(not _a.entry_eingabe.focus_set.called, "Fokus: modaler Dialog bleibt")
+_a = _app_fokus(None); _a._eingabe_fokus_pruefen()
+check(_a.entry_eingabe.focus_set.called, "Fokus: nirgends -> Befehlszeile")
+_a = _app_fokus(_c); _a.entry_eingabe.get.return_value = "abc"; _a.root.focus_get.return_value = _a.entry_eingabe
+check(_a._eingabe_hat_text(), "Text in der Befehlszeile erkannt")
+print("test_wand3d Fokus OK", ok)

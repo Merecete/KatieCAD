@@ -20,7 +20,7 @@ from katiecad.ui import meldung as messagebox
 from katiecad.common.i18n import tr, SPRACHE
 from katiecad.electrical import suchen as SU
 from katiecad.model.core import (
-    FARBEN, ZEICHNUNGSFORMATE, LINIENTYPEN, LINIENSTAERKEN,
+    FARBEN, ZEICHNUNGSFORMATE, LINIENTYPEN, LINIENSTAERKEN, DECKE_VORGABE,
     SCHRIFTARTEN, MASSSTAEBE, BEM_RICHTUNGEN,
     schrift_fett, schrift_name, schrift_setzen,
     Layer, Text, Linie, Kreis, Bogen, Rechteck, Polylinie,
@@ -4666,6 +4666,69 @@ def farbe_waehlen(parent, farbe="#c29bff", titel=None, von_layer=False, presets=
     dlg = FarbDialog(parent, farbe, titel, von_layer, presets, preset_praefix)
     parent.wait_window(dlg)
     return dlg.result
+
+
+class DeckeDialog(tk.Toplevel):
+    """Floor / ceiling: kind, thickness and height (top edge of a floor, underside of a ceiling).
+    result = {"art", "dicke", "hoehe"} or None."""
+    ARTEN = ("boden", "decke")
+
+    def __init__(self, parent, art="decke", dicke=200.0, hoehe=2500.0, neu=True):
+        super().__init__(parent)
+        self.result = None
+        self._art0 = art
+        self.title(tr("dlg.decke.titel_vorgabe" if neu else "dlg.decke.titel"))
+        self.transient(parent)
+        _modal(self)
+        self.configure(bg=FARBEN["bg_mittel"])
+        f = ttk.Frame(self, padding=14)
+        f.pack(fill=tk.BOTH, expand=True)
+        ttk.Label(f, text=tr("dlg.decke.art")).grid(row=0, column=0, sticky=tk.W, pady=4)
+        self.art_var = tk.StringVar(value=tr("dlg.decke.art." + art))
+        cb = ttk.Combobox(f, textvariable=self.art_var, state="readonly", width=20,
+                          values=[tr("dlg.decke.art." + a) for a in self.ARTEN])
+        cb.grid(row=0, column=1, sticky=tk.W, padx=8)
+        cb.bind("<<ComboboxSelected>>", lambda ev: self._art_gewechselt())
+        ttk.Label(f, text=tr("dlg.decke.dicke")).grid(row=1, column=0, sticky=tk.W, pady=4)
+        self.dicke_var = tk.StringVar(value=f"{dicke:g}")
+        e = ttk.Entry(f, textvariable=self.dicke_var, width=10)
+        e.grid(row=1, column=1, sticky=tk.W, padx=8)
+        e.focus_set()
+        e.select_range(0, tk.END)
+        self.hoehe_lbl = ttk.Label(f, text=tr("dlg.decke.hoehe." + art))
+        self.hoehe_lbl.grid(row=2, column=0, sticky=tk.W, pady=4)
+        self.hoehe_var = tk.StringVar(value=f"{hoehe:g}")
+        ttk.Entry(f, textvariable=self.hoehe_var, width=10).grid(row=2, column=1, sticky=tk.W, padx=8)
+        ttk.Label(f, text=tr("dlg.decke.hinweis"), style="Hint.TLabel", wraplength=380,
+                  justify=tk.LEFT).grid(row=3, column=0, columnspan=2, sticky=tk.W, pady=(8, 2))
+        bf = ttk.Frame(f)
+        bf.grid(row=4, column=0, columnspan=2, pady=(10, 0))
+        ttk.Button(bf, text=tr("dlg.ok"), command=self._ok).pack(side=tk.LEFT, padx=4)
+        ttk.Button(bf, text=tr("dlg.abbrechen"), command=self.destroy).pack(side=tk.LEFT, padx=4)
+        self.bind("<Return>", lambda ev: self._ok())
+        self.bind("<Escape>", lambda ev: self.destroy())
+        self.wait_window(self)
+
+    def _art(self):
+        wahl = self.art_var.get()
+        return next((a for a in self.ARTEN if tr("dlg.decke.art." + a) == wahl), "decke")
+
+    def _art_gewechselt(self):
+        neu = self._art()
+        self.hoehe_lbl.configure(text=tr("dlg.decke.hoehe." + neu))
+        alt_h = DECKE_VORGABE[self._art0][1]
+        if _zahl(self.hoehe_var, -1e9) == alt_h:         # untouched: suggest the usual height
+            self.hoehe_var.set(f"{DECKE_VORGABE[neu][1]:g}")
+        self._art0 = neu
+
+    def _ok(self):
+        dicke = _zahl(self.dicke_var, 0.0, True)
+        hoehe = _zahl(self.hoehe_var, -1e9)
+        if dicke is None or hoehe is None:
+            messagebox.showwarning(tr("dlg.decke.titel"), tr("dlg.wand.zahl"), parent=self)
+            return
+        self.result = {"art": self._art(), "dicke": dicke, "hoehe": hoehe}
+        self.destroy()
 
 
 class RaumDialog(tk.Toplevel):
