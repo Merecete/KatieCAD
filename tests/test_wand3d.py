@@ -65,7 +65,7 @@ check(Fz.bruestung == 700, "Fenster per Z-Pfeil hoeher")
 S.verschieben_achse([Fz], "z", -5000)
 check(Fz.bruestung == 0, "nicht unter den Boden")
 from katiecad.ui import ansicht3d as A3
-check(set(A3.BAU_MODI) == {"treppe", "wand", "raum", "decke", "tuer", "fenster", "durchbruch", "wandverb"} and all(m in A3.Ansicht3D.MODI for m in A3.BAU_MODI), "Bau-Modi")
+check(set(A3.BAU_MODI) == {"treppe", "wand", "raum", "decke", "dach", "tuer", "fenster", "durchbruch", "wandverb"} and all(m in A3.Ansicht3D.MODI for m in A3.BAU_MODI), "Bau-Modi")
 for sp in ("de", "en", "es", "fr"):
     for m in A3.BAU_MODI:
         check(i18n.TEXTE[sp].get("d3.modus." + m), f"i18n d3.modus.{m} {sp}")
@@ -240,6 +240,51 @@ for sp in ("de", "en", "es", "fr"):
               "dlg.treppe.wangen", "dlg.treppe.bruchlinie", "dlg.treppe.durchbruch"):
         check(i18n.TEXTE[sp].get(k), f"i18n {k} {sp}")
 print("test_wand3d Treppe Gelaender/Durchbruch OK", ok)
+
+# ---- roofs ----
+import math
+from katiecad.model import dach as _DM
+_rp = [(0, 0), (10000, 0), (10000, 6000), (0, 6000)]
+_r1 = core.Dach(_rp)
+check(abs(_r1.firsthoehe_berechnet() - 3000 * math.tan(math.radians(35))) < 1.0, "Walmdach: Firsthoehe aus Neigung")
+_n1 = S.virtuelle_netze(_r1)
+check(len(_n1) == 1 and len(_n1[0].punkte) == 6 and len(_n1[0].kanten) == 9, "Walmdach: 6 Punkte, 9 Kanten")
+_r2 = core.Dach(_rp, giebel=[2, 4])
+check(_r2.giebel == [2, 4] and abs(_r2.firsthoehe_berechnet() - _r1.firsthoehe_berechnet()) < 1.0, "Satteldach mit Giebeln")
+check(len(_r2.prims()) > len(core.Dach(_rp).prims()) - 3, "Giebel im Plan markiert")
+_r3 = core.Dach(_rp, spitz=False, firsthoehe=800)
+check(abs(_r3.firsthoehe_berechnet() - 800) < 1.0 and _r3.geometrie()["plateau"], "Dachhoehe: Plateau")
+_r4 = core.Dach([(0, 0), (10000, 0), (10000, 4000), (4000, 4000), (4000, 10000), (0, 10000)])
+_gm = _r4.geometrie()
+_fl = sum(abs(_DM._flaeche([(x, y) for x, y, z in p])) for _e, p in _gm["flaechen"])
+check(abs(_fl - 64e6) < 1e3 and len(_gm["grate"]) >= 8, "L-Grundriss: Kehle, Flaechen decken den Umriss")
+_r5 = core.Dach(list(reversed(_r4.punkte)))
+check(abs(sum(abs(_DM._flaeche([(x, y) for x, y, z in p])) for _e, p in _r5.geometrie()["flaechen"]) - 64e6) < 1e3, "Umlaufsinn egal")
+_r6 = core.Dach([(0, 0), (5000, 0), (10000, 0), (10000, 6000), (5000, 6000), (0, 6000)])
+check(abs(sum(abs(_DM._flaeche([(x, y) for x, y, z in p])) for _e, p in _r6.geometrie()["flaechen"]) - 60e6) < 1e3, "Punkt mitten auf einer Kante")
+_dd = _r2.to_dict(); _dd.pop("typ", None)
+_r7 = core.Dach(**_dd)
+check(_r7.giebel == [2, 4] and "_zbasis" not in _r2.to_dict() and "_dachgeo" not in _r2.to_dict(), "Speichern/Laden")
+_dk0 = core.Decke([(0, 0), (4000, 0), (4000, 3000), (0, 3000)], art="decke", hoehe=2500, etage=0)
+_r8 = core.Dach(_rp, etage=1)
+core.wand_verknuepfen([_dk0, _r8])
+check(_r8._zbasis == 2700, "Dach auf Etage 1: Hoehe ueber der Decke")
+check(abs(min(p[2] for p in S.virtuelle_netze(_r8)[0].punkte) - (2700 + _r8.traufe)) < 1e-6, "Dach 3D: Traufhoehe")
+_fk = []
+S._el_fang(_r1, _fk)
+check(len(_fk) >= 6 and all(k == "end" for _p, k in _fk), "Dach: Fangpunkte (Traufe und First)")
+check(A3.BAU_PUNKTE.count("dach") == 1 and A3.WERKZEUG_3D["dach"] == "dach", "3D-Werkzeug dach")
+_ap2 = _A.CadApp.__new__(_A.CadApp); _ap2._etage_filter = 0
+check(_ap2._etage_ausgeblendet(_r1) and not _A.CadApp.__new__(_A.CadApp).__dict__.get("x"), "Dach in der Etagenansicht ausgeblendet")
+_ap2._etage_filter = None
+check(not _ap2._etage_ausgeblendet(_r1), "Dach bei Gesamt sichtbar")
+check(core.BEFEHLE.get("DACH") == "tool:dach" and core.BEFEHLE.get("ROOF") == "tool:dach", "Befehl DACH")
+for sp in ("de", "en", "es", "fr"):
+    for k in ("tb.wz.dach", "menu.einfuegen.dach", "msg.dach.klick", "msg.dach.hinweis", "msg.dach.fertig", "dlg.dach.titel",
+              "dlg.dach.titel_vorgabe", "dlg.dach.neigung", "dlg.dach.spitz", "dlg.dach.firsthoehe", "dlg.dach.traufe",
+              "dlg.dach.giebel", "dlg.dach.hinweis", "dlg.dach.zahl", "d3.modus.dach"):
+        check(i18n.TEXTE[sp].get(k), f"i18n {k} {sp}")
+print("test_wand3d Dach OK", ok)
 
 # ---- view: one storey ----
 _ap = _A.CadApp.__new__(_A.CadApp)

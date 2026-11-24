@@ -9,7 +9,7 @@ and does the maths of the 3D manipulator (X/Y/Z arrows).
 import copy
 import math
 
-from katiecad.model.core import (Wand, Oeffnung, Decke, Treppe, Koerper3D, Gruppe3D, Skizze3D, Bemassung3D, Text3D, Linie, Rechteck,
+from katiecad.model.core import (Wand, Oeffnung, Decke, Treppe, Dach, Koerper3D, Gruppe3D, Skizze3D, Bemassung3D, Text3D, Linie, Rechteck,
                                  Polylinie, Kreis, Bogen, Ellipse, ZUSAMMENGESETZT, bogen_punkte,
                                  bogen_sweep, profil_aus_element, extrusion)
 from katiecad.model import geom3d as G
@@ -36,6 +36,9 @@ def _wand_sig(el):
     if isinstance(el, Decke):
         return (tuple(tuple(p) for p in el.punkte), el.art, el.dicke, el.hoehe, el._zbasis,
                 tuple(tuple(tuple(p) for p in l) for l in getattr(el, "_aussparungen", [])))
+    if isinstance(el, Dach):
+        return (tuple(tuple(p) for p in el.punkte), el.neigung, el.spitz, el.firsthoehe, el.traufe,
+                tuple(el.giebel), el._zbasis)
     if isinstance(el, Treppe):
         return (el.x, el.y, el.winkel, el.art, el.breite, el.hoehe, el.steigungen, el.auftritt,
                 el.dicke, el.bauweise, el.richtung, el.auge, el.r_innen, el.drehwinkel, el._zbasis,
@@ -48,7 +51,7 @@ def virtuelle_netze(el):
     """Meshes of the building elements that are solids in the 3D view only: a wall (with its
     height, open at doors / windows) and the door leaf / window pane. [] for everything else.
     Computed from the plan data (nothing is saved), cached on the element."""
-    if isinstance(el, (Wand, Decke, Treppe)):
+    if isinstance(el, (Wand, Decke, Treppe, Dach)):
         quads = None
     elif isinstance(el, Oeffnung) and el.art != "durchbruch":
         quads = None
@@ -66,6 +69,8 @@ def virtuelle_netze(el):
         zb = el._zbasis
         netze = wand_netze([(q, a + zb, b + zb) for q, a, b in el.stuecke3d()])
         netze += gelaender_netze(el, zb)
+    elif isinstance(el, Dach):
+        netze = dach_netze(el)
     elif isinstance(el, Decke):
         if len(el.punkte) >= 3:
             za, zb = el.z_bereich()
@@ -90,6 +95,37 @@ def virtuelle_netze(el):
         netze.append(Koerper3D("prisma", profil=quad, z0=z0, hoehe=hz - (LUFT_FLUEGEL if el.bruestung > 0 else 0.0)).netz())
     el._netz3d = (sig, netze)
     return netze
+
+
+def dach_netze(el):
+    """Roof surface as one mesh: the faces are triangles (hidden-line), the edges are the
+    outline of every roof face (eaves, ridges, hips, valleys, gable edges)."""
+    g = el.geometrie()
+    z0 = el._zbasis + el.traufe
+    nz = G.Netz()
+    cache = {}
+
+    def pk(x, y, z):
+        k = (round(x, 3), round(y, 3), round(z, 3))
+        if k not in cache:
+            cache[k] = nz.punkt((x, y, z0 + z))
+        return cache[k]
+    kanten = set()
+    polys = [p for _e, p in g["flaechen"] if len(p) >= 3] + [p for p in (g["plateau"] or []) if len(p) >= 3]
+    for poly in polys:
+        idx = [pk(*q) for q in poly]
+        # drop repeated points
+        sauber = [i for k, i in enumerate(idx) if i != idx[k - 1]]
+        if len(sauber) < 3:
+            continue
+        for a, b, c in G.triangulieren([nz.punkte[i] for i in sauber]):
+            nz.flaeche([sauber[a], sauber[b], sauber[c]])
+        for k in range(len(sauber)):
+            a, b = sauber[k], sauber[(k + 1) % len(sauber)]
+            kanten.add((min(a, b), max(a, b)))
+    for a, b in sorted(kanten):
+        nz.kante(a, b)
+    return [nz] if nz.punkte else []
 
 
 def _flaeche2(p):
@@ -961,6 +997,15 @@ def _el_fang(el, out):
         za, zb = el.z_bereich()
         for x, y in el.punkte:
             out.append(((x, y, 0.0), "end"))
+        return
+    if isinstance(el, Dach):
+        z0 = el._zbasis + el.traufe
+        for x, y in el.punkte:
+            out.append(((x, y, z0), "end"))
+        g = el.geometrie()
+        for a, b in g["grate"]:
+            for q in (a, b):
+                out.append(((q[0], q[1], z0 + q[2]), "end"))
         return
     if isinstance(el, Treppe):
         out.append(((el.x, el.y, el._zbasis), "end"))

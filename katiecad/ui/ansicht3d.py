@@ -20,7 +20,7 @@ from tkinter import ttk
 from katiecad.ui import meldung as messagebox
 
 from katiecad.common.i18n import tr
-from katiecad.model.core import (FARBEN, UI_SCHRIFT, Wand, Oeffnung, Decke, Treppe, etage_basis, Koerper3D, Gruppe3D, Skizze3D, kanal_rechteck, kanal_kette, kanal_versatz, kanal_aus_koerper, kanal_formstueck, Bemassung3D, Text3D, Viewport,
+from katiecad.model.core import (FARBEN, UI_SCHRIFT, Wand, Oeffnung, Decke, Treppe, Dach, etage_basis, Koerper3D, Gruppe3D, Skizze3D, kanal_rechteck, kanal_kette, kanal_versatz, kanal_aus_koerper, kanal_formstueck, Bemassung3D, Text3D, Viewport,
                                  quader, zylinder, kegel, pyramide, kugel)
 VERDECKT_SCHNELL_S = 0.15      # hidden-line run faster than this (seconds): stay hidden while navigating
 from katiecad.model import geom3d as G
@@ -32,8 +32,8 @@ from katiecad.ui.dialogs import _modal, _LayoutNameDialog
 WERKZEUG_3D = {"linie": "linie", "polylinie": "poly", "kreis": "kreis", "rechteck": "rechteck",
                "bemassung": "bem", "text": "text", "kanal": "kanal", "kanalverb": "kanalverb",
                "wand": "wand", "tuer": "tuer", "fenster": "fenster", "durchbruch": "durchbruch",
-               "wandverb": "wandverb", "raum": "raum", "decke": "decke", "treppe": "treppe"}
-BAU_PUNKTE = ("wand", "raum", "decke")                       # building tools: corner points on the floor
+               "wandverb": "wandverb", "raum": "raum", "decke": "decke", "dach": "dach", "treppe": "treppe"}
+BAU_PUNKTE = ("wand", "raum", "decke", "dach")                       # building tools: corner points on the floor
 BAU_OEFFNUNG = ("tuer", "fenster", "durchbruch")    # click on a wall
 BAU_MODI = BAU_PUNKTE + BAU_OEFFNUNG + ("wandverb", "treppe")
 
@@ -1177,7 +1177,7 @@ class Ansicht3D(tk.Frame):
                 self.info_var.set(tr("msg.treppe.start" if app.letzter_punkt is None else "msg.treppe.richtung"))
                 self.app.redraw()
             else:
-                self.info_var.set(tr({"raum": "msg.raum.hinweis", "decke": "msg.decke.hinweis"}.get(m, "msg.wand.klick")))
+                self.info_var.set(tr({"raum": "msg.raum.hinweis", "decke": "msg.decke.hinweis", "dach": "msg.dach.hinweis"}.get(m, "msg.wand.klick")))
             self.zeichne()
             return
         treffer = S.wand_treffer(self._sichtbare(), self.kamera, *self._mitte(), e.x, e.y)
@@ -1240,8 +1240,21 @@ class Ansicht3D(tk.Frame):
         z = zb
         if self._modus == "decke":
             z = zb + self.app._decke_hoehe
+        if self._modus == "dach":
+            z = zb + self.app._dach_vorgabe()["traufe"]
         self._polylinie([(x, y, z) for x, y in pts], gelb, 1, (4, 3), "vorschau",
-                        self._modus in ("raum", "decke") and len(pts) >= 3)
+                        self._modus in ("raum", "decke", "dach") and len(pts) >= 3)
+        if self._modus == "dach" and len(pts) >= 3:
+            try:
+                dv = self.app._dach_vorgabe()
+                dd = Dach(pts, neigung=dv["neigung"], spitz=dv["spitz"], firsthoehe=dv["firsthoehe"],
+                          traufe=dv["traufe"], giebel=dv["giebel"], etage=self.app._etage)
+                dd._zbasis = zb
+                for nz in S.virtuelle_netze(dd):
+                    for (i, j) in nz.kanten:
+                        self._linie(nz.punkte[i], nz.punkte[j], gelb, 1, (4, 3), "vorschau")
+            except Exception:
+                pass
         if self._modus == "decke" and len(pts) >= 3:
             try:
                 d = Decke(pts, art=self.app._decke_art, dicke=self.app._decke_dicke,

@@ -77,7 +77,7 @@ from katiecad.model.core import (
     BEFEHLE, PdfSeite, ist_dunkel,
     E_DEVICES, E_LINES, E_CABLE, E_CLAMPS, E_PIN, ELEKTRO_LAYER, FTEXT_LAYER,
     Layer, Layout, Element, Linie, Kreis, Bogen, Rechteck, Polylinie, Text,
-    Ellipse, Spline, Wand, Kabelkanal, kanal_kette, kanal_versatz, KANAL_LAYER, KANAL_LAYER_FARBE, kanal_formstueck, kanal_aus_koerper, _variantenname, Oeffnung, Raum, RAUM_LAYER, RAUM_LAYER_FARBE, Decke, Treppe, TREPPE_LAYER, TREPPE_LAYER_FARBE, etage_basis, DECKE_LAYER, DECKE_LAYER_FARBE, DECKE_VORGABE, WAND_LAYER, WAND_LAYER_FARBE,
+    Ellipse, Spline, Wand, Kabelkanal, kanal_kette, kanal_versatz, KANAL_LAYER, KANAL_LAYER_FARBE, kanal_formstueck, kanal_aus_koerper, _variantenname, Oeffnung, Raum, RAUM_LAYER, RAUM_LAYER_FARBE, Decke, Treppe, Dach, DACH_LAYER, DACH_LAYER_FARBE, DACH_VORGABE, TREPPE_LAYER, TREPPE_LAYER_FARBE, etage_basis, DECKE_LAYER, DECKE_LAYER_FARBE, DECKE_VORGABE, WAND_LAYER, WAND_LAYER_FARBE,
     wand_verknuepfen, wand_in_linien, wand_verbinden, wand_schliessen,
     Bemassung, Viewport, Schraffur, Bild, konturen_aus_elementen, bereich_an_punkt,
     AttributDefinition, Leitung, Verbindungspunkt, Querverweis,
@@ -102,7 +102,7 @@ from katiecad.ui.dialogs import (
     _BlockNameDialog, _BlockAuswahlDialog, BlockBrowserDialog,
     BlockSpeichernDialog, ImportZielDialog, XrefDialog,
     ProjektNeuDialog, AttributDefinitionDialog, BlockAttributeDialog,
-    MasstextDialog, WandDialog, KanalDialog, OeffnungDialog, RaumDialog, DeckeDialog, TreppeDialog, EtageAnsichtDialog, BauteilkatalogDialog, SchnellauswahlDialog, SuchenErsetzenDialog, QuerverweisDialog, PruefungDialog, EigenschaftenPalette, VerbindungspunkteDialog, ProjektDruckDialog,
+    MasstextDialog, WandDialog, KanalDialog, OeffnungDialog, RaumDialog, DeckeDialog, TreppeDialog, DachDialog, EtageAnsichtDialog, BauteilkatalogDialog, SchnellauswahlDialog, SuchenErsetzenDialog, QuerverweisDialog, PruefungDialog, EigenschaftenPalette, VerbindungspunkteDialog, ProjektDruckDialog,
     VerbindungspunktDialog, VerbindungDialog, FestMaskeDialog,
     KoordinatenfeldDialog,
     TitleBlockDialog, DokumentationDialog, ListenAuswahlDialog, SchriftenDialog, ProjektEigenschaftenDialog,
@@ -266,6 +266,8 @@ def _etage_aus(app, el):
     f = getattr(app, "_etage_filter", None)
     if f is None or getattr(el, "etage", None) is None:
         return False
+    if isinstance(el, Dach):                # the roof hides the interior: not shown in a single storey
+        return True
     if isinstance(el, Decke):
         # slabs: the floor of the storey (ceiling slab of the storey below, or its own floor slab)
         # stays, the ceiling above it is hidden so the interior can be seen
@@ -1422,6 +1424,8 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                            command=lambda: self._werkzeug_aus_menue("raum"))
         m_einf.add_command(label=tr("menu.einfuegen.decke"),
                            command=lambda: self._werkzeug_aus_menue("decke"))
+        m_einf.add_command(label=tr("menu.einfuegen.dach"),
+                           command=lambda: self._werkzeug_aus_menue("dach"))
         m_einf.add_command(label=tr("menu.einfuegen.treppe"),
                            command=lambda: self._werkzeug_aus_menue("treppe"))
         m_einf.add_command(label=tr("menu.einfuegen.kanal"),
@@ -1745,7 +1749,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         tb = self.tbB
         self._leisten_griff(tb, "bau")
         ttk.Label(tb, text=tr("tb.bau"), style="Title.TLabel").pack(side=tk.LEFT, padx=(0, 4))
-        for key in ("wand", "tuer", "fenster", "durchbruch", "wandverb", "raum", "decke", "treppe", "kanal", "kanalverb"):
+        for key in ("wand", "tuer", "fenster", "durchbruch", "wandverb", "raum", "decke", "dach", "treppe", "kanal", "kanalverb"):
             self._werkzeug_knopf(tb, key, FARBEN["cyan"])
 
         # --- Toolbar electrical (own bar) ---
@@ -2284,6 +2288,8 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             self.status.set(tr("msg.raum.klick"))
         elif wz == "decke":
             self._decke_werkzeug_start()
+        elif wz == "dach":
+            self._dach_werkzeug_start()
         elif wz == "treppe":
             self._treppe_werkzeug_start()
 
@@ -3010,7 +3016,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             self.status.set(tr("txt.0072"))
             self.redraw()
             return
-        if wz_e in ("wand", "raum", "decke", "kanal") and self.aktuelle_polylinie:
+        if wz_e in ("wand", "raum", "decke", "dach", "kanal") and self.aktuelle_polylinie:
             # a wall / room in progress is discarded; the tool stays active (a second ESC
             # with nothing in progress goes back to the selection)
             self.aktuelle_polylinie = []
@@ -3022,7 +3028,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             self._update_eingabe_hinweis()
             self.redraw()
             self.status.set(tr({"wand": "msg.wand.klick", "kanal": "msg.kanal.klick",
-                                "decke": "msg.decke.klick"}.get(wz_e, "msg.raum.klick")))
+                                "decke": "msg.decke.klick", "dach": "msg.dach.klick"}.get(wz_e, "msg.raum.klick")))
             return
         if self._griff_drag_el is not None:
             self._griff_drag_el = None
@@ -3723,7 +3729,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                         ecken[(i + 1) % 4][0], ecken[(i + 1) % 4][1])
                 if isinstance(el, Viewport):
                     zentrum((x1 + x2) / 2, (y1 + y2) / 2)
-            elif isinstance(el, (Wand, Oeffnung, Kabelkanal, Treppe)):
+            elif isinstance(el, (Wand, Oeffnung, Kabelkanal, Treppe, Dach)):
                 for pl, c in (el.prims(schraffur=False) if isinstance(el, (Wand, Kabelkanal)) else el.prims()):
                     for (x, y) in pl:
                         ende(x, y)
@@ -3832,7 +3838,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             return None
         tol = 12.0 / self._ctx_skala()
         liste = self._ctx_liste()
-        if self.aktuelle_polylinie and self.aktives_werkzeug.get() in ("polylinie", "spline", "wand", "raum", "decke", "kanal"):
+        if self.aktuelle_polylinie and self.aktives_werkzeug.get() in ("polylinie", "spline", "wand", "raum", "decke", "dach", "kanal"):
             liste = list(liste) + [Polylinie(list(self.aktuelle_polylinie))]
         res = self._finde_snap_in_liste(liste, x, y, tol, ref)
         if res is None and self._ctx()[0] == "layout":
@@ -4215,7 +4221,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         if type(el) in (Linie, Kreis, Bogen, Rechteck, Polylinie, Ellipse, Spline, Text,
                         Schraffur):
             return [fest(deepcopy(el))]
-        if isinstance(el, (Wand, Oeffnung, Kabelkanal, Treppe, Raum, Bemassung, Polylinie)):
+        if isinstance(el, (Wand, Oeffnung, Kabelkanal, Treppe, Dach, Raum, Bemassung, Polylinie)):
             res = []
             for p in self._prims(el, 50.0):
                 if p[0] == "l" and len(p[1]) >= 2:
@@ -4818,12 +4824,12 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             self._wand_verbinden_klick(pt)
         elif werkzeug == "kanalverb":
             self._kanal_verb_klick(pt)
-        elif werkzeug in ("polylinie", "spline", "wand", "raum", "decke", "kanal"):
+        elif werkzeug in ("polylinie", "spline", "wand", "raum", "decke", "dach", "kanal"):
             if lp is None or not self.aktuelle_polylinie:
                 self.aktuelle_polylinie = [pt]
             else:
                 p0 = self.aktuelle_polylinie[0]
-                schluss_tol = 12.0 / self.view["zoom"] if werkzeug in ("raum", "decke") else 1e-9
+                schluss_tol = 12.0 / self.view["zoom"] if werkzeug in ("raum", "decke", "dach") else 1e-9
                 if (len(self.aktuelle_polylinie) >= 3
                         and math.hypot(pt[0] - p0[0], pt[1] - p0[1]) < schluss_tol):
                     self._polylinie_abschliessen(geschlossen=True)
@@ -4959,7 +4965,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                    (el.x2, el.y2), (el.x1, el.y2)]
             for i in range(4):
                 segs.append((pts[i], pts[(i + 1) % 4]))
-        elif isinstance(el, (Wand, Oeffnung, Kabelkanal, Treppe)):
+        elif isinstance(el, (Wand, Oeffnung, Kabelkanal, Treppe, Dach)):
             for pl, c in (el.prims(schraffur=False) if isinstance(el, (Wand, Kabelkanal)) else el.prims()):
                 pts = list(pl) + ([pl[0]] if c and len(pl) > 2 else [])
                 for i in range(len(pts) - 1):
@@ -5364,6 +5370,9 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             return
         if isinstance(el, Kabelkanal):
             self._kanal_bearbeiten(el)
+            return
+        if isinstance(el, Dach):
+            self._dach_bearbeiten(el)
             return
         if isinstance(el, Decke):
             self._decke_bearbeiten(el)
@@ -5800,6 +5809,75 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             setattr(el, k, v)
         self.redraw()
 
+    # ---- roofs -------------------------------------------------------------
+    _dach_daten = None
+    _dach_traufe_manuell = False
+
+    def _dach_vorgabe(self):
+        if self._dach_daten is None:
+            self._dach_daten = {"neigung": DACH_VORGABE["neigung"], "spitz": DACH_VORGABE["spitz"],
+                                "firsthoehe": DACH_VORGABE["firsthoehe"], "traufe": DACH_VORGABE["traufe"],
+                                "giebel": [], "etage": self._etage}
+        return self._dach_daten
+
+    def _dach_layer_daten(self):
+        daten = self._layer_daten()
+        if DACH_LAYER not in self.layers:
+            self.layers[DACH_LAYER] = Layer(DACH_LAYER, DACH_LAYER_FARBE[0], DACH_LAYER_FARBE[1])
+            try:
+                self.layer_cb.config(values=list(self.layers.keys()))
+            except Exception:
+                pass
+        daten["layer"] = DACH_LAYER
+        daten["eig_farbe"] = False
+        daten["farbe"] = self.layers[DACH_LAYER].farbe
+        daten["staerke"] = None
+        daten["linientyp"] = "Volllinie (schmal)"
+        return daten
+
+    def _dach_traufe_vorschlag(self, etage, vorgabe):
+        """Eaves height: top of the highest ceiling of the storey, else the preset."""
+        hs = [e.hoehe + e.dicke for e in self._ctx_liste()
+              if isinstance(e, Decke) and e.art == "decke" and e.etage == etage]
+        return max(hs) if hs else vorgabe
+
+    def _dach_werkzeug_start(self):
+        """Roof tool: ask slope, roof height / peak, eaves, gable ends, then click the outline."""
+        d = dict(self._dach_vorgabe())
+        d["etage"] = self._etage
+        if not self._dach_traufe_manuell:
+            d["traufe"] = self._dach_traufe_vorschlag(self._etage, d["traufe"])
+        dlg = DachDialog(self.root, d)
+        if dlg.result is None or not self._etage_pruefen(dlg.result["etage"]):
+            self.aktives_werkzeug.set("auswahl")
+            self._werkzeug_toolbar()
+            return
+        self._dach_traufe_manuell = abs(dlg.result["traufe"] - d["traufe"]) > 1e-6
+        self._etage = dlg.result["etage"]
+        self._dach_daten = dict(dlg.result)
+        self._dach_layer_daten()
+        self.status.set(tr("msg.dach.klick"))
+
+    def _dach_neu(self, punkte):
+        self._snapshot()
+        d = Dach(punkte, **self._dach_vorgabe(), **self._dach_layer_daten())
+        d.etage = self._etage
+        self._ziel_liste().append(d)
+        self.auswahl = [d]
+        self.redraw()
+        self.status.set(tr("msg.dach.fertig", h=f"{d.firsthoehe_berechnet():.0f}"))
+
+    def _dach_bearbeiten(self, el):
+        d = {k: getattr(el, k) for k in ("neigung", "spitz", "firsthoehe", "traufe", "giebel", "etage")}
+        dlg = DachDialog(self.root, d, neu=False, kanten=len(el.punkte))
+        if dlg.result is None or not self._etage_pruefen(dlg.result["etage"]):
+            return
+        self._snapshot()
+        for k, v in dlg.result.items():
+            setattr(el, k, v)
+        self.redraw()
+        self.status.set(tr("msg.dach.fertig", h=f"{el.firsthoehe_berechnet():.0f}"))
+
     # ---- stairs ------------------------------------------------------------
     _treppe_daten = None
 
@@ -6106,6 +6184,16 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             self.letzter_punkt = None
             if len(punkte) >= 3:
                 self._decke_neu(punkte)
+            else:
+                self.status.set(tr("msg.raum.zu_wenig"))
+                self.redraw()
+            return
+        if self.aktives_werkzeug.get() == "dach":            # roof: closed polygon
+            punkte = list(self.aktuelle_polylinie)
+            self.aktuelle_polylinie = []
+            self.letzter_punkt = None
+            if len(punkte) >= 3:
+                self._dach_neu(punkte)
             else:
                 self.status.set(tr("msg.raum.zu_wenig"))
                 self.redraw()
@@ -7362,6 +7450,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             if typ == "kabelkanal": return Kabelkanal(**d)
             if typ == "raum":       return Raum(**d)
             if typ == "decke":      return Decke(**d)
+            if typ == "dach":       return Dach(**d)
             if typ == "treppe":     return Treppe(**d)
             if typ == "text":       return Text(**d)
             if typ == "bemassung":  return Bemassung(**d)
@@ -7500,7 +7589,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                         continue
                     ent = msp.add_text(zeile, dxfattribs={**attribs, "height": el.hoehe})
                     ent.set_placement((tx, ty), align=ezdxf.enums.TextEntityAlignment.MIDDLE_CENTER)
-            elif isinstance(el, (Wand, Oeffnung, Kabelkanal, Treppe)):
+            elif isinstance(el, (Wand, Oeffnung, Kabelkanal, Treppe, Dach)):
                 if isinstance(el, (Wand, Kabelkanal)):
                     for q in el.flaechen():
                         h = msp.add_hatch(dxfattribs=attribs)
@@ -7810,6 +7899,8 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             h(text=tr("msg.raum.hinweis"))
         elif w == "decke":
             h(text=tr("msg.decke.hinweis"))
+        elif w == "dach":
+            h(text=tr("msg.dach.hinweis"))
         elif w == "treppe":
             h(text=tr("msg.treppe.start" if self.letzter_punkt is None else "msg.treppe.richtung"))
         elif w == "rechteck":
@@ -7878,7 +7969,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         einh = self._einh_faktor()
         try:
             wort = text.upper()
-            if w in ("polylinie", "spline", "wand", "raum", "decke", "kanal") and self.aktuelle_polylinie and wort in (
+            if w in ("polylinie", "spline", "wand", "raum", "decke", "dach", "kanal") and self.aktuelle_polylinie and wort in (
                     "S", "SCHLIESSEN", "C", "CLOSE"):
                 self._polylinie_abschliessen(geschlossen=True)
                 self.letzter_punkt = None
@@ -7908,7 +7999,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                 self._eingabe_kreis(text, einh)
             elif w == "rechteck":
                 self._eingabe_rechteck(text, einh)
-            elif w in ("polylinie", "spline", "wand", "raum", "decke", "kanal"):
+            elif w in ("polylinie", "spline", "wand", "raum", "decke", "dach", "kanal"):
                 self._eingabe_polylinie(text, einh)
             elif w in ("bogen", "bemassung", "ellipse"):
                 self._eingabe_punkt_werkzeug(text, einh)
@@ -8314,9 +8405,11 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             return el.prims(self.dezimalkomma.get())
         if isinstance(el, Treppe) and _treppe_von_unten(self, el):
             return [("l", pl, c) for pl, c in el.prims_unten()]
-        if isinstance(el, (Wand, Oeffnung, Kabelkanal, Treppe)):
+        if isinstance(el, (Wand, Oeffnung, Kabelkanal, Treppe, Dach)):
             fl = [("f", q) for q in el.flaechen()] if isinstance(el, (Wand, Kabelkanal)) else []
             return fl + [("l", pl, c) for pl, c in el.prims()]
+        if isinstance(el, Dach):
+            return [("l", pl, c) for pl, c in el.prims()]
         if isinstance(el, Decke):               # stairwell openings (stairs below) as outlines
             return ([("l", list(el.punkte), True)] if len(el.punkte) >= 2 else []) + \
                    [("l", list(l), True) for l in getattr(el, "_aussparungen", [])]
@@ -8871,7 +8964,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                 txt = (f"R {r / einh:.2f}" if self.kreis_modus.get() == "radius"
                        else f"D {2 * r / einh:.2f}")
                 label(lp[0] + r, lp[1], txt)
-        elif w in ("raum", "decke") and self.aktuelle_polylinie:
+        elif w in ("raum", "decke", "dach") and self.aktuelle_polylinie:
             pts = list(self.aktuelle_polylinie) + [pt]
             zeige(Polylinie(pts, geschlossen=len(pts) >= 3))
             a = self.aktuelle_polylinie[-1]
@@ -9737,7 +9830,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
     def _eingabe_leer(self):
         if self._op is not None:
             self._op_rechtsklick()
-        elif (self.aktives_werkzeug.get() in ("polylinie", "spline", "wand", "raum", "decke", "kanal")
+        elif (self.aktives_werkzeug.get() in ("polylinie", "spline", "wand", "raum", "decke", "dach", "kanal")
               and self.aktuelle_polylinie):
             self._polylinie_abschliessen(geschlossen=False)
             self.letzter_punkt = None

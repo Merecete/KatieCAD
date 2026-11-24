@@ -4789,6 +4789,74 @@ class TreppeDialog(tk.Toplevel):
         self.destroy()
 
 
+class DachDialog(tk.Toplevel):
+    """Roof: slope, peak or roof height, eaves, gable ends. result = dict of Dach attributes or None."""
+
+    def __init__(self, parent, d, neu=True, kanten=None):
+        super().__init__(parent)
+        self.result = None
+        self._kanten = kanten
+        self.title(tr("dlg.dach.titel_vorgabe" if neu else "dlg.dach.titel"))
+        self.transient(parent)
+        _modal(self)
+        self.configure(bg=FARBEN["bg_mittel"])
+        f = ttk.Frame(self, padding=14)
+        f.pack(fill=tk.BOTH, expand=True)
+        r = 0
+
+        def feld(label, key, wert, text=None):
+            nonlocal r
+            ttk.Label(f, text=tr(label)).grid(row=r, column=0, sticky=tk.W, pady=3)
+            var = tk.StringVar(value=text if text is not None else f"{wert:g}")
+            ttk.Entry(f, textvariable=var, width=12).grid(row=r, column=1, sticky=tk.W, padx=8)
+            setattr(self, key, var)
+            r += 1
+            return var
+
+        e1 = feld("dlg.dach.neigung", "neigung_var", d["neigung"])
+        e1.set(f"{d['neigung']:g}")
+        self.spitz_var = tk.BooleanVar(value=bool(d["spitz"]))
+        ttk.Checkbutton(f, text=tr("dlg.dach.spitz"), variable=self.spitz_var).grid(
+            row=r, column=0, columnspan=2, sticky=tk.W, pady=2)
+        r += 1
+        feld("dlg.dach.firsthoehe", "first_var", d["firsthoehe"])
+        feld("dlg.dach.traufe", "traufe_var", d["traufe"])
+        feld("dlg.dach.giebel", "giebel_var", 0, text=", ".join(str(g) for g in d.get("giebel", [])))
+        ttk.Label(f, text=tr("dlg.etage")).grid(row=r, column=0, sticky=tk.W, pady=3)
+        self.etage_var = tk.StringVar(value=str(int(d["etage"])))
+        ttk.Entry(f, textvariable=self.etage_var, width=12).grid(row=r, column=1, sticky=tk.W, padx=8)
+        r += 1
+        ttk.Label(f, text=tr("dlg.dach.hinweis"), style="Hint.TLabel", wraplength=420,
+                  justify=tk.LEFT).grid(row=r, column=0, columnspan=2, sticky=tk.W, pady=(8, 2))
+        bf = ttk.Frame(f)
+        bf.grid(row=r + 1, column=0, columnspan=2, pady=(10, 0))
+        ttk.Button(bf, text=tr("dlg.ok"), command=self._ok).pack(side=tk.LEFT, padx=4)
+        ttk.Button(bf, text=tr("dlg.abbrechen"), command=self.destroy).pack(side=tk.LEFT, padx=4)
+        self.bind("<Return>", lambda ev: self._ok())
+        self.bind("<Escape>", lambda ev: self.destroy())
+        self.wait_window(self)
+
+    def _ok(self):
+        neigung = _zahl(self.neigung_var, 4.9, True)
+        first = _zahl(self.first_var, 9.0, True)
+        traufe = _zahl(self.traufe_var, -1e9)
+        etage = _etage_zahl(self.etage_var)
+        giebel = []
+        try:
+            for t in self.giebel_var.get().replace(";", ",").replace(" ", ",").split(","):
+                if t.strip():
+                    giebel.append(int(t))
+        except ValueError:
+            giebel = None
+        if (neigung is None or neigung > 85 or first is None or traufe is None or etage is None
+                or giebel is None or any(g < 1 or (self._kanten and g > self._kanten) for g in giebel)):
+            messagebox.showwarning(tr("dlg.dach.titel"), tr("dlg.dach.zahl"), parent=self)
+            return
+        self.result = {"neigung": neigung, "spitz": bool(self.spitz_var.get()), "firsthoehe": first,
+                       "traufe": traufe, "giebel": sorted(set(giebel)), "etage": etage}
+        self.destroy()
+
+
 class EtageAnsichtDialog(tk.Toplevel):
     """View > Storey: choose "All" or one of the existing storeys. result = "gesamt", a storey
     number or None (cancelled)."""

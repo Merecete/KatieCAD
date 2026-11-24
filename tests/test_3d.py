@@ -242,7 +242,7 @@ check(0 < _o2.r_oben <= 10.0 and _o2.r_unten == _o2.r_oben, "Radius oben+unten b
 _d2 = _o.to_dict(); _d2.pop("typ", None)
 check(core.Koerper3D(**_d2).r_oben == 5, "r_oben Round-Trip")
 check(W.WERKZEUG_3D == {"linie": "linie", "polylinie": "poly", "kreis": "kreis", "rechteck": "rechteck", "bemassung": "bem", "text": "text", "kanal": "kanal", "kanalverb": "kanalverb",
-                         "wand": "wand", "tuer": "tuer", "fenster": "fenster", "durchbruch": "durchbruch", "wandverb": "wandverb", "raum": "raum", "decke": "decke", "treppe": "treppe"},
+                         "wand": "wand", "tuer": "tuer", "fenster": "fenster", "durchbruch": "durchbruch", "wandverb": "wandverb", "raum": "raum", "decke": "decke", "dach": "dach", "treppe": "treppe"},
       "Werkzeug-Zuordnung 3D")
 check(len(G.profil_einruecken([(0, 0), (10, 0), (10, 10), (0, 10)], 2)) == 4, "Profil einrücken")
 _t = core.Text3D((1, 2, 3), "Hallo", 4)

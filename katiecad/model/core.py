@@ -725,6 +725,7 @@ BEFEHLE = {
     "WANDSCHRAFFUR": "wand:schraffur", "WALLHATCH": "wand:schraffur",
     "RAUM": "tool:raum", "ROOM": "tool:raum",
     "TREPPE": "tool:treppe", "STAIR": "tool:treppe", "STAIRS": "tool:treppe",
+    "DACH": "tool:dach", "ROOF": "tool:dach", "TECHO": "tool:dach", "TOIT": "tool:dach",
     "DECKE": "tool:decke", "BODEN": "tool:decke", "CEILING": "tool:decke", "FLOOR": "tool:decke",
     "KANAL": "tool:kanal", "KABELKANAL": "tool:kanal", "DUCT": "tool:kanal",
     "KANALVERBINDEN": "tool:kanalverb", "DUCTJOIN": "tool:kanalverb",
@@ -2287,6 +2288,9 @@ def wand_verknuepfen(elemente):
     oeff = [e for e in elemente if isinstance(e, Oeffnung)]
     for el in elemente:                                  # floor level of every storey (runtime)
         if isinstance(el, (Wand, Oeffnung, Decke, Treppe)):
+            b = etage_basis(elemente, getattr(el, "etage", 0))
+            el._zbasis = 0.0 if b is None else b
+        elif isinstance(el, Dach):
             b = etage_basis(elemente, getattr(el, "etage", 0))
             el._zbasis = 0.0 if b is None else b
     decken_aussparungen(elemente)
@@ -7198,3 +7202,113 @@ def _sp_treppe(e, ax, ay, bx, by):
 
 
 _inst(Treppe, skalieren=_sk_treppe, spiegeln=_sp_treppe)
+
+
+# ============================================================
+# Roofs
+# ============================================================
+DACH_LAYER = "Dächer"
+DACH_LAYER_FARBE = ("#c97b5a", 0.25)
+DACH_VORGABE = {"neigung": 35.0, "spitz": True, "firsthoehe": 2000.0, "traufe": WAND_HOEHE_STANDARD + 200.0}
+
+
+class Dach(Polylinie):
+    """Roof over a closed outline `punkte` (the eaves). Every edge slopes inwards by `neigung`
+    degrees (hip roof); edges listed in `giebel` (numbers 1..n, edge k runs from point k to point
+    k+1) are gable ends (vertical). `spitz`: the roof runs up to the ridge / peak, otherwise it is
+    cut `firsthoehe` mm above the eaves (flat top). `traufe`: height of the eaves above the floor
+    of the storey. Solid in the 3D view only; the plan shows outline, ridges, hips and valleys."""
+
+    def __init__(self, punkte, geschlossen=True, neigung=35.0, spitz=True, firsthoehe=2000.0,
+                 traufe=WAND_HOEHE_STANDARD + 200.0, giebel=None, etage=0, **kw):
+        for k in ("_netz3d", "_zbasis", "_dachgeo"):
+            kw.pop(k, None)
+        super().__init__(punkte, True, **kw)
+        self.typ = "dach"
+        self.neigung = min(85.0, max(5.0, float(neigung)))
+        self.spitz = bool(spitz)
+        self.firsthoehe = max(10.0, float(firsthoehe))
+        self.traufe = float(traufe)
+        self.giebel = sorted({int(g) for g in (giebel or []) if 1 <= int(g) <= max(1, len(self.punkte))})
+        self.etage = max(0, int(etage))
+        self._zbasis = 0.0
+
+    def to_dict(self):
+        d = super().to_dict()
+        for k in ("_zbasis", "_netz3d", "_dachgeo"):
+            d.pop(k, None)
+        return d
+
+    def neigungen(self):
+        return [90.0 if (i + 1) in self.giebel else self.neigung for i in range(len(self.punkte))]
+
+    def geometrie(self):
+        """{"flaechen", "plateau", "grate"} of the roof (z above the eaves), cached."""
+        from katiecad.model.dach import dach_flaechen
+        sig = (tuple(tuple(p) for p in self.punkte), self.neigung, self.spitz, self.firsthoehe,
+               tuple(self.giebel))
+        c = getattr(self, "_dachgeo", None)
+        if c is not None and c[0] == sig:
+            return c[1]
+        try:
+            g = dach_flaechen(self.punkte, self.neigungen(), None if self.spitz else self.firsthoehe)
+        except Exception:
+            g = {"flaechen": [], "plateau": None, "grate": []}
+        self._dachgeo = (sig, g)
+        return g
+
+    def firsthoehe_berechnet(self):
+        g = self.geometrie()
+        zs = [z for _e, p in g["flaechen"] for _x, _y, z in p]
+        return max(zs) if zs else 0.0
+
+    def prims(self):
+        n = len(self.punkte)
+        out = [(list(self.punkte), True)] if n >= 2 else []
+        g = self.geometrie()
+        for a, b in g["grate"]:
+            # ridges and hips (not the lines that run along the gable edge)
+            if self._auf_giebelkante(a, b):
+                continue
+            out.append(([(a[0], a[1]), (b[0], b[1])], False))
+        for pl in g["plateau"] or []:
+            out.append(([(x, y) for x, y, _z in pl], True))
+        for k in self.giebel:                                  # gable end: second line inside
+            i, j = k - 1, k % n
+            (ax, ay), (bx, by) = self.punkte[i], self.punkte[j]
+            ln = math.hypot(bx - ax, by - ay)
+            if ln < 1e-6:
+                continue
+            nx, ny = -(by - ay) / ln, (bx - ax) / ln
+            if _flaeche_poly(self.punkte) < 0:
+                nx, ny = -nx, -ny
+            d = min(80.0, ln * 0.1)
+            out.append(([(ax + nx * d, ay + ny * d), (bx + nx * d, by + ny * d)], False))
+        return out
+
+    def _auf_giebelkante(self, a, b):
+        n = len(self.punkte)
+        for k in self.giebel:
+            (px, py), (qx, qy) = self.punkte[k - 1], self.punkte[k % n]
+            ln = math.hypot(qx - px, qy - py)
+            if ln < 1e-6:
+                continue
+            if all(abs((qx - px) * (c[1] - py) - (qy - py) * (c[0] - px)) / ln < 1.0 for c in (a, b)):
+                return True
+        return False
+
+    def kanten_anzahl(self):
+        return len(self.punkte)
+
+
+def _flaeche_poly(p):
+    return sum(p[i][0] * p[(i + 1) % len(p)][1] - p[(i + 1) % len(p)][0] * p[i][1] for i in range(len(p))) / 2.0
+
+
+def _sk_dach(e, cx, cy, f):
+    _sk_poly(e, cx, cy, f)
+    e.traufe *= f
+    e.firsthoehe *= f
+
+
+_inst(Dach, skalieren=_sk_dach, spiegeln=lambda e, ax, ay, bx, by: _sp_poly(e, ax, ay, bx, by))
