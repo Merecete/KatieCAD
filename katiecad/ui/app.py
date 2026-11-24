@@ -255,6 +255,12 @@ _KULL_TYPEN = (Linie, Kreis, Bogen, Polylinie, Schraffur, Text)
 _KULL_WINZIG = (Linie, Kreis, Bogen, Polylinie)
 
 
+def _treppe_von_unten(app, el):
+    """True for a stair of the storey below while a single storey is shown (drawn dashed)."""
+    f = getattr(app, "_etage_filter", None)
+    return f is not None and getattr(el, "etage", f) != f
+
+
 def _etage_aus(app, el):
     """True for building parts of another storey while a single storey is shown (view only)."""
     f = getattr(app, "_etage_filter", None)
@@ -266,6 +272,8 @@ def _etage_aus(app, el):
         if el.art == "decke":
             return el.etage != f - 1
         return el.etage != f
+    if isinstance(el, Treppe):              # the stair that arrives from below stays visible
+        return el.etage != f and not (el.etage == f - 1 and el.durchbruch)
     return el.etage != f
 
 
@@ -8304,9 +8312,14 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                            (el.x2, el.y2), (el.x1, el.y2)], True)]
         if isinstance(el, Raum):
             return el.prims(self.dezimalkomma.get())
+        if isinstance(el, Treppe) and _treppe_von_unten(self, el):
+            return [("l", pl, c) for pl, c in el.prims_unten()]
         if isinstance(el, (Wand, Oeffnung, Kabelkanal, Treppe)):
             fl = [("f", q) for q in el.flaechen()] if isinstance(el, (Wand, Kabelkanal)) else []
             return fl + [("l", pl, c) for pl, c in el.prims()]
+        if isinstance(el, Decke):               # stairwell openings (stairs below) as outlines
+            return ([("l", list(el.punkte), True)] if len(el.punkte) >= 2 else []) + \
+                   [("l", list(l), True) for l in getattr(el, "_aussparungen", [])]
         if isinstance(el, Polylinie):
             return [("l", list(el.punkte), el.geschlossen)] if len(el.punkte) >= 2 else []
         if isinstance(el, Kreis):

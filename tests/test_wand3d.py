@@ -249,6 +249,10 @@ _ap._etage_filter = 1
 check(_ap._etage_ausgeblendet(_w0) and not _ap._etage_ausgeblendet(_w1) and _ap._etage_ausgeblendet(_t0)
       and not _ap._etage_ausgeblendet(_t1), "Etage 1: Etage 0 ausgeblendet")
 check(not _ap._etage_ausgeblendet(_d0) and _ap._etage_ausgeblendet(_d1), "Etage 1: Boden (Decke ueber 0) sichtbar, eigene Decke weg")
+_tu = core.Treppe(0, 0, 0, etage=0); _tu0 = core.Treppe(0, 0, 0, etage=0, durchbruch=False)
+check(not _ap._etage_ausgeblendet(_tu) and _ap._etage_ausgeblendet(_tu0), "Etage 1: Treppe von unten sichtbar (mit Durchbruch)")
+check(_tu.prims_unten() and all(not c for _p, c in _tu.prims_unten()[:-2]), "Treppe von unten: gestrichelt")
+check(_A._treppe_von_unten(_ap, _tu) and not _A._treppe_von_unten(_ap, core.Treppe(0, 0, 0, etage=1)), "von unten erkannt")
 _ap._etage_filter = 0
 check(_ap._etage_ausgeblendet(_d0) and _ap._etage_ausgeblendet(_d1), "Etage 0: Decke weg (Innenraum frei)")
 _bo = core.Decke([(0, 0), (1, 0), (1, 1)], art="boden", etage=0)

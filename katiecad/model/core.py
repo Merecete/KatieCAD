@@ -6951,6 +6951,14 @@ class Treppe(Element):
             out += self._bruchlinie()
         return out
 
+    def prims_unten(self):
+        """Plan view of the stair seen from the storey above (it comes from below): all treads
+        dashed, with the walking line."""
+        out = []
+        for q, _lv, _t in self.stufen():
+            out.extend(_gestrichelt(q))
+        return out + self.lauflinie()
+
     def _bruchlinie(self):
         """Zig-zag break line across the stair at the first tread above the cut height."""
         h = self.steigung()
