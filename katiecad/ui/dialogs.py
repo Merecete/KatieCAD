@@ -430,7 +430,7 @@ def _etage_zahl(var):
         v = int(float(var.get().strip().replace(",", ".")))
     except ValueError:
         return None
-    return v if 0 <= v <= 9 else None
+    return v if 0 <= v <= 15 else None
 
 
 class WandDialog(tk.Toplevel):

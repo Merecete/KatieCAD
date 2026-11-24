@@ -227,8 +227,7 @@ try:
     _ap._m_etage = _FM()
     _ap._etage_menue_aufbauen(); _ap._etage_menue_aufbauen()
     _me = _ap._m_etage.e
-    check(len(_me) == 2 + _A.CadApp.ETAGEN_MAX + 1, "Etagenmenue: feste Eintraege")
-    check([i for i, e in enumerate(_me[2:]) if e.get("state") == "normal"] == [0, 1], "Etagenmenue: nur vorhandene Etagen waehlbar")
+    check(len(_me) == 4 and _me[3]["value"] == "1", "Etagenmenue: Gesamt, Trenner, 0, 1 (ohne Doppel)")
 finally:
     _A.tk = _tk0
 _ap._etage_filter = None

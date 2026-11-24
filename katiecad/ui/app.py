@@ -5694,35 +5694,27 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         except Exception:
             pass
 
-    ETAGEN_MAX = 9                      # highest storey number (entries of the View > Storey menu)
+    ETAGEN_MAX = 15                     # highest storey number
 
     def _etage_menue_aufbauen(self):
-        """View > Storey: "All" + fixed entries "Storey 0..9"; only the storeys that exist can be
-        chosen (the others are greyed out). The entries are never added / removed afterwards -
-        only their state changes (that also works reliably with native menus)."""
+        """View > Storey: "All" + one entry per storey that exists (rebuilt on every opening of
+        the menu and after changes)."""
         m = self._m_etage
         var = self.__dict__.get("_etage_ansicht_var")
         if var is None:
             var = self._etage_ansicht_var = tk.StringVar(value="gesamt")
         vorhanden = self._etagen_vorhanden()
-        if m_eintraege(m) < 3 + self.ETAGEN_MAX:       # first call: create the entries
-            try:
-                m.delete(0, "end")
-            except Exception:
-                pass
-            m.add_radiobutton(label=tr("menu.ansicht.etage_gesamt"), value="gesamt", variable=var,
-                              command=lambda: self.etage_ansicht_setzen(None))
-            m.add_separator()
-            for n in range(self.ETAGEN_MAX + 1):
-                m.add_radiobutton(label=tr("menu.ansicht.etage_n", n=n), value=str(n), variable=var,
-                                  command=lambda n=n: self.etage_ansicht_setzen(n))
-        var.set("gesamt" if self._etage_filter is None else str(self._etage_filter))
-        for n in range(self.ETAGEN_MAX + 1):
-            try:
-                m.entryconfigure(2 + n, state="normal" if n in vorhanden else "disabled")
-            except Exception:
-                pass
         self._etage_menue_key = (tuple(vorhanden), self._etage_filter)
+        while m_eintraege(m):
+            m.delete(0)
+        var.set("gesamt" if self._etage_filter is None else str(self._etage_filter))
+        m.add_radiobutton(label=tr("menu.ansicht.etage_gesamt"), value="gesamt", variable=var,
+                          command=lambda: self.etage_ansicht_setzen(None))
+        if vorhanden:
+            m.add_separator()
+        for n in vorhanden:
+            m.add_radiobutton(label=tr("menu.ansicht.etage_n", n=n), value=str(n), variable=var,
+                              command=lambda n=n: self.etage_ansicht_setzen(n))
 
     def etage_ansicht_setzen(self, n):
         """View > Storey: None = all, else only this storey is shown (and drawn on)."""
