@@ -9,7 +9,7 @@ and does the maths of the 3D manipulator (X/Y/Z arrows).
 import copy
 import math
 
-from katiecad.model.core import (Wand, Oeffnung, Decke, Koerper3D, Gruppe3D, Skizze3D, Bemassung3D, Text3D, Linie, Rechteck,
+from katiecad.model.core import (Wand, Oeffnung, Decke, Treppe, Koerper3D, Gruppe3D, Skizze3D, Bemassung3D, Text3D, Linie, Rechteck,
                                  Polylinie, Kreis, Bogen, Ellipse, ZUSAMMENGESETZT, bogen_punkte,
                                  bogen_sweep, profil_aus_element, extrusion)
 from katiecad.model import geom3d as G
@@ -35,6 +35,9 @@ def _wand_sig(el):
                 el.hoehe, tuple(tuple(o) for o in getattr(el, "_oeff3", [])), el._zbasis)
     if isinstance(el, Decke):
         return (tuple(tuple(p) for p in el.punkte), el.art, el.dicke, el.hoehe, el._zbasis)
+    if isinstance(el, Treppe):
+        return (el.x, el.y, el.winkel, el.art, el.breite, el.hoehe, el.steigungen, el.auftritt,
+                el.dicke, el.bauweise, el.richtung, el.auge, el.r_innen, el.drehwinkel, el._zbasis)
     return (el.x, el.y, el.winkel, el.breite, el.hoehe, el.bruestung, el.dicke, el.ausrichtung, el._zbasis,
             el.art, tuple(el._lage()))
 
@@ -43,7 +46,7 @@ def virtuelle_netze(el):
     """Meshes of the building elements that are solids in the 3D view only: a wall (with its
     height, open at doors / windows) and the door leaf / window pane. [] for everything else.
     Computed from the plan data (nothing is saved), cached on the element."""
-    if isinstance(el, (Wand, Decke)):
+    if isinstance(el, (Wand, Decke, Treppe)):
         quads = None
     elif isinstance(el, Oeffnung) and el.art != "durchbruch":
         quads = None
@@ -57,6 +60,9 @@ def virtuelle_netze(el):
     if isinstance(el, Wand):
         zb = el._zbasis
         netze = wand_netze([(q, a + zb, b + zb) for q, a, b in el.stuecke3d() if b - a > 1e-6])
+    elif isinstance(el, Treppe):
+        zb = el._zbasis
+        netze = wand_netze([(q, a + zb, b + zb) for q, a, b in el.stuecke3d()])
     elif isinstance(el, Decke):
         if len(el.punkte) >= 3:
             za, zb = el.z_bereich()
@@ -774,6 +780,9 @@ def _el_fang(el, out):
         za, zb = el.z_bereich()
         for x, y in el.punkte:
             out.append(((x, y, 0.0), "end"))
+        return
+    if isinstance(el, Treppe):
+        out.append(((el.x, el.y, el._zbasis), "end"))
         return
     if isinstance(el, Wand):                      # centre line of the wall (to join walls)
         for x, y in el.punkte:

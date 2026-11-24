@@ -20,7 +20,7 @@ from tkinter import ttk
 from katiecad.ui import meldung as messagebox
 
 from katiecad.common.i18n import tr
-from katiecad.model.core import (FARBEN, UI_SCHRIFT, Wand, Oeffnung, Decke, etage_basis, Koerper3D, Gruppe3D, Skizze3D, kanal_rechteck, kanal_kette, kanal_versatz, kanal_aus_koerper, kanal_formstueck, Bemassung3D, Text3D, Viewport,
+from katiecad.model.core import (FARBEN, UI_SCHRIFT, Wand, Oeffnung, Decke, Treppe, etage_basis, Koerper3D, Gruppe3D, Skizze3D, kanal_rechteck, kanal_kette, kanal_versatz, kanal_aus_koerper, kanal_formstueck, Bemassung3D, Text3D, Viewport,
                                  quader, zylinder, kegel, pyramide, kugel)
 VERDECKT_SCHNELL_S = 0.15      # hidden-line run faster than this (seconds): stay hidden while navigating
 from katiecad.model import geom3d as G
@@ -32,10 +32,10 @@ from katiecad.ui.dialogs import _modal, _LayoutNameDialog
 WERKZEUG_3D = {"linie": "linie", "polylinie": "poly", "kreis": "kreis", "rechteck": "rechteck",
                "bemassung": "bem", "text": "text", "kanal": "kanal", "kanalverb": "kanalverb",
                "wand": "wand", "tuer": "tuer", "fenster": "fenster", "durchbruch": "durchbruch",
-               "wandverb": "wandverb", "raum": "raum", "decke": "decke"}
+               "wandverb": "wandverb", "raum": "raum", "decke": "decke", "treppe": "treppe"}
 BAU_PUNKTE = ("wand", "raum", "decke")                       # building tools: corner points on the floor
 BAU_OEFFNUNG = ("tuer", "fenster", "durchbruch")    # click on a wall
-BAU_MODI = BAU_PUNKTE + BAU_OEFFNUNG + ("wandverb",)
+BAU_MODI = BAU_PUNKTE + BAU_OEFFNUNG + ("wandverb", "treppe")
 
 BTN_MITTE, BTN_RECHTS = ("3", "2") if __import__("sys").platform == "darwin" else ("2", "3")
 
@@ -962,8 +962,10 @@ class Ansicht3D(tk.Frame):
     def modus_setzen(self, modus):
         if modus != "messen":
             self._messungen = []
-        if modus not in BAU_PUNKTE:
+        if modus not in BAU_PUNKTE and modus != "treppe":
             self.app.aktuelle_polylinie = []
+            self.app.letzter_punkt = None
+        elif modus == "treppe":
             self.app.letzter_punkt = None
         self._skiz = None
         self._platz = None
@@ -1055,7 +1057,7 @@ class Ansicht3D(tk.Frame):
 
     def _modus_ende(self):
         self._messungen = []
-        if self._modus in BAU_PUNKTE:
+        if self._modus in BAU_PUNKTE or self._modus == "treppe":
             self.app.aktuelle_polylinie = []
             self.app.letzter_punkt = None
         self._modus = None
@@ -1165,13 +1167,17 @@ class Ansicht3D(tk.Frame):
     def _bau_klick(self, e):
         m = self._modus
         app = self.app
-        if m in BAU_PUNKTE:
+        if m in BAU_PUNKTE or m == "treppe":
             r = self._bau_punkt(e)
             if r is None:
                 self.info_var.set(tr("d3.msg.keine_ebene"))
                 return
             app._zeichnen_werkzeug_anwenden(r[0][0], r[0][1])
-            self.info_var.set(tr({"raum": "msg.raum.hinweis", "decke": "msg.decke.hinweis"}.get(m, "msg.wand.klick")))
+            if m == "treppe":
+                self.info_var.set(tr("msg.treppe.start" if app.letzter_punkt is None else "msg.treppe.richtung"))
+                self.app.redraw()
+            else:
+                self.info_var.set(tr({"raum": "msg.raum.hinweis", "decke": "msg.decke.hinweis"}.get(m, "msg.wand.klick")))
             self.zeichne()
             return
         treffer = S.wand_treffer(self._sichtbare(), self.kamera, *self._mitte(), e.x, e.y)
@@ -1199,6 +1205,19 @@ class Ansicht3D(tk.Frame):
             self.zeichne()
             return True
         return False
+
+    def _treppe_vorschau(self):
+        lp = self.app.letzter_punkt
+        r = self._bau_punkt(self._maus) if self._maus else None
+        if lp is None or r is None or math.hypot(r[0][0] - lp[0], r[0][1] - lp[1]) < 1e-6:
+            return
+        t = Treppe(lp[0], lp[1], math.degrees(math.atan2(r[0][1] - lp[1], r[0][0] - lp[0])),
+                   **self.app._treppe_vorgabe())
+        t._zbasis = etage_basis(self.app._ctx_liste(), self.app._etage) or 0.0
+        gelb = FARBEN["gelb"]
+        for nz in S.virtuelle_netze(t):
+            for (i, j) in nz.kanten:
+                self._linie(nz.punkte[i], nz.punkte[j], gelb, 1, (4, 3), "vorschau")
 
     def _bau_vorschau(self):
         pl = self.app.aktuelle_polylinie
@@ -1300,7 +1319,7 @@ class Ansicht3D(tk.Frame):
         if m in BAU_OEFFNUNG or m == "wandverb":
             self._hover = h
             return
-        if m in BAU_PUNKTE:
+        if m in BAU_PUNKTE or m == "treppe":
             r = self._bau_punkt(e)
             if r:
                 h["fang"] = (r[2], r[1])
@@ -1785,6 +1804,9 @@ class Ansicht3D(tk.Frame):
         if m in BAU_PUNKTE:
             self._bau_vorschau()
             return
+        if m == "treppe":
+            self._treppe_vorschau()
+            return
         if self._platz is not None and self._platz.get("maus"):
             pl = self._platz
             p, fang = self._platz_pos(pl["maus"], pl)
@@ -2129,7 +2151,8 @@ class Ansicht3D(tk.Frame):
         if self._platz is not None:
             self._platz["maus"] = e
             self.zeichne()
-        elif self._skiz is not None or (self._modus in BAU_PUNKTE and self.app.aktuelle_polylinie):
+        elif (self._skiz is not None or (self._modus in BAU_PUNKTE and self.app.aktuelle_polylinie)
+              or (self._modus == "treppe" and self.app.letzter_punkt is not None)):
             self.zeichne()
         elif self._modus in self.MODI:
             self._hover_zeichnen()
@@ -2417,7 +2440,10 @@ class Ansicht3D(tk.Frame):
         self._erzeuge(pl["art"], pl["par"], pos)
 
     def abbrechen(self):
-        if self._modus in BAU_PUNKTE and self.app.aktuelle_polylinie:
+        if self._modus == "treppe" and self.app.letzter_punkt is not None:
+            self.app.letzter_punkt = None
+            self.zeichne()
+        elif self._modus in BAU_PUNKTE and self.app.aktuelle_polylinie:
             self.app.aktuelle_polylinie = []
             self.app.letzter_punkt = None
             self.zeichne()

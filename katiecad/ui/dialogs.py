@@ -20,7 +20,7 @@ from katiecad.ui import meldung as messagebox
 from katiecad.common.i18n import tr, SPRACHE
 from katiecad.electrical import suchen as SU
 from katiecad.model.core import (
-    FARBEN, ZEICHNUNGSFORMATE, LINIENTYPEN, LINIENSTAERKEN, DECKE_VORGABE,
+    FARBEN, ZEICHNUNGSFORMATE, LINIENTYPEN, LINIENSTAERKEN, DECKE_VORGABE, TREPPE_ARTEN, TREPPE_BAUWEISEN,
     SCHRIFTARTEN, MASSSTAEBE, BEM_RICHTUNGEN,
     schrift_fett, schrift_name, schrift_setzen,
     Layer, Text, Linie, Kreis, Bogen, Rechteck, Polylinie,
@@ -4688,6 +4688,89 @@ def farbe_waehlen(parent, farbe="#c29bff", titel=None, von_layer=False, presets=
     dlg = FarbDialog(parent, farbe, titel, von_layer, presets, preset_praefix)
     parent.wait_window(dlg)
     return dlg.result
+
+
+class TreppeDialog(tk.Toplevel):
+    """Stair: kind, size, risers, construction. result = dict of Treppe attributes or None."""
+    ARTEN = TREPPE_ARTEN
+    BAUWEISEN = TREPPE_BAUWEISEN
+    RICHTUNGEN = ("links", "rechts")
+
+    def __init__(self, parent, d, neu=True):
+        super().__init__(parent)
+        self.result = None
+        self.title(tr("dlg.treppe.titel_vorgabe" if neu else "dlg.treppe.titel"))
+        self.transient(parent)
+        _modal(self)
+        self.configure(bg=FARBEN["bg_mittel"])
+        f = ttk.Frame(self, padding=14)
+        f.pack(fill=tk.BOTH, expand=True)
+        r = 0
+
+        def combo(label, key, werte, praefix, aktuell, breite=26):
+            nonlocal r
+            ttk.Label(f, text=tr(label)).grid(row=r, column=0, sticky=tk.W, pady=3)
+            var = tk.StringVar(value=tr(praefix + aktuell))
+            ttk.Combobox(f, textvariable=var, state="readonly", width=breite,
+                         values=[tr(praefix + w) for w in werte]).grid(row=r, column=1, sticky=tk.W, padx=8)
+            setattr(self, key, var)
+            r += 1
+
+        def feld(label, key, wert):
+            nonlocal r
+            ttk.Label(f, text=tr(label)).grid(row=r, column=0, sticky=tk.W, pady=3)
+            var = tk.StringVar(value=f"{wert:g}")
+            ttk.Entry(f, textvariable=var, width=10).grid(row=r, column=1, sticky=tk.W, padx=8)
+            setattr(self, key, var)
+            r += 1
+
+        combo("dlg.treppe.art", "art_var", self.ARTEN, "dlg.treppe.art.", d["art"])
+        feld("dlg.treppe.breite", "breite_var", d["breite"])
+        feld("dlg.treppe.hoehe", "hoehe_var", d["hoehe"])
+        feld("dlg.treppe.steigungen", "steig_var", d["steigungen"])
+        feld("dlg.treppe.auftritt", "auftritt_var", d["auftritt"])
+        combo("dlg.treppe.bauweise", "bau_var", self.BAUWEISEN, "dlg.treppe.bauweise.", d["bauweise"])
+        feld("dlg.treppe.dicke", "dicke_var", d["dicke"])
+        combo("dlg.treppe.richtung", "richt_var", self.RICHTUNGEN, "dlg.treppe.richtung.", d["richtung"])
+        feld("dlg.treppe.auge", "auge_var", d["auge"])
+        feld("dlg.treppe.r_innen", "rin_var", d["r_innen"])
+        feld("dlg.treppe.drehwinkel", "dreh_var", d["drehwinkel"])
+        ttk.Label(f, text=tr("dlg.etage")).grid(row=r, column=0, sticky=tk.W, pady=3)
+        self.etage_var = tk.StringVar(value=str(int(d["etage"])))
+        ttk.Entry(f, textvariable=self.etage_var, width=10).grid(row=r, column=1, sticky=tk.W, padx=8)
+        r += 1
+        ttk.Label(f, text=tr("dlg.treppe.hinweis"), style="Hint.TLabel", wraplength=420,
+                  justify=tk.LEFT).grid(row=r, column=0, columnspan=2, sticky=tk.W, pady=(8, 2))
+        bf = ttk.Frame(f)
+        bf.grid(row=r + 1, column=0, columnspan=2, pady=(10, 0))
+        ttk.Button(bf, text=tr("dlg.ok"), command=self._ok).pack(side=tk.LEFT, padx=4)
+        ttk.Button(bf, text=tr("dlg.abbrechen"), command=self.destroy).pack(side=tk.LEFT, padx=4)
+        self.bind("<Return>", lambda ev: self._ok())
+        self.bind("<Escape>", lambda ev: self.destroy())
+        self.wait_window(self)
+
+    @staticmethod
+    def _wahl(var, werte, praefix, vorgabe):
+        w = var.get()
+        return next((x for x in werte if tr(praefix + x) == w), vorgabe)
+
+    def _ok(self):
+        z = {k: _zahl(getattr(self, k + "_var"), 0.0, True)
+             for k in ("breite", "hoehe", "auftritt", "dicke")}
+        z["auge"] = _zahl(self.auge_var, 0.0)
+        z["r_innen"] = _zahl(self.rin_var, 20.0)
+        z["drehwinkel"] = _zahl(self.dreh_var, 30.0)
+        st = _zahl(self.steig_var, 0.0)
+        etage = _etage_zahl(self.etage_var)
+        if any(v is None for v in z.values()) or st is None or etage is None or z["drehwinkel"] > 720:
+            messagebox.showwarning(tr("dlg.treppe.titel"), tr("dlg.wand.zahl"), parent=self)
+            return
+        self.result = {"art": self._wahl(self.art_var, self.ARTEN, "dlg.treppe.art.", "gerade"),
+                       "steigungen": int(st), "etage": etage,
+                       "bauweise": self._wahl(self.bau_var, self.BAUWEISEN, "dlg.treppe.bauweise.", "massiv"),
+                       "richtung": self._wahl(self.richt_var, self.RICHTUNGEN, "dlg.treppe.richtung.", "links"),
+                       **z}
+        self.destroy()
 
 
 class DeckeDialog(tk.Toplevel):

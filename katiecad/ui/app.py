@@ -77,7 +77,7 @@ from katiecad.model.core import (
     BEFEHLE, PdfSeite, ist_dunkel,
     E_DEVICES, E_LINES, E_CABLE, E_CLAMPS, E_PIN, ELEKTRO_LAYER, FTEXT_LAYER,
     Layer, Layout, Element, Linie, Kreis, Bogen, Rechteck, Polylinie, Text,
-    Ellipse, Spline, Wand, Kabelkanal, kanal_kette, kanal_versatz, KANAL_LAYER, KANAL_LAYER_FARBE, kanal_formstueck, kanal_aus_koerper, _variantenname, Oeffnung, Raum, RAUM_LAYER, RAUM_LAYER_FARBE, Decke, etage_basis, DECKE_LAYER, DECKE_LAYER_FARBE, DECKE_VORGABE, WAND_LAYER, WAND_LAYER_FARBE,
+    Ellipse, Spline, Wand, Kabelkanal, kanal_kette, kanal_versatz, KANAL_LAYER, KANAL_LAYER_FARBE, kanal_formstueck, kanal_aus_koerper, _variantenname, Oeffnung, Raum, RAUM_LAYER, RAUM_LAYER_FARBE, Decke, Treppe, TREPPE_LAYER, TREPPE_LAYER_FARBE, etage_basis, DECKE_LAYER, DECKE_LAYER_FARBE, DECKE_VORGABE, WAND_LAYER, WAND_LAYER_FARBE,
     wand_verknuepfen, wand_in_linien, wand_verbinden, wand_schliessen,
     Bemassung, Viewport, Schraffur, Bild, konturen_aus_elementen, bereich_an_punkt,
     AttributDefinition, Leitung, Verbindungspunkt, Querverweis,
@@ -102,7 +102,7 @@ from katiecad.ui.dialogs import (
     _BlockNameDialog, _BlockAuswahlDialog, BlockBrowserDialog,
     BlockSpeichernDialog, ImportZielDialog, XrefDialog,
     ProjektNeuDialog, AttributDefinitionDialog, BlockAttributeDialog,
-    MasstextDialog, WandDialog, KanalDialog, OeffnungDialog, RaumDialog, DeckeDialog, BauteilkatalogDialog, SchnellauswahlDialog, SuchenErsetzenDialog, QuerverweisDialog, PruefungDialog, EigenschaftenPalette, VerbindungspunkteDialog, ProjektDruckDialog,
+    MasstextDialog, WandDialog, KanalDialog, OeffnungDialog, RaumDialog, DeckeDialog, TreppeDialog, BauteilkatalogDialog, SchnellauswahlDialog, SuchenErsetzenDialog, QuerverweisDialog, PruefungDialog, EigenschaftenPalette, VerbindungspunkteDialog, ProjektDruckDialog,
     VerbindungspunktDialog, VerbindungDialog, FestMaskeDialog,
     KoordinatenfeldDialog,
     TitleBlockDialog, DokumentationDialog, ListenAuswahlDialog, SchriftenDialog, ProjektEigenschaftenDialog,
@@ -1400,6 +1400,8 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                            command=lambda: self._werkzeug_aus_menue("raum"))
         m_einf.add_command(label=tr("menu.einfuegen.decke"),
                            command=lambda: self._werkzeug_aus_menue("decke"))
+        m_einf.add_command(label=tr("menu.einfuegen.treppe"),
+                           command=lambda: self._werkzeug_aus_menue("treppe"))
         m_einf.add_command(label=tr("menu.einfuegen.kanal"),
                            command=lambda: self._werkzeug_aus_menue("kanal"))
         m_einf.add_command(label=tr("menu.einfuegen.kanalverb"),
@@ -1720,7 +1722,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         tb = self.tbB
         self._leisten_griff(tb, "bau")
         ttk.Label(tb, text=tr("tb.bau"), style="Title.TLabel").pack(side=tk.LEFT, padx=(0, 4))
-        for key in ("wand", "tuer", "fenster", "durchbruch", "wandverb", "raum", "decke", "kanal", "kanalverb"):
+        for key in ("wand", "tuer", "fenster", "durchbruch", "wandverb", "raum", "decke", "treppe", "kanal", "kanalverb"):
             self._werkzeug_knopf(tb, key, FARBEN["cyan"])
 
         # --- Toolbar electrical (own bar) ---
@@ -2259,6 +2261,8 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             self.status.set(tr("msg.raum.klick"))
         elif wz == "decke":
             self._decke_werkzeug_start()
+        elif wz == "treppe":
+            self._treppe_werkzeug_start()
 
     def _bem_art_starten(self, art):
         """Activates the dimension tool with radius/diameter preselected."""
@@ -3696,7 +3700,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                         ecken[(i + 1) % 4][0], ecken[(i + 1) % 4][1])
                 if isinstance(el, Viewport):
                     zentrum((x1 + x2) / 2, (y1 + y2) / 2)
-            elif isinstance(el, (Wand, Oeffnung, Kabelkanal)):
+            elif isinstance(el, (Wand, Oeffnung, Kabelkanal, Treppe)):
                 for pl, c in (el.prims(schraffur=False) if isinstance(el, (Wand, Kabelkanal)) else el.prims()):
                     for (x, y) in pl:
                         ende(x, y)
@@ -4188,7 +4192,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         if type(el) in (Linie, Kreis, Bogen, Rechteck, Polylinie, Ellipse, Spline, Text,
                         Schraffur):
             return [fest(deepcopy(el))]
-        if isinstance(el, (Wand, Oeffnung, Kabelkanal, Raum, Bemassung, Polylinie)):
+        if isinstance(el, (Wand, Oeffnung, Kabelkanal, Treppe, Raum, Bemassung, Polylinie)):
             res = []
             for p in self._prims(el, 50.0):
                 if p[0] == "l" and len(p[1]) >= 2:
@@ -4466,6 +4470,8 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         if isinstance(el, (Wand, Kabelkanal)) and el.punkt_im_koerper(x_mm, y_mm, tol):
             return True                          # the whole wall / duct body counts, not only the faces
         if isinstance(el, Oeffnung) and el.trifft(x_mm, y_mm, tol):
+            return True
+        if isinstance(el, Treppe) and el.punkt_im_koerper(x_mm, y_mm, tol):
             return True
         if isinstance(el, Text):
             return el.punkt_im_rahmen(x_mm, y_mm, tol)
@@ -4782,6 +4788,8 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             self._ellipse_klick(pt)
         elif werkzeug in ("tuer", "fenster", "durchbruch"):
             self._wand_oeffnung_klick(pt, werkzeug)
+        elif werkzeug == "treppe":
+            self._treppe_klick(pt)
         elif werkzeug == "wandverb":
             self._wand_verbinden_klick(pt)
         elif werkzeug == "kanalverb":
@@ -4927,7 +4935,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                    (el.x2, el.y2), (el.x1, el.y2)]
             for i in range(4):
                 segs.append((pts[i], pts[(i + 1) % 4]))
-        elif isinstance(el, (Wand, Oeffnung, Kabelkanal)):
+        elif isinstance(el, (Wand, Oeffnung, Kabelkanal, Treppe)):
             for pl, c in (el.prims(schraffur=False) if isinstance(el, (Wand, Kabelkanal)) else el.prims()):
                 pts = list(pl) + ([pl[0]] if c and len(pl) > 2 else [])
                 for i in range(len(pts) - 1):
@@ -5336,6 +5344,9 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         if isinstance(el, Decke):
             self._decke_bearbeiten(el)
             return
+        if isinstance(el, Treppe):
+            self._treppe_bearbeiten(el)
+            return
         if isinstance(el, Wand):
             self._wand_bearbeiten(el)
             return
@@ -5738,6 +5749,87 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         for k, v in dlg.result.items():
             setattr(el, k, v)
         self.redraw()
+
+    # ---- stairs ------------------------------------------------------------
+    _treppe_daten = None
+
+    def _treppe_vorgabe(self):
+        if self._treppe_daten is None:
+            self._treppe_daten = {"art": "gerade", "breite": 1000.0, "hoehe": 2700.0, "steigungen": 0,
+                                  "auftritt": 280.0, "dicke": 40.0, "bauweise": "massiv",
+                                  "richtung": "links", "auge": 100.0, "r_innen": 100.0,
+                                  "drehwinkel": 270.0, "etage": self._etage}
+        return self._treppe_daten
+
+    def _treppe_layer_daten(self):
+        daten = self._layer_daten()
+        if TREPPE_LAYER not in self.layers:
+            self.layers[TREPPE_LAYER] = Layer(TREPPE_LAYER, TREPPE_LAYER_FARBE[0], TREPPE_LAYER_FARBE[1])
+            try:
+                self.layer_cb.config(values=list(self.layers.keys()))
+            except Exception:
+                pass
+        daten["layer"] = TREPPE_LAYER
+        daten["eig_farbe"] = False
+        daten["farbe"] = self.layers[TREPPE_LAYER].farbe
+        daten["staerke"] = None
+        daten["linientyp"] = "Volllinie (schmal)"
+        return daten
+
+    def _treppe_werkzeug_start(self):
+        """Stair tool: ask the properties, then click the entry point and the running direction."""
+        d = dict(self._treppe_vorgabe())
+        d["etage"] = self._etage
+        liste = self._ctx_liste()
+        b0, b1 = etage_basis(liste, self._etage), etage_basis(liste, self._etage + 1)
+        if b0 is not None and b1 is not None and b1 > b0 and not self._treppe_hoehe_manuell:
+            d["hoehe"] = b1 - b0                      # floor to floor: up to the next storey
+        dlg = TreppeDialog(self.root, d)
+        if dlg.result is None or not self._etage_pruefen(dlg.result["etage"]):
+            self.aktives_werkzeug.set("auswahl")
+            self._werkzeug_toolbar()
+            return
+        self._treppe_hoehe_manuell = abs(dlg.result["hoehe"] - d["hoehe"]) > 1e-6
+        self._etage = dlg.result["etage"]
+        self._treppe_daten = dict(dlg.result)
+        self._treppe_layer_daten()
+        self.letzter_punkt = None
+        self.status.set(tr("msg.treppe.start"))
+
+    _treppe_hoehe_manuell = False
+
+    def _treppe_klick(self, pt):
+        """1st click: entry point (middle of the first step), 2nd click: running direction."""
+        lp = self.letzter_punkt
+        if lp is None:
+            self.letzter_punkt = pt
+            self.status.set(tr("msg.treppe.richtung"))
+            return
+        if math.hypot(pt[0] - lp[0], pt[1] - lp[1]) < 1e-6:
+            return
+        winkel = math.degrees(math.atan2(pt[1] - lp[1], pt[0] - lp[0])) % 360.0
+        self._snapshot()
+        t = Treppe(lp[0], lp[1], winkel, **self._treppe_vorgabe(), **self._treppe_layer_daten())
+        t.etage = self._etage
+        self._ziel_liste().append(t)
+        self.auswahl = [t]
+        self.letzter_punkt = None
+        self.redraw()
+        self.status.set(tr("msg.treppe.fertig", n=t.anzahl(), h=f"{t.steigung():.0f}",
+                           a=f"{t.auftritt:.0f}", s=f"{t.schrittmass():.0f}"))
+
+    def _treppe_bearbeiten(self, el):
+        d = {k: getattr(el, k) for k in ("art", "breite", "hoehe", "steigungen", "auftritt", "dicke",
+                                         "bauweise", "richtung", "auge", "r_innen", "drehwinkel", "etage")}
+        dlg = TreppeDialog(self.root, d, neu=False)
+        if dlg.result is None or not self._etage_pruefen(dlg.result["etage"]):
+            return
+        self._snapshot()
+        for k, v in dlg.result.items():
+            setattr(el, k, v)
+        self.redraw()
+        self.status.set(tr("msg.treppe.fertig", n=el.anzahl(), h=f"{el.steigung():.0f}",
+                           a=f"{el.auftritt:.0f}", s=f"{el.schrittmass():.0f}"))
 
     def _raum_neu(self, punkte):
         """Room frame from the clicked corners, then ask number and name."""
@@ -7216,6 +7308,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             if typ == "kabelkanal": return Kabelkanal(**d)
             if typ == "raum":       return Raum(**d)
             if typ == "decke":      return Decke(**d)
+            if typ == "treppe":     return Treppe(**d)
             if typ == "text":       return Text(**d)
             if typ == "bemassung":  return Bemassung(**d)
             if typ == "viewport":   return Viewport(**d)
@@ -7353,7 +7446,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                         continue
                     ent = msp.add_text(zeile, dxfattribs={**attribs, "height": el.hoehe})
                     ent.set_placement((tx, ty), align=ezdxf.enums.TextEntityAlignment.MIDDLE_CENTER)
-            elif isinstance(el, (Wand, Oeffnung, Kabelkanal)):
+            elif isinstance(el, (Wand, Oeffnung, Kabelkanal, Treppe)):
                 if isinstance(el, (Wand, Kabelkanal)):
                     for q in el.flaechen():
                         h = msp.add_hatch(dxfattribs=attribs)
@@ -7663,6 +7756,8 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             h(text=tr("msg.raum.hinweis"))
         elif w == "decke":
             h(text=tr("msg.decke.hinweis"))
+        elif w == "treppe":
+            h(text=tr("msg.treppe.start" if self.letzter_punkt is None else "msg.treppe.richtung"))
         elif w == "rechteck":
             h(text=((tr("txt.0289") if self.letzter_punkt is None else tr("txt.0290"))))
         elif w == "bogen":
@@ -8163,7 +8258,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                            (el.x2, el.y2), (el.x1, el.y2)], True)]
         if isinstance(el, Raum):
             return el.prims(self.dezimalkomma.get())
-        if isinstance(el, (Wand, Oeffnung, Kabelkanal)):
+        if isinstance(el, (Wand, Oeffnung, Kabelkanal, Treppe)):
             fl = [("f", q) for q in el.flaechen()] if isinstance(el, (Wand, Kabelkanal)) else []
             return fl + [("l", pl, c) for pl, c in el.prims()]
         if isinstance(el, Polylinie):
@@ -8723,6 +8818,10 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             a = self.aktuelle_polylinie[-1]
             label((a[0] + pt[0]) / 2, (a[1] + pt[1]) / 2,
                   f"{math.hypot(pt[0] - a[0], pt[1] - a[1]) / einh:.2f} {unit}")
+        elif w == "treppe" and lp is not None and math.hypot(pt[0] - lp[0], pt[1] - lp[1]) > 1e-6:
+            zeige(Treppe(lp[0], lp[1], math.degrees(math.atan2(pt[1] - lp[1], pt[0] - lp[0])),
+                         **self._treppe_vorgabe()))
+            label((lp[0] + pt[0]) / 2, (lp[1] + pt[1]) / 2, f"{math.degrees(math.atan2(pt[1] - lp[1], pt[0] - lp[0])) % 360.0:.1f}°")
         elif w == "rechteck" and lp is not None:
             zeige(Rechteck(lp[0], lp[1], pt[0], pt[1]))
             label((lp[0] + pt[0]) / 2, (lp[1] + pt[1]) / 2,

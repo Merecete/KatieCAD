@@ -724,6 +724,7 @@ BEFEHLE = {
     "WANDVERBINDEN": "wand:verbinden", "WALLJOIN": "wand:verbinden", "VERBINDEN": "wand:verbinden",
     "WANDSCHRAFFUR": "wand:schraffur", "WALLHATCH": "wand:schraffur",
     "RAUM": "tool:raum", "ROOM": "tool:raum",
+    "TREPPE": "tool:treppe", "STAIR": "tool:treppe", "STAIRS": "tool:treppe",
     "DECKE": "tool:decke", "BODEN": "tool:decke", "CEILING": "tool:decke", "FLOOR": "tool:decke",
     "KANAL": "tool:kanal", "KABELKANAL": "tool:kanal", "DUCT": "tool:kanal",
     "KANALVERBINDEN": "tool:kanalverb", "DUCTJOIN": "tool:kanalverb",
@@ -2285,7 +2286,7 @@ def wand_verknuepfen(elemente):
     waende = [e for e in elemente if isinstance(e, Wand)]
     oeff = [e for e in elemente if isinstance(e, Oeffnung)]
     for el in elemente:                                  # floor level of every storey (runtime)
-        if isinstance(el, (Wand, Oeffnung, Decke)):
+        if isinstance(el, (Wand, Oeffnung, Decke, Treppe)):
             b = etage_basis(elemente, getattr(el, "etage", 0))
             el._zbasis = 0.0 if b is None else b
     for w in waende:
@@ -2561,7 +2562,7 @@ def wand_in_linien(elemente):
     wand_verknuepfen(elemente)
     out = []
     for e in elemente:
-        if isinstance(e, (Wand, Oeffnung, Kabelkanal)):
+        if isinstance(e, (Wand, Oeffnung, Kabelkanal, Treppe)):
             for pl, c in e.prims():
                 out.append(Polylinie(pl, geschlossen=c, layer=e.layer, farbe=e.farbe,
                                      linientyp=e.linientyp, eig_farbe=e.eig_farbe,
@@ -6710,3 +6711,222 @@ def _sk_decke(e, cx, cy, f):
 
 
 _inst(Decke, skalieren=_sk_decke, spiegeln=lambda e, ax, ay, bx, by: _sp_poly(e, ax, ay, bx, by))
+
+
+# ============================================================
+# Stairs
+# ============================================================
+TREPPE_LAYER = "Treppen"
+TREPPE_LAYER_FARBE = ("#7fd1d9", 0.25)
+TREPPE_ARTEN = ("gerade", "l", "u", "wendel")
+TREPPE_BAUWEISEN = ("massiv", "frei")
+TREPPE_STEIGUNG_ZIEL = 175.0                   # usual riser height (mm) for the automatic number of risers
+
+
+class Treppe(Element):
+    """Stair. (x, y) = middle of the entry edge, `winkel` = running direction (degrees).
+    art: "gerade" (straight), "l" (two runs, 90 deg landing), "u" (two runs, 180 deg landing,
+    gap `auge` between the runs), "wendel" (spiral about (x, y): inner radius `r_innen`,
+    sweep `drehwinkel`). `richtung`: turn to the "links" / "rechts". `hoehe`: total rise to the
+    next floor level; `steigungen` = number of risers (0 = automatic, about 175 mm each).
+    `bauweise`: "massiv" (blocks down to the floor) or "frei" (thin treads, thickness `dicke`).
+    The top tread is the floor of the next storey (n risers, n - 1 treads / landing)."""
+
+    def __init__(self, x=0.0, y=0.0, winkel=0.0, art="gerade", breite=1000.0, hoehe=2700.0,
+                 steigungen=0, auftritt=280.0, dicke=40.0, bauweise="massiv", richtung="links",
+                 auge=100.0, r_innen=100.0, drehwinkel=270.0, etage=0, **kw):
+        for k in ("_netz3d", "_zbasis"):
+            kw.pop(k, None)
+        super().__init__("treppe", **kw)
+        self.x, self.y, self.winkel = float(x), float(y), float(winkel)
+        self.art = art if art in TREPPE_ARTEN else "gerade"
+        self.breite = max(200.0, float(breite))
+        self.hoehe = max(100.0, float(hoehe))
+        self.steigungen = max(0, int(steigungen))
+        self.auftritt = max(50.0, float(auftritt))
+        self.dicke = max(5.0, float(dicke))
+        self.bauweise = bauweise if bauweise in TREPPE_BAUWEISEN else "massiv"
+        self.richtung = "rechts" if richtung == "rechts" else "links"
+        self.auge = max(0.0, float(auge))
+        self.r_innen = max(20.0, float(r_innen))
+        self.drehwinkel = min(720.0, max(30.0, float(drehwinkel)))
+        self.etage = max(0, int(etage))
+        self._zbasis = 0.0
+
+    def to_dict(self):
+        d = super().to_dict()
+        d.pop("_zbasis", None)
+        d.pop("_netz3d", None)
+        return d
+
+    # ---- numbers ----------------------------------------------------------
+    def anzahl(self):
+        """Number of risers."""
+        n = self.steigungen if self.steigungen >= 2 else int(round(self.hoehe / TREPPE_STEIGUNG_ZIEL))
+        return max(4 if self.art in ("l", "u") else 2, n)
+
+    def steigung(self):
+        return self.hoehe / self.anzahl()
+
+    def schrittmass(self):
+        """2 x riser + tread (the comfortable stride is about 600 - 640 mm)."""
+        return 2.0 * self.steigung() + self.auftritt
+
+    # ---- geometry ---------------------------------------------------------
+    def _w(self, u, v):
+        a = math.radians(self.winkel)
+        return (self.x + u * math.cos(a) - v * math.sin(a), self.y + u * math.sin(a) + v * math.cos(a))
+
+    def _rechteck(self, u0, v0, u1, v1):
+        ua, ub = min(u0, u1), max(u0, u1)
+        va, vb = min(v0, v1), max(v0, v1)
+        return [self._w(ua, va), self._w(ub, va), self._w(ub, vb), self._w(ua, vb)]
+
+    def stufen(self):
+        """[(polygon (outline of the tread / landing), level, [convex pieces])] in world
+        coordinates. Level k lies k * riser height above the floor."""
+        n, t, b = self.anzahl(), self.auftritt, self.breite
+        s = 1.0 if self.richtung == "links" else -1.0
+        out = []
+
+        def rect(level, u0, v0, u1, v1):
+            q = self._rechteck(u0, v0, u1, v1)
+            out.append((q, level, [q]))
+
+        if self.art == "gerade":
+            for i in range(1, n):
+                rect(i, (i - 1) * t, -b / 2, i * t, b / 2)
+        elif self.art in ("l", "u"):
+            L = n // 2
+            for i in range(1, L):
+                rect(i, (i - 1) * t, -b / 2, i * t, b / 2)
+            u0 = (L - 1) * t
+            if self.art == "l":
+                rect(L, u0, -b / 2, u0 + b, b / 2)
+                for j in range(1, n - L):
+                    rect(L + j, u0, s * (b / 2 + (j - 1) * t), u0 + b, s * (b / 2 + j * t))
+            else:
+                rect(L, u0, -s * b / 2, u0 + b, s * (1.5 * b + self.auge))
+                for j in range(1, n - L):
+                    rect(L + j, u0 - (j - 1) * t, s * (b / 2 + self.auge), u0 - j * t,
+                         s * (1.5 * b + self.auge))
+        else:                                                   # spiral
+            r0, r1 = self.r_innen, self.r_innen + b
+            dth = math.radians(self.drehwinkel) / (n - 1)
+            seg = max(2, int(math.ceil(math.degrees(dth) / 20.0)))
+            for i in range(1, n):
+                a0 = s * (i - 1) * dth
+                innen, aussen, teile = [], [], []
+                for k in range(seg + 1):
+                    ph = a0 + s * dth * k / seg
+                    innen.append(self._w(r0 * math.cos(ph), r0 * math.sin(ph)))
+                    aussen.append(self._w(r1 * math.cos(ph), r1 * math.sin(ph)))
+                for k in range(seg):
+                    teile.append([innen[k], aussen[k], aussen[k + 1], innen[k + 1]])
+                out.append((innen + list(reversed(aussen)), i, teile))
+        return out
+
+    def lauflinie(self):
+        """Walking line with arrow head: [(points, False)]."""
+        n, t, b = self.anzahl(), self.auftritt, self.breite
+        s = 1.0 if self.richtung == "links" else -1.0
+        if self.art == "gerade":
+            pl = [(0.0, 0.0), ((n - 1) * t, 0.0)]
+        elif self.art in ("l", "u"):
+            L = n // 2
+            u0 = (L - 1) * t + b / 2
+            if self.art == "l":
+                pl = [(0.0, 0.0), (u0, 0.0), (u0, s * (b / 2 + (n - 1 - L) * t))]
+            else:
+                pl = [(0.0, 0.0), (u0, 0.0), (u0, s * (b + self.auge)), ((L - 1) * t - (n - 1 - L) * t, s * (b + self.auge))]
+        else:
+            rm = self.r_innen + b / 2
+            sw = math.radians(self.drehwinkel)
+            pl = [(rm * math.cos(s * sw * k / 24), rm * math.sin(s * sw * k / 24)) for k in range(25)]
+        pts = [self._w(*p) for p in pl]
+        out = [(pts, False)]
+        (ax, ay), (bx, by) = pts[-2], pts[-1]
+        d = math.hypot(bx - ax, by - ay) or 1.0
+        ux, uy = (bx - ax) / d, (by - ay) / d
+        k = min(150.0, b * 0.25)
+        for sgn in (1, -1):
+            out.append(([(bx, by), (bx - ux * k + sgn * -uy * k * 0.5, by - uy * k + sgn * ux * k * 0.5)], False))
+        return out
+
+    def prims(self):
+        out = [(q, True) for q, _lv, _t in self.stufen()]
+        return out + self.lauflinie()
+
+    def stuecke3d(self):
+        """The stair as boxes for the 3D view: [(convex polygon, z_from, z_to)] (relative to the
+        floor level of the storey)."""
+        h = self.steigung()
+        out = []
+        for _q, lv, teile in self.stufen():
+            zb = lv * h
+            if self.bauweise == "massiv":
+                # solid: blocks down to the floor; a spiral is a helix slab (one riser thick)
+                za = max(0.0, zb - h) if self.art == "wendel" else 0.0
+            else:
+                za = max(0.0, zb - self.dicke)
+            for q in teile:
+                out.append((q, za, zb))
+        return out
+
+    # ---- object behaviour ---------------------------------------------------
+    def bbox(self):
+        pts = [p for q, _l, _t in self.stufen() for p in q]
+        if not pts:
+            return (self.x, self.y, self.x, self.y)
+        xs = [p[0] for p in pts]
+        ys = [p[1] for p in pts]
+        return (min(xs), min(ys), max(xs), max(ys))
+
+    def punkt_im_koerper(self, x, y, tol=0.0):
+        for q, _l, _t in self.stufen():
+            if _punkt_in_polygon(x, y, q):
+                return True
+            if tol > 0 and any(abstand_punkt_segment(x, y, q[i][0], q[i][1], q[(i + 1) % len(q)][0],
+                                                     q[(i + 1) % len(q)][1]) <= tol
+                               for i in range(len(q))):
+                return True
+        return False
+
+    def trifft(self, x, y, tol=0.0):
+        return self.punkt_im_koerper(x, y, tol)
+
+    def verschieben(self, dx, dy):
+        self.x += dx
+        self.y += dy
+
+    def drehen(self, cx, cy, winkel_deg):
+        self.x, self.y = punkte_drehen(self.x, self.y, cx, cy, winkel_deg)
+        self.winkel = (self.winkel + winkel_deg) % 360.0
+
+    def griffe(self):
+        a = math.radians(self.winkel)
+        k = max(500.0, self.breite)
+        return [("c", self.x, self.y), ("r", self.x + k * math.cos(a), self.y + k * math.sin(a))]
+
+    def griff_bewegen(self, griff_id, x, y):
+        if griff_id == "c":
+            self.x, self.y = x, y
+        elif griff_id == "r" and math.hypot(x - self.x, y - self.y) > 1e-6:
+            self.winkel = math.degrees(math.atan2(y - self.y, x - self.x)) % 360.0
+
+
+def _sk_treppe(e, cx, cy, f):
+    e.x, e.y = _skal_pt(e.x, e.y, cx, cy, f)
+    e.breite *= f
+    e.auftritt *= f
+    e.auge *= f
+    e.r_innen *= f
+
+
+def _sp_treppe(e, ax, ay, bx, by):
+    e.x, e.y = punkt_spiegeln(e.x, e.y, ax, ay, bx, by)
+    e.winkel = (2 * _phi(ax, ay, bx, by) - e.winkel) % 360.0
+    e.richtung = "rechts" if e.richtung == "links" else "links"
+
+
+_inst(Treppe, skalieren=_sk_treppe, spiegeln=_sp_treppe)

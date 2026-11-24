@@ -131,6 +131,7 @@ BESCHREIBUNG = {
     "tool:querverweis": "Referencia cruzada",
     "tool:raum": "Sala",
     "tool:decke": "Suelo / techo",
+    "tool:treppe": "Escalera",
     "tool:kanal": "Dibujar canaleta (2D/3D)",
     "tool:kanalverb": "Unir canaletas",
     "tool:rechteck": "Rectángulo",

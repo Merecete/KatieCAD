@@ -65,7 +65,7 @@ check(Fz.bruestung == 700, "Fenster per Z-Pfeil hoeher")
 S.verschieben_achse([Fz], "z", -5000)
 check(Fz.bruestung == 0, "nicht unter den Boden")
 from katiecad.ui import ansicht3d as A3
-check(set(A3.BAU_MODI) == {"wand", "raum", "decke", "tuer", "fenster", "durchbruch", "wandverb"} and all(m in A3.Ansicht3D.MODI for m in A3.BAU_MODI), "Bau-Modi")
+check(set(A3.BAU_MODI) == {"treppe", "wand", "raum", "decke", "tuer", "fenster", "durchbruch", "wandverb"} and all(m in A3.Ansicht3D.MODI for m in A3.BAU_MODI), "Bau-Modi")
 for sp in ("de", "en", "es", "fr"):
     for m in A3.BAU_MODI:
         check(i18n.TEXTE[sp].get("d3.modus." + m), f"i18n d3.modus.{m} {sp}")
@@ -164,3 +164,36 @@ for sp in ("de", "en", "es", "fr"):
     for k in ("dlg.etage", "dlg.etage.hinweis", "dlg.etage.hinweis_decke", "msg.etage.fehlt"):
         check(i18n.TEXTE[sp].get(k), f"i18n {k} {sp}")
 print("test_wand3d Etage OK", ok)
+
+# ---- stairs (Treppe) ----
+for _art in core.TREPPE_ARTEN:
+    _tp = core.Treppe(0, 0, 30, art=_art, hoehe=2700)
+    _n = _tp.anzahl()
+    check(_n == 15 and abs(_tp.steigung() - 180) < 1e-9, f"Treppe {_art}: 15 Steigungen")
+    check(len(_tp.stufen()) == _n - 1, f"Treppe {_art}: n-1 Auftritte/Podest")
+    _st = _tp.stuecke3d()
+    check(abs(max(b for _q, _a, b in _st) - 2700 + 180) < 1e-6, f"Treppe {_art}: oberste Stufe eine Steigung unter dem Boden darueber")
+    _nz = S.virtuelle_netze(_tp)
+    check(len(_nz) == 1 and len(_nz[0].kanten) > 20, f"Treppe {_art}: 3D-Netz")
+    check(S.hat_netze(_tp) and _tp.bbox()[2] > _tp.bbox()[0], f"Treppe {_art}: bbox/3D")
+    _d = _tp.to_dict(); check("_zbasis" not in _d and _d["typ"] == "treppe", "Treppe to_dict")
+    _d.pop("typ"); check(core.Treppe(**_d).art == _art, "Treppe Round-Trip")
+_g = core.Treppe(100, 200, 0, art="gerade", breite=1000, auftritt=280)
+check(abs(_g.bbox()[2] - (100 + 14 * 280)) < 1e-6 and abs(_g.bbox()[1] - (200 - 500)) < 1e-6, "gerade: Lauflaenge 14 x Auftritt")
+check(_g.punkt_im_koerper(300, 200) and not _g.punkt_im_koerper(300, 900), "Treffer")
+_g.drehen(100, 200, 90)
+check(abs(_g.winkel - 90) < 1e-6 and abs(_g.bbox()[3] - (200 + 14 * 280)) < 1e-6, "drehen")
+_g.griff_bewegen("r", 100, 0); check(abs(_g.winkel - 270) < 1e-6, "Drehgriff")
+_s = core.Treppe(0, 0, 0, richtung="links"); _s.spiegeln(0, 0, 1, 0)
+check(_s.richtung == "rechts", "spiegeln dreht die Abbiegerichtung")
+_f = core.Treppe(0, 0, 0, bauweise="frei", dicke=50)
+check(all(abs(b - a - 50) < 1e-6 or a == 0 for _q, a, b in _f.stuecke3d()), "frei: duenne Stufen")
+_etw = core.Treppe(0, 0, 0, etage=1)
+core.wand_verknuepfen([_w0, _d0, _etw])
+check(_etw._zbasis == 2700, "Treppe auf Etage 1")
+check(min(p[2] for p in S.virtuelle_netze(_etw)[0].punkte) == 2700, "Treppe: 3D-Hoehe ueber der Decke")
+check(A3.WERKZEUG_3D["treppe"] == "treppe" and "treppe" in A3.BAU_MODI, "3D-Werkzeug treppe")
+for sp in ("de", "en", "es", "fr"):
+    for k in ("tb.wz.treppe", "menu.einfuegen.treppe", "dlg.treppe.titel_vorgabe", "dlg.treppe.art.u", "dlg.treppe.hinweis", "msg.treppe.fertig", "d3.modus.treppe"):
+        check(i18n.TEXTE[sp].get(k), f"i18n {k} {sp}")
+print("test_wand3d Treppe OK", ok)
