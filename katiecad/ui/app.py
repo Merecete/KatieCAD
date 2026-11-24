@@ -255,6 +255,12 @@ _KULL_TYPEN = (Linie, Kreis, Bogen, Polylinie, Schraffur, Text)
 _KULL_WINZIG = (Linie, Kreis, Bogen, Polylinie)
 
 
+def _etage_aus(app, el):
+    """True for building parts of another storey while a single storey is shown (view only)."""
+    f = getattr(app, "_etage_filter", None)
+    return f is not None and getattr(el, "etage", None) is not None and el.etage != f
+
+
 class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
     def __init__(self, root):
         self.root = root
@@ -1473,6 +1479,11 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                             command=lambda n=_name: self.toolbar_verschieben(n, 1))
             m_tb.add_cascade(label=tr("menu.ansicht.tb_" + _name), menu=m_n)
         m_ansicht.add_cascade(label=tr("menu.ansicht.tb"), menu=m_tb)
+        self._m_etage = tk.Menu(m_ansicht, tearoff=0, bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
+                                activebackground=FARBEN["cyan"], activeforeground=FARBEN["bg_dunkel"],
+                                postcommand=self._etage_menue_aufbauen)
+        self._etage_menue_aufbauen()
+        m_ansicht.add_cascade(label=tr("menu.ansicht.etage"), menu=self._m_etage)
         m_ansicht.add_command(label=tr("menu.ansicht.zoom_grenzen"),
                               command=self.zoom_grenzen)
         m_ansicht.add_separator()
@@ -2781,7 +2792,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         for el in liste:
             if not self._ist_layout():                 # hidden layers do not count
                 l = self.layers.get(getattr(el, "layer", None))
-                if l is not None and not l.sichtbar:
+                if (l is not None and not l.sichtbar) or _etage_aus(self, el):
                     continue
             try:
                 b = el.bbox()
@@ -3642,7 +3653,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                     and any(el is x for x in self._snap_ausschluss)):
                 continue
             l = self.layers.get(el.layer)
-            if l and not l.sichtbar:
+            if (l and not l.sichtbar) or _etage_aus(self, el):
                 continue
             if isinstance(el, Kabel):
                 sammle(el.x, el.y, "endpunkt", 0)
@@ -4435,7 +4446,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         liste = self._aktuelle_elemente_liste()
         for el in reversed(liste):
             l = self.layers.get(el.layer)
-            if l and not l.sichtbar:
+            if (l and not l.sichtbar) or _etage_aus(self, el):
                 continue
             if self._punkt_auf_element(el, x_mm, y_mm, toleranz_mm):
                 return el
@@ -4530,8 +4541,9 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
     def alle_markieren(self):
         liste = self._aktuelle_elemente_liste()
         self.auswahl = [el for el in liste
-                        if self.layers.get(el.layer) is None or
-                        self.layers.get(el.layer).sichtbar]
+                        if (self.layers.get(el.layer) is None or
+                            self.layers.get(el.layer).sichtbar)
+                        and not _etage_aus(self, el)]
         self.redraw()
         self.status.set((tr("txt.0021", p0=len(self.auswahl))))
 
@@ -4567,7 +4579,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         liste = self._aktuelle_elemente_liste()
         for el in liste:
             l = self.layers.get(el.layer)
-            if l and not l.sichtbar:
+            if (l and not l.sichtbar) or _etage_aus(self, el):
                 continue
             if getattr(el, "NUR_KLICK", False):
                 continue                 # Coordinate field: click only
@@ -4875,7 +4887,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
 
     def _element_sichtbar(self, el):
         l = self.layers.get(el.layer)
-        return (l is None) or l.sichtbar
+        return ((l is None) or l.sichtbar) and not _etage_aus(self, el)
 
     def _element_auf_punkt_snap(self, x_mm, y_mm, tol_mm):
         liste = self._aktuelle_elemente_liste()
@@ -5644,6 +5656,43 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
     _wand_hoehe = 2500.0
     _etage = 0                          # storey of the building tools (0 = ground floor)
 
+    # ---- view: show one storey only -------------------------------------
+    _etage_filter = None                # None = all storeys, else the storey shown
+
+    def _etage_ausgeblendet(self, el):
+        """True for building parts of another storey while a single storey is shown."""
+        return _etage_aus(self, el)
+
+    def _etagen_vorhanden(self):
+        return sorted({el.etage for el in self._ctx_liste()
+                       if isinstance(el, (Wand, Oeffnung, Decke, Treppe))})
+
+    def _etage_menue_aufbauen(self):
+        m = self._m_etage
+        try:
+            m.delete(0, "end")
+        except Exception:
+            pass
+        var = self.__dict__.setdefault("_etage_ansicht_var", tk.StringVar(value="gesamt"))
+        var.set("gesamt" if self._etage_filter is None else str(self._etage_filter))
+        m.add_radiobutton(label=tr("menu.ansicht.etage_gesamt"), value="gesamt", variable=var,
+                          command=lambda: self.etage_ansicht_setzen(None))
+        etagen = self._etagen_vorhanden()
+        if etagen:
+            m.add_separator()
+        for n in etagen:
+            m.add_radiobutton(label=tr("menu.ansicht.etage_n", n=n), value=str(n), variable=var,
+                              command=lambda n=n: self.etage_ansicht_setzen(n))
+
+    def etage_ansicht_setzen(self, n):
+        """View > Storey: None = all, else only this storey is shown (and drawn on)."""
+        self._etage_filter = n
+        if n is not None:
+            self._etage = n
+        self.auswahl = [e for e in self.auswahl if not self._etage_ausgeblendet(e)]
+        self.redraw()
+        self.status.set(tr("msg.etage.alle") if n is None else tr("msg.etage.nur", n=n))
+
     def _etage_pruefen(self, n):
         """Storey n exists when there is a ceiling over storey n-1 (0 always). Else a message."""
         if etage_basis(self._ctx_liste(), n) is not None:
@@ -5876,7 +5925,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         for el in self._ctx_liste():
             if isinstance(el, Wand) and el is not ausser:
                 l = self.layers.get(el.layer)
-                if l and not l.sichtbar:
+                if (l and not l.sichtbar) or _etage_aus(self, el):
                     continue
                 if el.punkt_im_koerper(pt[0], pt[1], tol):
                     r = el.naechstes_segment(pt[0], pt[1])
@@ -6155,7 +6204,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             kull = self._kull_fenster() if len(self.elemente) > KULL_AB else None
             for el in self.elemente:
                 l = self.layers.get(el.layer)
-                if l and not l.sichtbar:
+                if (l and not l.sichtbar) or _etage_aus(self, el):
                     continue
                 if kull is not None and self._ausserhalb(el, kull):
                     continue
@@ -9389,7 +9438,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         nur = {id(e) for e in (self._op or {}).get("objekte") or []}
         for el in self._aktuelle_elemente_liste():
             l = self.layers.get(el.layer)
-            if l and not l.sichtbar:
+            if (l and not l.sichtbar) or _etage_aus(self, el):
                 continue
             if nur and id(el) not in nur:
                 continue
@@ -11841,7 +11890,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
 
     def _el_sichtbar(self, el):
         l = self.layers.get(el.layer)
-        return not (l and not l.sichtbar)
+        return not (l and not l.sichtbar) and not _etage_aus(self, el)
 
     def _vp_name(self, vp):
         einh = self._einh_faktor()

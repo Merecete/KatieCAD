@@ -668,7 +668,7 @@ class Ansicht3D(tk.Frame):
 
     def _sichtbar(self, el):
         l = self.app.layers.get(getattr(el, "layer", None))
-        return not (l and not l.sichtbar)
+        return not (l and not l.sichtbar) and not self.app._etage_ausgeblendet(el)
 
     def _text3(self, p, text, farbe, tag="szene"):
         q = self.kamera.proj(p, *self._mitte())

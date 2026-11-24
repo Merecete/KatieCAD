@@ -197,3 +197,18 @@ for sp in ("de", "en", "es", "fr"):
     for k in ("tb.wz.treppe", "menu.einfuegen.treppe", "dlg.treppe.titel_vorgabe", "dlg.treppe.art.u", "dlg.treppe.hinweis", "msg.treppe.fertig", "d3.modus.treppe"):
         check(i18n.TEXTE[sp].get(k), f"i18n {k} {sp}")
 print("test_wand3d Treppe OK", ok)
+
+# ---- view: one storey ----
+_ap = _A.CadApp.__new__(_A.CadApp)
+_ap.__dict__["_ctx_liste"] = lambda: _all
+check(not _ap._etage_ausgeblendet(_w0) and not _ap._etage_ausgeblendet(core.Linie(0, 0, 1, 1)), "Gesamt: nichts ausgeblendet")
+_ap._etage_filter = 1
+check(_ap._etage_ausgeblendet(_w0) and not _ap._etage_ausgeblendet(_w1) and _ap._etage_ausgeblendet(_t0)
+      and not _ap._etage_ausgeblendet(_t1), "Etage 1: Etage 0 ausgeblendet")
+check(not _ap._etage_ausgeblendet(core.Linie(0, 0, 1, 1)) and not _ap._etage_ausgeblendet(core.Text(0, 0, "x")), "andere Objekte bleiben")
+check(_ap._etagen_vorhanden() == [0, 1], "vorhandene Etagen aus den Bauteilen")
+_ap._etage_filter = None
+for sp in ("de", "en", "es", "fr"):
+    for k in ("menu.ansicht.etage", "menu.ansicht.etage_gesamt", "menu.ansicht.etage_n", "msg.etage.alle", "msg.etage.nur"):
+        check(i18n.TEXTE[sp].get(k), f"i18n {k} {sp}")
+print("test_wand3d Etagenansicht OK", ok)
