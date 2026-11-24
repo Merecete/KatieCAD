@@ -4773,6 +4773,39 @@ class TreppeDialog(tk.Toplevel):
         self.destroy()
 
 
+class EtageAnsichtDialog(tk.Toplevel):
+    """View > Storey: choose "All" or one of the existing storeys. result = "gesamt", a storey
+    number or None (cancelled)."""
+
+    def __init__(self, parent, etagen, aktuell=None):
+        super().__init__(parent)
+        self.result = None
+        self.title(tr("menu.ansicht.etage"))
+        self.transient(parent)
+        _modal(self)
+        self.configure(bg=FARBEN["bg_mittel"])
+        f = ttk.Frame(self, padding=14)
+        f.pack(fill=tk.BOTH, expand=True)
+        self.var = tk.StringVar(value="gesamt" if aktuell is None else str(aktuell))
+        wahl = [("gesamt", tr("menu.ansicht.etage_gesamt"))]
+        wahl += [(str(n), tr("menu.ansicht.etage_n", n=n)) for n in etagen]
+        for r, (wert, text) in enumerate(wahl):
+            ttk.Radiobutton(f, text=text, value=wert, variable=self.var,
+                            command=self._ok).grid(row=r, column=0, sticky=tk.W, pady=3)
+        if not etagen:
+            ttk.Label(f, text=tr("dlg.etage_ansicht.leer"), style="Hint.TLabel", wraplength=300,
+                      justify=tk.LEFT).grid(row=len(wahl), column=0, sticky=tk.W, pady=(8, 2))
+        ttk.Button(f, text=tr("dlg.abbrechen"), command=self.destroy).grid(
+            row=len(wahl) + 1, column=0, pady=(10, 0))
+        self.bind("<Escape>", lambda ev: self.destroy())
+        self.wait_window(self)
+
+    def _ok(self):
+        w = self.var.get()
+        self.result = "gesamt" if w == "gesamt" else int(w)
+        self.destroy()
+
+
 class DeckeDialog(tk.Toplevel):
     """Floor / ceiling: kind, thickness and height (top edge of a floor, underside of a ceiling).
     result = {"art", "dicke", "hoehe"} or None."""

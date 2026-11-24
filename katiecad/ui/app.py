@@ -102,7 +102,7 @@ from katiecad.ui.dialogs import (
     _BlockNameDialog, _BlockAuswahlDialog, BlockBrowserDialog,
     BlockSpeichernDialog, ImportZielDialog, XrefDialog,
     ProjektNeuDialog, AttributDefinitionDialog, BlockAttributeDialog,
-    MasstextDialog, WandDialog, KanalDialog, OeffnungDialog, RaumDialog, DeckeDialog, TreppeDialog, BauteilkatalogDialog, SchnellauswahlDialog, SuchenErsetzenDialog, QuerverweisDialog, PruefungDialog, EigenschaftenPalette, VerbindungspunkteDialog, ProjektDruckDialog,
+    MasstextDialog, WandDialog, KanalDialog, OeffnungDialog, RaumDialog, DeckeDialog, TreppeDialog, EtageAnsichtDialog, BauteilkatalogDialog, SchnellauswahlDialog, SuchenErsetzenDialog, QuerverweisDialog, PruefungDialog, EigenschaftenPalette, VerbindungspunkteDialog, ProjektDruckDialog,
     VerbindungspunktDialog, VerbindungDialog, FestMaskeDialog,
     KoordinatenfeldDialog,
     TitleBlockDialog, DokumentationDialog, ListenAuswahlDialog, SchriftenDialog, ProjektEigenschaftenDialog,
@@ -253,15 +253,6 @@ KULL_AB = 800
 KULL_RAND_PX = 150
 _KULL_TYPEN = (Linie, Kreis, Bogen, Polylinie, Schraffur, Text)
 _KULL_WINZIG = (Linie, Kreis, Bogen, Polylinie)
-
-
-def m_eintraege(menu):
-    """Number of entries of a menu."""
-    try:
-        i = menu.index("end")
-        return 0 if i is None else int(i) + 1
-    except Exception:
-        return 0
 
 
 def _etage_aus(app, el):
@@ -1496,11 +1487,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                             command=lambda n=_name: self.toolbar_verschieben(n, 1))
             m_tb.add_cascade(label=tr("menu.ansicht.tb_" + _name), menu=m_n)
         m_ansicht.add_cascade(label=tr("menu.ansicht.tb"), menu=m_tb)
-        self._m_etage = tk.Menu(m_ansicht, tearoff=0, bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
-                                activebackground=FARBEN["cyan"], activeforeground=FARBEN["bg_dunkel"],
-                                postcommand=self._etage_menue_aufbauen)
-        self._etage_menue_aufbauen()
-        m_ansicht.add_cascade(label=tr("menu.ansicht.etage"), menu=self._m_etage)
+        m_ansicht.add_command(label=tr("menu.ansicht.etage") + "...", command=self.etage_dialog)
         m_ansicht.add_command(label=tr("menu.ansicht.zoom_grenzen"),
                               command=self.zoom_grenzen)
         m_ansicht.add_separator()
@@ -5684,37 +5671,11 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         return sorted({el.etage for el in self._ctx_liste()
                        if isinstance(el, (Wand, Oeffnung, Decke, Treppe))})
 
-    def _etage_menue_pflegen(self):
-        """Rebuilds the View > Storey menu when the storeys or the choice changed (does not rely
-        on the menu's post command alone)."""
-        try:
-            key = (tuple(self._etagen_vorhanden()), self._etage_filter)
-            if key != getattr(self, "_etage_menue_key", None):
-                self._etage_menue_aufbauen()
-        except Exception:
-            pass
-
-    ETAGEN_MAX = 15                     # highest storey number
-
-    def _etage_menue_aufbauen(self):
-        """View > Storey: "All" + one entry per storey that exists (rebuilt on every opening of
-        the menu and after changes)."""
-        m = self._m_etage
-        var = self.__dict__.get("_etage_ansicht_var")
-        if var is None:
-            var = self._etage_ansicht_var = tk.StringVar(value="gesamt")
-        vorhanden = self._etagen_vorhanden()
-        self._etage_menue_key = (tuple(vorhanden), self._etage_filter)
-        while m_eintraege(m):
-            m.delete(0)
-        var.set("gesamt" if self._etage_filter is None else str(self._etage_filter))
-        m.add_radiobutton(label=tr("menu.ansicht.etage_gesamt"), value="gesamt", variable=var,
-                          command=lambda: self.etage_ansicht_setzen(None))
-        if vorhanden:
-            m.add_separator()
-        for n in vorhanden:
-            m.add_radiobutton(label=tr("menu.ansicht.etage_n", n=n), value=str(n), variable=var,
-                              command=lambda n=n: self.etage_ansicht_setzen(n))
+    def etage_dialog(self):
+        """View > Storey...: window to choose "All" or one of the existing storeys."""
+        dlg = EtageAnsichtDialog(self.root, self._etagen_vorhanden(), self._etage_filter)
+        if dlg.result is not None:
+            self.etage_ansicht_setzen(None if dlg.result == "gesamt" else dlg.result)
 
     def etage_ansicht_setzen(self, n):
         """View > Storey: None = all, else only this storey is shown (and drawn on)."""
@@ -6191,7 +6152,6 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             self._layer_anzeige_nachziehen()          # layer list follows the selection
         except (AttributeError, tk.TclError):
             pass
-        self._etage_menue_pflegen()           # View > Storey follows the drawing
         self._vp_fang_cache = None            # snap points of the 3D model are recomputed
         if self._ansicht3d is not None:
             try:
