@@ -205,6 +205,12 @@ check(not _ap._etage_ausgeblendet(_w0) and not _ap._etage_ausgeblendet(core.Lini
 _ap._etage_filter = 1
 check(_ap._etage_ausgeblendet(_w0) and not _ap._etage_ausgeblendet(_w1) and _ap._etage_ausgeblendet(_t0)
       and not _ap._etage_ausgeblendet(_t1), "Etage 1: Etage 0 ausgeblendet")
+check(not _ap._etage_ausgeblendet(_d0) and _ap._etage_ausgeblendet(_d1), "Etage 1: Boden (Decke ueber 0) sichtbar, eigene Decke weg")
+_ap._etage_filter = 0
+check(_ap._etage_ausgeblendet(_d0) and _ap._etage_ausgeblendet(_d1), "Etage 0: Decke weg (Innenraum frei)")
+_bo = core.Decke([(0, 0), (1, 0), (1, 1)], art="boden", etage=0)
+check(not _ap._etage_ausgeblendet(_bo), "Etage 0: eigener Boden sichtbar")
+_ap._etage_filter = 1
 check(not _ap._etage_ausgeblendet(core.Linie(0, 0, 1, 1)) and not _ap._etage_ausgeblendet(core.Text(0, 0, "x")), "andere Objekte bleiben")
 check(_ap._etagen_vorhanden() == [0, 1], "vorhandene Etagen aus den Bauteilen")
 class _FM:                      # menu stub

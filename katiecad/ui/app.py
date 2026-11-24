@@ -267,7 +267,15 @@ def m_eintraege(menu):
 def _etage_aus(app, el):
     """True for building parts of another storey while a single storey is shown (view only)."""
     f = getattr(app, "_etage_filter", None)
-    return f is not None and getattr(el, "etage", None) is not None and el.etage != f
+    if f is None or getattr(el, "etage", None) is None:
+        return False
+    if isinstance(el, Decke):
+        # slabs: the floor of the storey (ceiling slab of the storey below, or its own floor slab)
+        # stays, the ceiling above it is hidden so the interior can be seen
+        if el.art == "decke":
+            return el.etage != f - 1
+        return el.etage != f
+    return el.etage != f
 
 
 class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarDockMixin):
