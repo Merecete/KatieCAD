@@ -5667,8 +5667,19 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         return sorted({el.etage for el in self._ctx_liste()
                        if isinstance(el, (Wand, Oeffnung, Decke, Treppe))})
 
+    def _etage_menue_pflegen(self):
+        """Rebuilds the View > Storey menu when the storeys or the choice changed (does not rely
+        on the menu's post command alone)."""
+        try:
+            key = (tuple(self._etagen_vorhanden()), self._etage_filter)
+            if key != getattr(self, "_etage_menue_key", None):
+                self._etage_menue_aufbauen()
+        except Exception:
+            pass
+
     def _etage_menue_aufbauen(self):
         m = self._m_etage
+        self._etage_menue_key = (tuple(self._etagen_vorhanden()), self._etage_filter)
         try:
             m.delete(0, "end")
         except Exception:
@@ -6159,6 +6170,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             self._layer_anzeige_nachziehen()          # layer list follows the selection
         except (AttributeError, tk.TclError):
             pass
+        self._etage_menue_pflegen()           # View > Storey follows the drawing
         self._vp_fang_cache = None            # snap points of the 3D model are recomputed
         if self._ansicht3d is not None:
             try:
