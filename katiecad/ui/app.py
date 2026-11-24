@@ -1489,7 +1489,11 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             m_n = tk.Menu(m_tb, tearoff=0, bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
                           activebackground=FARBEN["cyan"],
                           activeforeground=FARBEN["bg_dunkel"])
-            for _pos in ("oben", "unten", "rechts"):
+            m_n.add_checkbutton(label=tr("menu.ansicht.tb_anzeigen"), variable=self.toolbar_sicht_var(_name),
+                                command=lambda n=_name: self.toolbar_sichtbar_setzen(
+                                    n, self.toolbar_sicht_var(n).get()))
+            m_n.add_separator()
+            for _pos in ("oben", "unten", "links", "rechts"):
                 m_n.add_command(label=tr("menu.ansicht.tb_" + _pos),
                                 command=lambda p=_pos, n=_name: self.toolbar_position_setzen(p, n))
             m_n.add_separator()
@@ -1498,6 +1502,9 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             m_n.add_command(label=tr("menu.ansicht.tb_zurueck"),
                             command=lambda n=_name: self.toolbar_verschieben(n, 1))
             m_tb.add_cascade(label=tr("menu.ansicht.tb_" + _name), menu=m_n)
+        m_tb.add_separator()
+        m_tb.add_command(label=tr("menu.ansicht.tb_alle"), command=self.toolbar_alle_einblenden)
+        m_tb.add_command(label=tr("menu.ansicht.tb_standard"), command=self.toolbar_standard)
         m_ansicht.add_cascade(label=tr("menu.ansicht.tb"), menu=m_tb)
         m_ansicht.add_command(label=tr("menu.ansicht.etage") + "...", command=self.etage_dialog)
         m_ansicht.add_command(label=tr("menu.ansicht.zoom_grenzen"),
@@ -1777,6 +1784,9 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                          ("aufloesen3d", "aufloesen")):
             self._befehl_knopf(tb, key, FARBEN["cyan"],
                                lambda c=cmd: self.ansicht3d_befehl(c))
+
+        for _n in ("werkzeug", "bau", "elektro", "3d"):          # right click: hide / show bars
+            self._toolbar_rechtsklick_binden(self._leiste(_n), _n)
 
         # --- Toolbar 2 ---
         tb2 = self.tb2

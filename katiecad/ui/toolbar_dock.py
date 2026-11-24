@@ -9,12 +9,18 @@ release - it snaps there - or choose View > Toolbars. At the right edge the
 symbols wrap into several columns. The choices are stored in the configuration.
 """
 
+import sys
 import tkinter as tk
 from tkinter import ttk
 
+from katiecad.common.i18n import tr
+from katiecad.model.core import FARBEN
+
 from katiecad.common.config import lade_konfiguration, speichere_konfiguration
 
-POSITIONEN = ("oben", "unten", "rechts")
+POSITIONEN = ("oben", "unten", "links", "rechts")
+VERTIKAL = ("links", "rechts")                           # areas where the symbols wrap into columns
+BTN_RECHTS = "2" if sys.platform == "darwin" else "3"
 ZELLE_PX = 36                 # height of one symbol row at the right edge
 
 
@@ -26,6 +32,8 @@ def ziel_position(relx, rely, aktuell="oben"):
         return "unten"
     if rely < 0.22:
         return "oben"
+    if relx < 0.12:
+        return "links"
     return aktuell
 
 
@@ -96,6 +104,136 @@ class ToolbarDockMixin:
             pass
         self._toolbar_anordnen()
 
+    # ---- show / hide --------------------------------------------------
+    def _tb_aus_liste(self):
+        if getattr(self, "_tb_aus", None) is None:
+            try:
+                a = lade_konfiguration().get("toolbar_aus")
+            except Exception:
+                a = None
+            self._tb_aus = [n for n in (a or []) if n in LEISTEN] if isinstance(a, list) else []
+        return self._tb_aus
+
+    def toolbar_sichtbar(self, name):
+        return name not in self._tb_aus_liste()
+
+    def _tb_aus_speichern(self):
+        try:
+            cfg = lade_konfiguration()
+            cfg["toolbar_aus"] = list(self._tb_aus_liste())
+            speichere_konfiguration(cfg)
+        except Exception:
+            pass
+
+    def toolbar_sichtbar_setzen(self, name, sichtbar):
+        """Shows / hides one bar (stored in the configuration)."""
+        if name not in LEISTEN:
+            return
+        aus = self._tb_aus_liste()
+        if sichtbar and name in aus:
+            aus.remove(name)
+        elif not sichtbar and name not in aus:
+            aus.append(name)
+        self._tb_aus_speichern()
+        self._toolbar_sicht_vars_pflegen()
+        self._toolbar_anordnen()
+
+    def toolbar_alle_einblenden(self):
+        self._tb_aus_liste().clear()
+        self._tb_aus_speichern()
+        self._toolbar_sicht_vars_pflegen()
+        self._toolbar_anordnen()
+
+    def toolbar_standard(self):
+        """Original layout: every bar visible, on top, in the original order."""
+        self._tb_aus_liste().clear()
+        self._tb_reihe = list(LEISTEN)
+        self._tb_pos_werte = {n: "oben" for n in LEISTEN}
+        try:
+            cfg = lade_konfiguration()
+            cfg["toolbar_aus"] = []
+            cfg["toolbar_reihenfolge"] = list(LEISTEN)
+            for n in LEISTEN:
+                cfg[CONFIG_KEY[n]] = "oben"
+            speichere_konfiguration(cfg)
+        except Exception:
+            pass
+        self._toolbar_sicht_vars_pflegen()
+        self._toolbar_anordnen()
+
+    def toolbar_sicht_var(self, name):
+        """BooleanVar of the check entry View > Toolbars > <bar> > Show."""
+        if getattr(self, "_tb_sicht_vars", None) is None:
+            self._tb_sicht_vars = {}
+        v = self._tb_sicht_vars.get(name)
+        if v is None:
+            v = self._tb_sicht_vars[name] = tk.BooleanVar(value=self.toolbar_sichtbar(name))
+        return v
+
+    def _toolbar_sicht_vars_pflegen(self):
+        for n, v in (getattr(self, "_tb_sicht_vars", None) or {}).items():
+            try:
+                v.set(self.toolbar_sichtbar(n))
+            except Exception:
+                pass
+
+    def toolbar_menue_zeigen(self, name, x, y):
+        """Context menu of a bar: hide it, show the hidden ones, restore everything."""
+        m = tk.Menu(self.root, tearoff=0, bg=FARBEN["bg_mittel"], fg=FARBEN["cyan"],
+                    activebackground=FARBEN["cyan"], activeforeground=FARBEN["bg_dunkel"])
+        if name in LEISTEN and self.toolbar_sichtbar(name):
+            m.add_command(label=tr("tb.ausblenden", n=tr("menu.ansicht.tb_" + name)),
+                          command=lambda: self._toolbar_ausblenden_hinweis(name))
+        aus = [n for n in LEISTEN if not self.toolbar_sichtbar(n)]
+        if aus:
+            if m.index("end") is not None:
+                m.add_separator()
+            for n in aus:
+                m.add_command(label=tr("tb.einblenden_n", n=tr("menu.ansicht.tb_" + n)),
+                              command=lambda n=n: self.toolbar_sichtbar_setzen(n, True))
+            if len(aus) > 1:
+                m.add_command(label=tr("menu.ansicht.tb_alle"), command=self.toolbar_alle_einblenden)
+        m.add_separator()
+        m.add_command(label=tr("menu.ansicht.tb_standard"), command=self.toolbar_standard)
+        self._menue_zeigen(m, x, y)
+
+    def _toolbar_ausblenden_hinweis(self, name):
+        self.toolbar_sichtbar_setzen(name, False)
+        try:
+            self.status.set(tr("msg.tb.ausgeblendet"))
+        except Exception:
+            pass
+
+    def _toolbar_rechtsklick_binden(self, tb, name):
+        """Right click on a bar (also on its symbols) opens its context menu."""
+        def zeigen(e):
+            self.toolbar_menue_zeigen(name, e.x_root, e.y_root)
+            return "break"
+        ereignis = f"<ButtonRelease-{BTN_RECHTS}>"
+
+        def rek(w, ersetzen=False):
+            try:
+                if ersetzen:
+                    w.bind(ereignis, zeigen)            # the bar itself persists: no double binding
+                else:
+                    w.bind(ereignis, zeigen, add="+")
+            except Exception:
+                pass
+            for ch in w.winfo_children():
+                rek(ch)
+        rek(tb, True)
+
+    def _notleiste(self):
+        """Small bar that is shown while every toolbar is hidden: the way back."""
+        nl_ = getattr(self, "_tb_notleiste", None)
+        if nl_ is None:
+            nl_ = self._tb_notleiste = ttk.Frame(self._zone("oben"))
+            ttk.Button(nl_, text=tr("tb.einblenden"),
+                       command=lambda: self.toolbar_menue_zeigen(
+                           "", self.root.winfo_rootx() + 20, self.root.winfo_rooty() + 80)).pack(side=tk.LEFT)
+            self._toolbar_rechtsklick_binden(nl_, "")
+        return nl_
+
     # ---- positions ----------------------------------------------------
     def toolbar_position(self, name="werkzeug"):
         if self._tb_pos_werte is None:
@@ -142,6 +280,9 @@ class ToolbarDockMixin:
             self._tb_info = {}
         koord = getattr(self, "_koord_bar", None)
         belegt = {p: [] for p in POSITIONEN}
+        nl_ = getattr(self, "_tb_notleiste", None)
+        if nl_ is not None:
+            nl_.grid_forget()
         for name in self.toolbar_reihenfolge():
             tb = self._leiste(name)
             if tb is None:
@@ -149,7 +290,8 @@ class ToolbarDockMixin:
             pos = self.toolbar_position(name)
             if pos != "oben" and koord is None:
                 pos = "oben"
-            belegt[pos].append(name)
+            if self.toolbar_sichtbar(name):
+                belegt[pos].append(name)
             for ch in tb.winfo_children():
                 if ch.winfo_manager() == "pack":
                     self._tb_info[ch] = ch.pack_info()
@@ -160,20 +302,29 @@ class ToolbarDockMixin:
         for pos in POSITIONEN:
             self._zone(pos).pack_forget()
         # docking areas
+        alle_aus = not any(belegt.values()) and any(self._leiste(n) is not None for n in LEISTEN)
+        if alle_aus:                                   # never leave the user without a way back
+            self._zone("oben").pack(side=tk.TOP, fill=tk.X, before=self.tb2)
+            self._notleiste().grid(row=50, column=0, sticky="nw")
         if belegt["oben"]:
             self._zone("oben").pack(side=tk.TOP, fill=tk.X, before=self.tb2)
         if belegt["unten"] and koord is not None:
             self._zone("unten").pack(side=tk.BOTTOM, fill=tk.X, after=koord)
         if belegt["rechts"] and koord is not None:
             self._zone("rechts").pack(side=tk.RIGHT, fill=tk.Y, after=koord)
+        if belegt["links"] and koord is not None:
+            vor = getattr(self, "_tab_leiste", None)
+            if vor is None:
+                vor = self._zeichenflaeche()
+            self._zone("links").pack(side=tk.LEFT, fill=tk.Y, before=vor)
         for pos, namen in belegt.items():
             zone = self._zone(pos)
             for name in namen:
                 tb = self._leiste(name)
-                if pos == "rechts":
+                if pos in VERTIKAL:
                     tb.pack(in_=zone, side=tk.TOP, fill=tk.X, anchor="n")
                     tb.tkraise()
-                if pos == "rechts":
+                if pos in VERTIKAL:
                     self._leiste_gitter(name, len(namen))
                 else:
                     for ch in tb.winfo_children():
@@ -246,17 +397,20 @@ class ToolbarDockMixin:
 
     def _toolbar_neu_gitter(self):
         self._tb_resize_id = None
-        rechts = [n for n in self.toolbar_reihenfolge() if self._leiste(n) is not None
-                  and self.toolbar_position(n) == "rechts"]
-        key = (self.root.winfo_height() // ZELLE_PX, self.root.winfo_width() // 40, len(rechts))
+        def sicht(pos):
+            return [n for n in self.toolbar_reihenfolge() if self._leiste(n) is not None
+                    and self.toolbar_position(n) == pos and self.toolbar_sichtbar(n)]
+        seiten = {p: sicht(p) for p in VERTIKAL}
+        key = (self.root.winfo_height() // ZELLE_PX, self.root.winfo_width() // 40,
+               tuple(len(v) for v in seiten.values()))
         if getattr(self, "_tb_zeilen", None) == key:
             return
         self._tb_zeilen = key
-        for n in rechts:
-            self._leiste_gitter(n, len(rechts))
+        for namen in seiten.values():
+            for n in namen:
+                self._leiste_gitter(n, len(namen))
         for pos in ("oben", "unten"):
-            self._zone_reihen(pos, [n for n in self.toolbar_reihenfolge() if self._leiste(n) is not None
-                                    and self.toolbar_position(n) == pos])
+            self._zone_reihen(pos, sicht(pos))
 
     def _leiste_ablegen(self, name, px, py):
         """Drop at screen point (px, py): the bar under it of the same area decides; left half =
@@ -265,7 +419,7 @@ class ToolbarDockMixin:
         pos = self.toolbar_position(name)
         for n in LEISTEN:
             tb = self._leiste(n)
-            if n == name or tb is None or self.toolbar_position(n) != pos:
+            if n == name or tb is None or self.toolbar_position(n) != pos or not self.toolbar_sichtbar(n):
                 continue
             try:
                 x0, y0 = tb.winfo_rootx(), tb.winfo_rooty()
@@ -273,7 +427,7 @@ class ToolbarDockMixin:
             except Exception:
                 continue
             if x0 <= px <= x1 and y0 <= py <= y1:
-                if (px - x0) * 2 < (x1 - x0) if pos != "rechts" else (py - y0) * 2 < (y1 - y0):
+                if (px - x0) * 2 < (x1 - x0) if pos not in VERTIKAL else (py - y0) * 2 < (y1 - y0):
                     self.toolbar_vor(name, n)
                 else:
                     r.remove(name)
