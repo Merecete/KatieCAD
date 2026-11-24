@@ -77,3 +77,7 @@ check(zmax(S.virtuelle_netze(W)[0]) == 3000 or max(zmax(x) for x in S.virtuelle_
 for sp in ("de", "en", "es", "fr"):
     check(i18n.TEXTE[sp].get("dlg.wand.hoehe"), "i18n " + sp)
 print("test_wand3d OK", ok)
+# snap: wall centre line + corners also in 3D (join walls); long meshes must not collapse to cap centres
+_W2 = core.Wand([(0, 0), (4000, 0), (4000, 3000)], dicke=240)
+_pk = {(round(p[0]), round(p[1])) for p, a in S.fang_kandidaten([_W2]) if abs(p[2]) < 1e-6 and a == "end"}
+check((0, 0) in _pk and (4000, 3000) in _pk and (4120, -120) in _pk, "Fang: Mittellinie + Ecken der Wand")

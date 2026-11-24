@@ -762,6 +762,13 @@ def _kreis_fang(c, r, u, v, out):
 def _el_fang(el, out):
     if isinstance(el, Bemassung3D):
         return
+    if isinstance(el, Wand):                      # centre line of the wall (to join walls)
+        for x, y in el.punkte:
+            out.append(((x, y, 0.0), "end"))
+        for i, j in el._segmente():
+            (ax, ay), (bx, by) = el.punkte[i], el.punkte[j]
+            out.append((((ax + bx) / 2, (ay + by) / 2, 0.0), "mitte"))
+        return
     if isinstance(el, Skizze3D):
         if el.form == "kreis" and len(el.daten) >= 3:
             u, v, _w = G.ebene_basis(el.ebene)
@@ -794,7 +801,7 @@ def fang_kandidaten(elemente):
     """Snap candidates [(3D point, kind)] with kind end / mitte / zentrum."""
     out = []
     for _el, nz in koerper_netze(elemente):
-        if len(nz.punkte) > 24:                       # round body: only the cap centres
+        if ist_3d(_el) and len(nz.punkte) > 24:                       # round body: only the cap centres
             zs = [p[2] for p in nz.punkte]
             z0, z1 = min(zs), max(zs)
             for zz in (z0, z1):
