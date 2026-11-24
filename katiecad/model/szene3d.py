@@ -34,10 +34,12 @@ def _wand_sig(el):
         return (tuple(tuple(p) for p in el.punkte), el.geschlossen, el.dicke, el.ausrichtung,
                 el.hoehe, tuple(tuple(o) for o in getattr(el, "_oeff3", [])), el._zbasis)
     if isinstance(el, Decke):
-        return (tuple(tuple(p) for p in el.punkte), el.art, el.dicke, el.hoehe, el._zbasis)
+        return (tuple(tuple(p) for p in el.punkte), el.art, el.dicke, el.hoehe, el._zbasis,
+                tuple(tuple(tuple(p) for p in l) for l in getattr(el, "_aussparungen", [])))
     if isinstance(el, Treppe):
         return (el.x, el.y, el.winkel, el.art, el.breite, el.hoehe, el.steigungen, el.auftritt,
-                el.dicke, el.bauweise, el.richtung, el.auge, el.r_innen, el.drehwinkel, el._zbasis)
+                el.dicke, el.bauweise, el.richtung, el.auge, el.r_innen, el.drehwinkel, el._zbasis,
+                el.gelaender, el.gelaender_hoehe, el.wangen)
     return (el.x, el.y, el.winkel, el.breite, el.hoehe, el.bruestung, el.dicke, el.ausrichtung, el._zbasis,
             el.art, tuple(el._lage()))
 
@@ -63,11 +65,15 @@ def virtuelle_netze(el):
     elif isinstance(el, Treppe):
         zb = el._zbasis
         netze = wand_netze([(q, a + zb, b + zb) for q, a, b in el.stuecke3d()])
+        netze += gelaender_netze(el, zb)
     elif isinstance(el, Decke):
         if len(el.punkte) >= 3:
             za, zb = el.z_bereich()
-            netze = [Koerper3D("prisma", profil=[tuple(p) for p in el.punkte], z0=za,
-                               hoehe=zb - za).netz()]
+            if getattr(el, "_aussparungen", None):
+                netze = [platte_netz([tuple(p) for p in el.punkte], el._aussparungen, za, zb)]
+            else:
+                netze = [Koerper3D("prisma", profil=[tuple(p) for p in el.punkte], z0=za,
+                                   hoehe=zb - za).netz()]
     else:
         cx, cy, ux, uy, ol, orr = el._lage()
         nx, ny = -uy, ux
@@ -83,6 +89,181 @@ def virtuelle_netze(el):
         z0 = el._zbasis + el.bruestung + (LUFT_FLUEGEL if el.bruestung > 0 else 0.0)
         netze.append(Koerper3D("prisma", profil=quad, z0=z0, hoehe=hz - (LUFT_FLUEGEL if el.bruestung > 0 else 0.0)).netz())
     el._netz3d = (sig, netze)
+    return netze
+
+
+def _flaeche2(p):
+    return sum(p[i][0] * p[(i + 1) % len(p)][1] - p[(i + 1) % len(p)][0] * p[i][1] for i in range(len(p))) / 2.0
+
+
+def _schneidet(a, b, c, d):
+    """Do the open segments ab and cd cross (properly)?"""
+    d1 = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+    d2 = (b[0] - a[0]) * (d[1] - a[1]) - (b[1] - a[1]) * (d[0] - a[0])
+    d3 = (d[0] - c[0]) * (a[1] - c[1]) - (d[1] - c[1]) * (a[0] - c[0])
+    d4 = (d[0] - c[0]) * (b[1] - c[1]) - (d[1] - c[1]) * (b[0] - c[0])
+    return d1 * d2 < -1e-9 and d3 * d4 < -1e-9
+
+
+def _ohr_dreiecke(poly):
+    """Ear clipping of a counter-clockwise polygon that may contain duplicated points (a
+    polygon with holes joined by bridges). -> [(p, q, r)] as coordinates."""
+    pts = list(poly)
+    out = []
+    schutz = 0
+    while len(pts) > 3 and schutz < 20 * len(poly) ** 2:
+        schutz += 1
+        n = len(pts)
+        gefunden = False
+        for i in range(n):
+            a, b, c = pts[i - 1], pts[i], pts[(i + 1) % n]
+            kr = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+            if kr <= 1e-9:
+                continue
+            ok = True
+            for p in pts:
+                if p in (a, b, c):
+                    continue
+                d1 = (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])
+                d2 = (c[0] - b[0]) * (p[1] - b[1]) - (c[1] - b[1]) * (p[0] - b[0])
+                d3 = (a[0] - c[0]) * (p[1] - c[1]) - (a[1] - c[1]) * (p[0] - c[0])
+                if d1 >= -1e-9 and d2 >= -1e-9 and d3 >= -1e-9:
+                    ok = False
+                    break
+            if ok:
+                out.append((a, b, c))
+                del pts[i]
+                gefunden = True
+                break
+        if not gefunden:
+            break
+    if len(pts) == 3:
+        out.append(tuple(pts))
+    elif len(pts) > 3:                                   # fallback: fan
+        out.extend((pts[0], pts[j], pts[j + 1]) for j in range(1, len(pts) - 1))
+    return out
+
+
+def platte_netz(aussen, loecher, z0, z1):
+    """Slab (outline `aussen`, holes `loecher` = [[(x, y)]], from z0 to z1) as one mesh: only the
+    real edges (outline, hole edges, vertical edges); the faces are triangles for hidden-line."""
+    aussen = list(aussen) if _flaeche2(aussen) > 0 else list(reversed(aussen))
+    loecher = [list(l) if _flaeche2(l) < 0 else list(reversed(l)) for l in loecher if len(l) >= 3]
+    poly = list(aussen)
+    rest = list(loecher)
+    # join the holes to the outline with a bridge (keyhole)
+    while rest:
+        alle = [aussen] + loecher
+        kanten = [(pl[i], pl[(i + 1) % len(pl)]) for pl in alle for i in range(len(pl))]
+        paare = []
+        for hi, hp in enumerate(rest[0]):
+            for oj, op in enumerate(poly):
+                paare.append((math.hypot(hp[0] - op[0], hp[1] - op[1]), hi, oj))
+        paare.sort()
+        wahl = paare[0]
+        for dist, hi, oj in paare:
+            a, b = rest[0][hi], poly[oj]
+            if not any(_schneidet(a, b, c, d) for c, d in kanten):
+                wahl = (dist, hi, oj)
+                break
+        _d, hi, oj = wahl
+        h = rest[0]
+        poly = poly[:oj + 1] + h[hi:] + h[:hi] + [h[hi]] + poly[oj:]
+        rest.pop(0)
+    nz = G.Netz()
+    idx_cache = {}
+
+    def pk(x, y, z):
+        key = (round(x, 6), round(y, 6), z)
+        if key not in idx_cache:
+            idx_cache[key] = nz.punkt((x, y, z))
+        return idx_cache[key]
+    for a, b, c in _ohr_dreiecke(poly):
+        nz.flaeche([pk(*a, z1), pk(*b, z1), pk(*c, z1)])
+        nz.flaeche([pk(*c, z0), pk(*b, z0), pk(*a, z0)])
+    for pl in [aussen] + loecher:
+        n = len(pl)
+        for i in range(n):
+            a, b = pl[i], pl[(i + 1) % n]
+            nz.flaeche([pk(*a, z0), pk(*b, z0), pk(*b, z1), pk(*a, z1)])
+            nz.kante(pk(*a, z0), pk(*b, z0))
+            nz.kante(pk(*a, z1), pk(*b, z1))
+            nz.kante(pk(*a, z0), pk(*a, z1))
+    return nz
+
+
+def balken_netz(pts, bh, dz0, dz1):
+    """Beam along the 3D polyline `pts`: horizontal half width `bh`, vertical extent z + dz0 ..
+    z + dz1 at every point (slanted beams, e.g. handrails and stringers). One mesh; vertical
+    segments (no plan direction) are left out."""
+    nz = G.Netz()
+    ok = False
+    for A, B in zip(pts, pts[1:]):
+        dx, dy = B[0] - A[0], B[1] - A[1]
+        ln = math.hypot(dx, dy)
+        if ln < 1e-6:
+            continue
+        nx, ny = -dy / ln * bh, dx / ln * bh
+        ends = []
+        for P in (A, B):
+            ends.append([nz.punkt((P[0] + nx, P[1] + ny, P[2] + dz0)), nz.punkt((P[0] - nx, P[1] - ny, P[2] + dz0)),
+                         nz.punkt((P[0] - nx, P[1] - ny, P[2] + dz1)), nz.punkt((P[0] + nx, P[1] + ny, P[2] + dz1))])
+        e0, e1 = ends
+        for e in ends:
+            nz.flaeche(e)
+            for i in range(4):
+                nz.kante(e[i], e[(i + 1) % 4])
+        for i in range(4):
+            j = (i + 1) % 4
+            nz.flaeche([e0[i], e0[j], e1[j], e1[i]])
+            nz.kante(e0[i], e1[i])
+        ok = True
+    return nz if ok else None
+
+
+def _vereinfachen3d(pts):
+    """Removes the points that lie on a straight line between their neighbours."""
+    if len(pts) < 3:
+        return list(pts)
+    out = [pts[0]]
+    for i in range(1, len(pts) - 1):
+        a, b, c = out[-1], pts[i], pts[i + 1]
+        u = (b[0] - a[0], b[1] - a[1], b[2] - a[2])
+        v = (c[0] - b[0], c[1] - b[1], c[2] - b[2])
+        kx = u[1] * v[2] - u[2] * v[1]
+        ky = u[2] * v[0] - u[0] * v[2]
+        kz = u[0] * v[1] - u[1] * v[0]
+        if (kx * kx + ky * ky + kz * kz) > 1e-6 * max(1.0, (u[0] ** 2 + u[1] ** 2 + u[2] ** 2) * (v[0] ** 2 + v[1] ** 2 + v[2] ** 2)) \
+                or (u[0] * v[0] + u[1] * v[1] + u[2] * v[2]) < 0:
+            out.append(b)
+    out.append(pts[-1])
+    return out
+
+
+GELAENDER_QUERSCHNITT = 50.0                         # handrail / post cross section (mm)
+WANGE_DICKE = 50.0                                   # stringer thickness
+WANGE_HOEHE = 250.0                                  # stringer height (below the tread level)
+
+
+def gelaender_netze(t, zb):
+    """Meshes of the railing (handrail, posts) and the stringers of a stair; z absolute."""
+    g = t.gelaender3d()
+    netze = []
+    q = GELAENDER_QUERSCHNITT
+    for pl in g["schienen"]:
+        n = balken_netz(_vereinfachen3d([(x, y, z + zb) for x, y, z in pl]), q / 2, -q / 2, q / 2)
+        if n is not None:
+            netze.append(n)
+    if g["pfosten"]:
+        st = []
+        for x, y, z0, z1 in g["pfosten"]:
+            h = q / 2
+            st.append(([(x - h, y - h), (x + h, y - h), (x + h, y + h), (x - h, y + h)], z0 + zb, z1 + zb))
+        netze += wand_netze(st)
+    for pl in g["wangen"]:
+        n = balken_netz(_vereinfachen3d([(x, y, z + zb) for x, y, z in pl]), WANGE_DICKE / 2, -WANGE_HOEHE, 0.0)
+        if n is not None:
+            netze.append(n)
     return netze
 
 

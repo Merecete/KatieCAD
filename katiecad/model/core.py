@@ -2289,6 +2289,7 @@ def wand_verknuepfen(elemente):
         if isinstance(el, (Wand, Oeffnung, Decke, Treppe)):
             b = etage_basis(elemente, getattr(el, "etage", 0))
             el._zbasis = 0.0 if b is None else b
+    decken_aussparungen(elemente)
     for w in waende:
         w._luecken = []
         w._fenster = []
@@ -6683,6 +6684,7 @@ class Decke(Polylinie):
                  **kw):
         kw.pop("_netz3d", None)
         kw.pop("_zbasis", None)
+        kw.pop("_aussparungen", None)
         super().__init__(punkte, True, **kw)
         self.typ = "decke"
         self.art = art if art in DECKE_ARTEN else "decke"
@@ -6690,6 +6692,7 @@ class Decke(Polylinie):
         self.hoehe = float(hoehe)       # above the floor level of its storey
         self.etage = max(0, int(etage))
         self._zbasis = 0.0
+        self._aussparungen = []         # openings (stairs), runtime only: [[(x, y)]]
 
     def z_bereich(self):
         """(z_from, z_to) of the slab, absolute (including the floor level of the storey)."""
@@ -6702,7 +6705,49 @@ class Decke(Polylinie):
         d = super().to_dict()
         d.pop("_zbasis", None)
         d.pop("_netz3d", None)
+        d.pop("_aussparungen", None)
         return d
+
+
+def _loch_im_polygon(loch, poly):
+    """True when the polygon `loch` lies completely inside `poly` (not touching its edges)."""
+    n, m = len(poly), len(loch)
+    for (x, y) in loch:
+        if not _punkt_in_polygon(x, y, poly):
+            return False
+        if any(abstand_punkt_segment(x, y, poly[i][0], poly[i][1], poly[(i + 1) % n][0],
+                                     poly[(i + 1) % n][1]) < 0.5 for i in range(n)):
+            return False
+    for i in range(m):
+        a, b = loch[i], loch[(i + 1) % m]
+        for j in range(n):
+            c, d = poly[j], poly[(j + 1) % n]
+            d1 = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+            d2 = (b[0] - a[0]) * (d[1] - a[1]) - (b[1] - a[1]) * (d[0] - a[0])
+            d3 = (d[0] - c[0]) * (a[1] - c[1]) - (d[1] - c[1]) * (a[0] - c[0])
+            d4 = (d[0] - c[0]) * (b[1] - c[1]) - (d[1] - c[1]) * (b[0] - c[0])
+            if d1 * d2 < 0 and d3 * d4 < 0:
+                return False
+    return True
+
+
+def decken_aussparungen(elemente):
+    """Stairs cut an opening into the ceiling of their storey (runtime only): every ceiling
+    (art "decke") gets `_aussparungen`, the outlines of the stair openings that lie completely
+    inside it."""
+    treppen = [e for e in elemente if isinstance(e, Treppe) and e.durchbruch]
+    for d in elemente:
+        if not isinstance(d, Decke):
+            continue
+        d._aussparungen = []
+        if d.art != "decke" or len(d.punkte) < 3:
+            continue
+        for t in treppen:
+            if t.etage != d.etage:
+                continue
+            for loch in t.deckenoeffnung(d.hoehe):
+                if len(loch) >= 3 and _loch_im_polygon(loch, d.punkte):
+                    d._aussparungen.append([tuple(p) for p in loch])
 
 
 def _sk_decke(e, cx, cy, f):
@@ -6721,6 +6766,9 @@ TREPPE_LAYER_FARBE = ("#7fd1d9", 0.25)
 TREPPE_ARTEN = ("gerade", "l", "u", "wendel")
 TREPPE_BAUWEISEN = ("massiv", "frei")
 TREPPE_STEIGUNG_ZIEL = 175.0                   # usual riser height (mm) for the automatic number of risers
+TREPPE_GELAENDER = ("keins", "links", "rechts", "beidseitig")
+TREPPE_SCHNITT = 1000.0                        # plan cut height: treads above it are drawn dashed
+TREPPE_KOPFFREIHEIT = 2000.0                   # headroom: where the ceiling opening starts
 
 
 class Treppe(Element):
@@ -6734,7 +6782,8 @@ class Treppe(Element):
 
     def __init__(self, x=0.0, y=0.0, winkel=0.0, art="gerade", breite=1000.0, hoehe=2700.0,
                  steigungen=0, auftritt=280.0, dicke=40.0, bauweise="massiv", richtung="links",
-                 auge=100.0, r_innen=100.0, drehwinkel=270.0, etage=0, **kw):
+                 auge=100.0, r_innen=100.0, drehwinkel=270.0, etage=0, gelaender="keins",
+                 gelaender_hoehe=900.0, wangen=False, bruchlinie=False, durchbruch=True, **kw):
         for k in ("_netz3d", "_zbasis"):
             kw.pop(k, None)
         super().__init__("treppe", **kw)
@@ -6751,6 +6800,11 @@ class Treppe(Element):
         self.r_innen = max(20.0, float(r_innen))
         self.drehwinkel = min(720.0, max(30.0, float(drehwinkel)))
         self.etage = max(0, int(etage))
+        self.gelaender = gelaender if gelaender in TREPPE_GELAENDER else "keins"
+        self.gelaender_hoehe = max(300.0, float(gelaender_hoehe))
+        self.wangen = bool(wangen)              # side stringers
+        self.bruchlinie = bool(bruchlinie)      # plan: break line, treads above the cut dashed
+        self.durchbruch = bool(durchbruch)      # opening in the ceiling above the stair
         self._zbasis = 0.0
 
     def to_dict(self):
@@ -6785,31 +6839,58 @@ class Treppe(Element):
     def stufen(self):
         """[(polygon (outline of the tread / landing), level, [convex pieces])] in world
         coordinates. Level k lies k * riser height above the floor."""
+        return [e[:3] for e in self._stufen_voll() if e[0] is not None]
+
+    def _stufen_voll(self):
+        """Like stufen(), with a 4th item per tread: the points of the entry edge on the
+        (left, right) side of the walking direction: ([left points], [right points]) in world
+        coordinates (landings have extra corner points). The last item is the end edge of the
+        stair, level n, with an empty polygon: (None, n, [], (left, right))."""
         n, t, b = self.anzahl(), self.auftritt, self.breite
         s = 1.0 if self.richtung == "links" else -1.0
         out = []
 
-        def rect(level, u0, v0, u1, v1):
+        def W(u, v):
+            return self._w(u, v)
+
+        def rect(level, u0, v0, u1, v1, ein=None):
             q = self._rechteck(u0, v0, u1, v1)
-            out.append((q, level, [q]))
+            out.append((q, level, [q], ein))
+
+        def gerade_ein(u):                      # entry edge across the run (walking along +u)
+            return ([W(u, b / 2)], [W(u, -b / 2)])
 
         if self.art == "gerade":
             for i in range(1, n):
-                rect(i, (i - 1) * t, -b / 2, i * t, b / 2)
+                rect(i, (i - 1) * t, -b / 2, i * t, b / 2, gerade_ein((i - 1) * t))
+            out.append((None, n, [], gerade_ein((n - 1) * t)))
         elif self.art in ("l", "u"):
             L = n // 2
             for i in range(1, L):
-                rect(i, (i - 1) * t, -b / 2, i * t, b / 2)
+                rect(i, (i - 1) * t, -b / 2, i * t, b / 2, gerade_ein((i - 1) * t))
             u0 = (L - 1) * t
+            # inner / outer side of the turn -> left / right of the walking direction
+            def lr(innen, aussen):
+                return (innen, aussen) if s > 0 else (aussen, innen)
             if self.art == "l":
-                rect(L, u0, -b / 2, u0 + b, b / 2)
+                ein_i = [W(u0, s * b / 2)]
+                ein_a = [W(u0, -s * b / 2), W(u0 + b, -s * b / 2)]
+                rect(L, u0, -b / 2, u0 + b, b / 2, lr(ein_i, ein_a))
                 for j in range(1, n - L):
-                    rect(L + j, u0, s * (b / 2 + (j - 1) * t), u0 + b, s * (b / 2 + j * t))
+                    v = s * (b / 2 + (j - 1) * t)
+                    rect(L + j, u0, v, u0 + b, s * (b / 2 + j * t), lr([W(u0, v)], [W(u0 + b, v)]))
+                v = s * (b / 2 + (n - L - 1) * t)
+                out.append((None, n, [], lr([W(u0, v)], [W(u0 + b, v)])))
             else:
-                rect(L, u0, -s * b / 2, u0 + b, s * (1.5 * b + self.auge))
+                ein_i = [W(u0, s * b / 2), W(u0, s * (b / 2 + self.auge))]
+                ein_a = [W(u0, -s * b / 2), W(u0 + b, -s * b / 2), W(u0 + b, s * (1.5 * b + self.auge))]
+                rect(L, u0, -s * b / 2, u0 + b, s * (1.5 * b + self.auge), lr(ein_i, ein_a))
+                vi, va = s * (b / 2 + self.auge), s * (1.5 * b + self.auge)
                 for j in range(1, n - L):
-                    rect(L + j, u0 - (j - 1) * t, s * (b / 2 + self.auge), u0 - j * t,
-                         s * (1.5 * b + self.auge))
+                    u = u0 - (j - 1) * t
+                    rect(L + j, u, vi, u0 - j * t, va, lr([W(u, vi)], [W(u, va)]))
+                u = u0 - (n - L - 1) * t
+                out.append((None, n, [], lr([W(u, vi)], [W(u, va)])))
         else:                                                   # spiral
             r0, r1 = self.r_innen, self.r_innen + b
             dth = math.radians(self.drehwinkel) / (n - 1)
@@ -6823,7 +6904,11 @@ class Treppe(Element):
                     aussen.append(self._w(r1 * math.cos(ph), r1 * math.sin(ph)))
                 for k in range(seg):
                     teile.append([innen[k], aussen[k], aussen[k + 1], innen[k + 1]])
-                out.append((innen + list(reversed(aussen)), i, teile))
+                li = ([innen[0]], [aussen[0]]) if s > 0 else ([aussen[0]], [innen[0]])
+                out.append((innen + list(reversed(aussen)), i, teile, li))
+            ph = s * (n - 1) * dth
+            pi_, pa_ = W(r0 * math.cos(ph), r0 * math.sin(ph)), W(r1 * math.cos(ph), r1 * math.sin(ph))
+            out.append((None, n, [], ([pi_], [pa_]) if s > 0 else ([pa_], [pi_])))
         return out
 
     def lauflinie(self):
@@ -6854,8 +6939,110 @@ class Treppe(Element):
         return out
 
     def prims(self):
-        out = [(q, True) for q, _lv, _t in self.stufen()]
-        return out + self.lauflinie()
+        h = self.steigung()
+        out = []
+        for q, lv, _t in self.stufen():
+            if self.bruchlinie and lv * h > TREPPE_SCHNITT + 1e-6:     # above the cut: dashed
+                out.extend(_gestrichelt(q))
+            else:
+                out.append((q, True))
+        out += self.lauflinie()
+        if self.bruchlinie:
+            out += self._bruchlinie()
+        return out
+
+    def _bruchlinie(self):
+        """Zig-zag break line across the stair at the first tread above the cut height."""
+        h = self.steigung()
+        for _q, lv, _t, ein in self._stufen_voll():
+            if _q is not None and lv * h > TREPPE_SCHNITT + 1e-6:
+                (ax, ay), (bx, by) = ein[0][0], ein[1][0]
+                ex, ey = bx - ax, by - ay
+                ln = math.hypot(ex, ey)
+                if ln < 1e-6:
+                    return []
+                nx, ny = -ey / ln, ex / ln
+                k = min(120.0, ln * 0.12)
+
+                def P(f, w=0.0):
+                    return (ax + ex * f + nx * k * w, ay + ey * f + ny * k * w)
+                return [([P(0), P(0.38), P(0.46, 1), P(0.54, -1), P(0.62), P(1)], False)]
+        return []
+
+    # ---- railing, stringers, ceiling opening -------------------------------
+    def seitenpfad(self, seite):
+        """Nodes [(x, y, level)] along the left / right side of the stair (walking direction),
+        one per tread entry edge (plus corner points of landings and the end of the stair)."""
+        i = 0 if seite == "links" else 1
+        out = []
+        for q, lv, _t, ein in self._stufen_voll():
+            for p in ein[i]:
+                out.append((p[0], p[1], float(lv)))
+        return out
+
+    def seiten_gelaender(self):
+        return {"keins": [], "links": ["links"], "rechts": ["rechts"],
+                "beidseitig": ["links", "rechts"]}[self.gelaender]
+
+    def gelaender3d(self):
+        """Railing / stringers as simple elements (z relative to the floor of the storey):
+        {"schienen": [[(x, y, z)]] (handrail centre lines), "pfosten": [(x, y, z0, z1)],
+        "wangen": [[(x, y, z)]] (top edge of the stringers)}."""
+        h = self.steigung()
+        gh = self.gelaender_hoehe
+        schienen, pfosten, wangen = [], [], []
+        for seite in self.seiten_gelaender():
+            kn = [(x, y, lv * h) for x, y, lv in self.seitenpfad(seite)]
+            if len(kn) < 2:
+                continue
+            schienen.append([(x, y, z + gh) for x, y, z in kn])
+            for i, (x, y, z) in enumerate(kn):
+                gleich = any(abs(kn[j][0] - x) < 1e-6 and abs(kn[j][1] - y) < 1e-6
+                             for j in (i - 1, i + 1) if 0 <= j < len(kn))
+                if i % 3 == 0 or i == len(kn) - 1 or gleich:
+                    pfosten.append((x, y, z, z + gh))
+        if self.wangen:
+            for seite in ("links", "rechts"):
+                kn = [(x, y, lv * h) for x, y, lv in self.seitenpfad(seite)]
+                if len(kn) >= 2:
+                    wangen.append(kn)
+        return {"schienen": schienen, "pfosten": pfosten, "wangen": wangen}
+
+    def _lokal(self, x, y):
+        a = math.radians(self.winkel)
+        dx, dy = x - self.x, y - self.y
+        return dx * math.cos(a) + dy * math.sin(a), -dx * math.sin(a) + dy * math.cos(a)
+
+    def deckenoeffnung(self, unterkante, rand=0.0):
+        """Outline(s) [[(x, y)]] of the opening a ceiling with the underside `unterkante`
+        (relative to the floor of the storey) needs: everything of the stair that lies above the
+        headroom height below the ceiling. [] when `durchbruch` is off or nothing reaches it."""
+        if not self.durchbruch:
+            return []
+        h = self.steigung()
+        sel = [(q, lv) for q, lv, _t in self.stufen() if lv * h + TREPPE_KOPFFREIHEIT > unterkante]
+        if not sel:
+            return []
+        if self.art == "wendel":
+            n = self.anzahl()
+            dth = self.drehwinkel / (n - 1)
+            if len(sel) * dth >= 330.0:                          # (almost) a full turn: circle
+                r = self.r_innen + self.breite + rand
+                return [[self._w(r * math.cos(2 * math.pi * k / 24), r * math.sin(2 * math.pi * k / 24))
+                         for k in range(24)]]
+            innen, aussen = [], []
+            for q, _lv in sel:
+                half = len(q) // 2
+                i_, a_ = list(q[:half]), list(reversed(q[half:]))
+                innen += i_ if not innen else i_[1:]
+                aussen += a_ if not aussen else a_[1:]
+            return [innen + list(reversed(aussen))]
+        rects = []
+        for q, _lv in sel:
+            loc = [self._lokal(*p) for p in q]
+            us, vs = [p[0] for p in loc], [p[1] for p in loc]
+            rects.append((min(us) - rand, min(vs) - rand, max(us) + rand, max(vs) + rand))
+        return [[self._w(u, v) for u, v in lp] for lp in _rechtecke_vereinigen(rects)]
 
     def stuecke3d(self):
         """The stair as boxes for the 3D view: [(convex polygon, z_from, z_to)] (relative to the
@@ -6915,7 +7102,79 @@ class Treppe(Element):
             self.winkel = math.degrees(math.atan2(y - self.y, x - self.x)) % 360.0
 
 
+def _gestrichelt(poly, strich=120.0, luecke=90.0):
+    """Closed polygon as dashed segments [([p, q], False)]."""
+    out = []
+    n = len(poly)
+    rest, an = strich, True                    # remaining length of the current dash / gap
+    for i in range(n):
+        (ax, ay), (bx, by) = poly[i], poly[(i + 1) % n]
+        ln = math.hypot(bx - ax, by - ay)
+        pos = 0.0
+        while pos < ln - 1e-9:
+            schritt = min(rest, ln - pos)
+            if an:
+                f0, f1 = pos / ln, (pos + schritt) / ln
+                out.append(([(ax + (bx - ax) * f0, ay + (by - ay) * f0),
+                             (ax + (bx - ax) * f1, ay + (by - ay) * f1)], False))
+            pos += schritt
+            rest -= schritt
+            if rest <= 1e-9:
+                an = not an
+                rest = strich if an else luecke
+    return out
+
+
+def _rechtecke_vereinigen(rects):
+    """Outline(s) of the union of axis-parallel rectangles (u0, v0, u1, v1): counter-clockwise
+    polygons with the collinear points removed."""
+    def k(v):
+        return round(v, 3)
+    us = sorted({k(r[0]) for r in rects} | {k(r[2]) for r in rects})
+    vs = sorted({k(r[1]) for r in rects} | {k(r[3]) for r in rects})
+    voll = set()
+    for i in range(len(us) - 1):
+        for j in range(len(vs) - 1):
+            mu, mv = (us[i] + us[i + 1]) / 2, (vs[j] + vs[j + 1]) / 2
+            if any(r[0] - 1e-6 <= mu <= r[2] + 1e-6 and r[1] - 1e-6 <= mv <= r[3] + 1e-6 for r in rects):
+                voll.add((i, j))
+    kanten = {}
+    for (i, j) in voll:
+        if (i, j - 1) not in voll:
+            kanten.setdefault((us[i], vs[j]), []).append((us[i + 1], vs[j]))
+        if (i + 1, j) not in voll:
+            kanten.setdefault((us[i + 1], vs[j]), []).append((us[i + 1], vs[j + 1]))
+        if (i, j + 1) not in voll:
+            kanten.setdefault((us[i + 1], vs[j + 1]), []).append((us[i], vs[j + 1]))
+        if (i - 1, j) not in voll:
+            kanten.setdefault((us[i], vs[j + 1]), []).append((us[i], vs[j]))
+    loops = []
+    while kanten:
+        start = next(iter(kanten))
+        lp, p = [start], start
+        while True:
+            nxt = kanten[p].pop()
+            if not kanten[p]:
+                del kanten[p]
+            if nxt == start:
+                break
+            lp.append(nxt)
+            p = nxt
+            if p not in kanten:
+                break
+        out = []                                  # remove collinear points
+        n = len(lp)
+        for i in range(n):
+            a, b, c = lp[i - 1], lp[i], lp[(i + 1) % n]
+            if abs((b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0])) > 1e-9:
+                out.append(b)
+        if len(out) >= 3:
+            loops.append(out)
+    return loops
+
+
 def _sk_treppe(e, cx, cy, f):
+    e.gelaender_hoehe *= f
     e.x, e.y = _skal_pt(e.x, e.y, cx, cy, f)
     e.breite *= f
     e.auftritt *= f
@@ -6927,6 +7186,7 @@ def _sp_treppe(e, ax, ay, bx, by):
     e.x, e.y = punkt_spiegeln(e.x, e.y, ax, ay, bx, by)
     e.winkel = (2 * _phi(ax, ay, bx, by) - e.winkel) % 360.0
     e.richtung = "rechts" if e.richtung == "links" else "links"
+    e.gelaender = {"links": "rechts", "rechts": "links"}.get(e.gelaender, e.gelaender)
 
 
 _inst(Treppe, skalieren=_sk_treppe, spiegeln=_sp_treppe)

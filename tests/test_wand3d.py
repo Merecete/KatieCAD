@@ -198,6 +198,49 @@ for sp in ("de", "en", "es", "fr"):
         check(i18n.TEXTE[sp].get(k), f"i18n {k} {sp}")
 print("test_wand3d Treppe OK", ok)
 
+# ---- stairs: railing, stringers, break line, ceiling opening ----
+for _art in ("gerade", "l", "u", "wendel"):
+    _g = core.Treppe(0, 0, 0, art=_art, gelaender="beidseitig", wangen=True)
+    _gg = _g.gelaender3d()
+    check(len(_gg["schienen"]) == 2 and len(_gg["wangen"]) == 2 and _gg["pfosten"], f"Gelaender {_art}")
+    _top = max(z for pl in _gg["schienen"] for _x, _y, z in pl)
+    check(abs(_top - (_g.hoehe + _g.gelaender_hoehe)) < 1e-6, f"Gelaender {_art}: Hoehe am oberen Ende")
+    _nz = S.virtuelle_netze(_g)
+    check(len(_nz) >= 4, f"Treppe {_art}: Netze fuer Koerper, Gelaender, Wangen")
+    check(core.Treppe(0, 0, 0, art=_art, gelaender="links").gelaender3d()["schienen"].__len__() == 1, f"nur links {_art}")
+    check(core.Treppe(0, 0, 0, art=_art).gelaender3d()["schienen"] == [], f"ohne Gelaender {_art}")
+_sp = core.Treppe(0, 0, 0, gelaender="links"); _sp.spiegeln(0, 0, 1, 0)
+check(_sp.gelaender == "rechts", "spiegeln: Gelaenderseite")
+_bl = core.Treppe(0, 0, 0, bruchlinie=True)
+check(len(_bl.prims()) > len(core.Treppe(0, 0, 0).prims()) and _bl._bruchlinie(), "Bruchlinie + gestrichelte Stufen")
+_dk = core.Decke([(-3000, -4000), (6000, -4000), (6000, 4000), (-3000, 4000)], art="decke", hoehe=2500, etage=0)
+for _art in ("gerade", "l", "u", "wendel"):
+    _tr = core.Treppe(0, 0, 30, art=_art, etage=0)
+    core.wand_verknuepfen([_dk, _tr])
+    check(len(_dk._aussparungen) == 1, f"Durchbruch {_art}")
+    _n = S.virtuelle_netze(_dk)[0]
+    _fl = 0.0
+    for _f in _n.flaechen:
+        if len(_f) == 3 and all(abs(_n.punkte[i][2] - 2700) < 1e-6 for i in _f):
+            _p = [_n.punkte[i] for i in _f]
+            _fl += abs((_p[1][0] - _p[0][0]) * (_p[2][1] - _p[0][1]) - (_p[1][1] - _p[0][1]) * (_p[2][0] - _p[0][0])) / 2
+    check(abs(_fl - (9000 * 8000 - abs(sum(S._flaeche2(l) for l in _dk._aussparungen)))) < 1.0, f"Decke mit Loch {_art}: Flaeche")
+_tr = core.Treppe(0, 0, 0, durchbruch=False)
+core.wand_verknuepfen([_dk, _tr]); check(_dk._aussparungen == [], "Durchbruch aus")
+_tr = core.Treppe(0, 0, 0, etage=1)
+core.wand_verknuepfen([_dk, _tr]); check(_dk._aussparungen == [], "andere Etage: kein Durchbruch")
+_tr = core.Treppe(0, 0, 0)
+_dk2 = core.Decke([(-100, -100), (500, -100), (500, 500), (-100, 500)], art="decke", hoehe=2500)
+core.wand_verknuepfen([_dk2, _tr]); check(_dk2._aussparungen == [], "Loch ragt aus der Decke: kein Schnitt")
+_bo = core.Decke([(-3000, -4000), (6000, -4000), (6000, 4000), (-3000, 4000)], art="boden", hoehe=0, etage=0)
+core.wand_verknuepfen([_bo, core.Treppe(0, 0, 0)]); check(_bo._aussparungen == [], "Boden bekommt keinen Durchbruch")
+check("_aussparungen" not in _dk.to_dict() and "gelaender" in core.Treppe(0, 0, 0).to_dict(), "Speichern")
+for sp in ("de", "en", "es", "fr"):
+    for k in ("dlg.treppe.gelaender", "dlg.treppe.gelaender.keins", "dlg.treppe.gelaender.beidseitig", "dlg.treppe.gelaender_hoehe",
+              "dlg.treppe.wangen", "dlg.treppe.bruchlinie", "dlg.treppe.durchbruch"):
+        check(i18n.TEXTE[sp].get(k), f"i18n {k} {sp}")
+print("test_wand3d Treppe Gelaender/Durchbruch OK", ok)
+
 # ---- view: one storey ----
 _ap = _A.CadApp.__new__(_A.CadApp)
 _ap.__dict__["_ctx_liste"] = lambda: _all

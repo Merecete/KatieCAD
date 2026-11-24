@@ -20,7 +20,7 @@ from katiecad.ui import meldung as messagebox
 from katiecad.common.i18n import tr, SPRACHE
 from katiecad.electrical import suchen as SU
 from katiecad.model.core import (
-    FARBEN, ZEICHNUNGSFORMATE, LINIENTYPEN, LINIENSTAERKEN, DECKE_VORGABE, TREPPE_ARTEN, TREPPE_BAUWEISEN,
+    FARBEN, ZEICHNUNGSFORMATE, LINIENTYPEN, LINIENSTAERKEN, DECKE_VORGABE, TREPPE_ARTEN, TREPPE_BAUWEISEN, TREPPE_GELAENDER,
     SCHRIFTARTEN, MASSSTAEBE, BEM_RICHTUNGEN,
     schrift_fett, schrift_name, schrift_setzen,
     Layer, Text, Linie, Kreis, Bogen, Rechteck, Polylinie,
@@ -4695,6 +4695,7 @@ class TreppeDialog(tk.Toplevel):
     ARTEN = TREPPE_ARTEN
     BAUWEISEN = TREPPE_BAUWEISEN
     RICHTUNGEN = ("links", "rechts")
+    GELAENDER = TREPPE_GELAENDER
 
     def __init__(self, parent, d, neu=True):
         super().__init__(parent)
@@ -4735,6 +4736,17 @@ class TreppeDialog(tk.Toplevel):
         feld("dlg.treppe.auge", "auge_var", d["auge"])
         feld("dlg.treppe.r_innen", "rin_var", d["r_innen"])
         feld("dlg.treppe.drehwinkel", "dreh_var", d["drehwinkel"])
+        combo("dlg.treppe.gelaender", "gel_var", self.GELAENDER, "dlg.treppe.gelaender.",
+              d.get("gelaender", "keins"))
+        feld("dlg.treppe.gelaender_hoehe", "gelh_var", d.get("gelaender_hoehe", 900.0))
+        self.wangen_var = tk.BooleanVar(value=bool(d.get("wangen", False)))
+        self.bruch_var = tk.BooleanVar(value=bool(d.get("bruchlinie", False)))
+        self.durch_var = tk.BooleanVar(value=bool(d.get("durchbruch", True)))
+        for text, var in (("dlg.treppe.wangen", self.wangen_var), ("dlg.treppe.bruchlinie", self.bruch_var),
+                          ("dlg.treppe.durchbruch", self.durch_var)):
+            ttk.Checkbutton(f, text=tr(text), variable=var).grid(row=r, column=0, columnspan=2,
+                                                                 sticky=tk.W, pady=2)
+            r += 1
         ttk.Label(f, text=tr("dlg.etage")).grid(row=r, column=0, sticky=tk.W, pady=3)
         self.etage_var = tk.StringVar(value=str(int(d["etage"])))
         ttk.Entry(f, textvariable=self.etage_var, width=10).grid(row=r, column=1, sticky=tk.W, padx=8)
@@ -4760,6 +4772,7 @@ class TreppeDialog(tk.Toplevel):
         z["auge"] = _zahl(self.auge_var, 0.0)
         z["r_innen"] = _zahl(self.rin_var, 20.0)
         z["drehwinkel"] = _zahl(self.dreh_var, 30.0)
+        z["gelaender_hoehe"] = _zahl(self.gelh_var, 300.0)
         st = _zahl(self.steig_var, 0.0)
         etage = _etage_zahl(self.etage_var)
         if any(v is None for v in z.values()) or st is None or etage is None or z["drehwinkel"] > 720:
@@ -4769,6 +4782,9 @@ class TreppeDialog(tk.Toplevel):
                        "steigungen": int(st), "etage": etage,
                        "bauweise": self._wahl(self.bau_var, self.BAUWEISEN, "dlg.treppe.bauweise.", "massiv"),
                        "richtung": self._wahl(self.richt_var, self.RICHTUNGEN, "dlg.treppe.richtung.", "links"),
+                       "gelaender": self._wahl(self.gel_var, self.GELAENDER, "dlg.treppe.gelaender.", "keins"),
+                       "wangen": bool(self.wangen_var.get()), "bruchlinie": bool(self.bruch_var.get()),
+                       "durchbruch": bool(self.durch_var.get()),
                        **z}
         self.destroy()
 

@@ -5800,7 +5800,9 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             self._treppe_daten = {"art": "gerade", "breite": 1000.0, "hoehe": 2700.0, "steigungen": 0,
                                   "auftritt": 280.0, "dicke": 40.0, "bauweise": "massiv",
                                   "richtung": "links", "auge": 100.0, "r_innen": 100.0,
-                                  "drehwinkel": 270.0, "etage": self._etage}
+                                  "drehwinkel": 270.0, "etage": self._etage, "gelaender": "beidseitig",
+                                  "gelaender_hoehe": 900.0, "wangen": False, "bruchlinie": True,
+                                  "durchbruch": True}
         return self._treppe_daten
 
     def _treppe_layer_daten(self):
@@ -5862,7 +5864,9 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
 
     def _treppe_bearbeiten(self, el):
         d = {k: getattr(el, k) for k in ("art", "breite", "hoehe", "steigungen", "auftritt", "dicke",
-                                         "bauweise", "richtung", "auge", "r_innen", "drehwinkel", "etage")}
+                                         "bauweise", "richtung", "auge", "r_innen", "drehwinkel", "etage",
+                                         "gelaender", "gelaender_hoehe", "wangen", "bruchlinie",
+                                         "durchbruch")}
         dlg = TreppeDialog(self.root, d, neu=False)
         if dlg.result is None or not self._etage_pruefen(dlg.result["etage"]):
             return
