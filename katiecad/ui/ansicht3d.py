@@ -1145,6 +1145,12 @@ class Ansicht3D(tk.Frame):
                         best = (d, q)
             if best is not None:
                 r = ((best[1][0], best[1][1]), "end", (best[1][0], best[1][1], 0.0))
+        if r is None and self.app.osnap.get():
+            # snap to ANY visible point (also wall tops, slab corners): only its plan position
+            # (x, y) counts, like the corner you would pick in 2D
+            fp = S.fang_suche(self._sichtbare(), self.kamera, *self._mitte(), e.x, e.y, 14.0)
+            if fp is not None:
+                r = ((fp[0][0], fp[0][1]), fp[1], fp[0])
         if r is None:
             r = self._fang_ebene(e, G.BODEN_EBENE)
         if r is None:

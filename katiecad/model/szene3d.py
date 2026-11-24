@@ -777,6 +777,7 @@ def _el_fang(el, out):
     if isinstance(el, Wand):                      # centre line of the wall (to join walls)
         for x, y in el.punkte:
             out.append(((x, y, 0.0), "achse"))
+            out.append(((x, y, el.hoehe), "achse"))             # also at the top of the wall
         for i, j in el._segmente():
             (ax, ay), (bx, by) = el.punkte[i], el.punkte[j]
             out.append((((ax + bx) / 2, (ay + by) / 2, 0.0), "mitte"))

@@ -134,3 +134,5 @@ check(_a.entry_eingabe.focus_set.called, "Fokus: nirgends -> Befehlszeile")
 _a = _app_fokus(_c); _a.entry_eingabe.get.return_value = "abc"; _a.root.focus_get.return_value = _a.entry_eingabe
 check(_a._eingabe_hat_text(), "Text in der Befehlszeile erkannt")
 print("test_wand3d Fokus OK", ok)
+_pt = [(round(p[0]), round(p[1]), round(p[2])) for p, a in S.fang_kandidaten([_W2]) if a == "achse"]
+check((4000, 3000, 2500) in _pt and (4000, 3000, 0) in _pt, "Fang: Wandachse unten und oben")
