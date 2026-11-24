@@ -24,16 +24,18 @@ BTN_RECHTS = "2" if sys.platform == "darwin" else "3"
 ZELLE_PX = 36                 # height of one symbol row at the right edge
 
 
-def ziel_position(relx, rely, aktuell="oben"):
-    """Docking edge for a pointer position inside the window (0..1)."""
+def ziel_position(relx, rely, aktuell="oben", links=0.12):
+    """Docking edge for a pointer position inside the window (0..1). `links`: right edge of the
+    left drop area (the project sidebar plus a margin) as a fraction of the window width; it
+    reaches from just below the toolbars to just above the status bar."""
     if relx > 0.85:
         return "rechts"
+    if relx < links and 0.15 <= rely <= 0.88:
+        return "links"
     if rely > 0.78:
         return "unten"
     if rely < 0.22:
         return "oben"
-    if relx < 0.12:
-        return "links"
     return aktuell
 
 
@@ -436,6 +438,18 @@ class ToolbarDockMixin:
                 return True
         return False
 
+    def _links_grenze(self, fensterbreite):
+        """Right edge of the left drop area as a fraction of the window width: the project
+        sidebar (when visible) plus a margin of 80 px."""
+        breite = 0
+        try:
+            sl = getattr(self, "seitenleiste", None)
+            if sl is not None and sl.ist_sichtbar():
+                breite = sl.winfo_width()
+        except Exception:
+            breite = 0
+        return min(0.5, max(0.08, (breite + 80) / max(1, fensterbreite)))
+
     def _toolbar_griff_binden(self, griff, name="werkzeug"):
         """Drag the grip to an edge of the window and release."""
         def los(e):
@@ -447,7 +461,7 @@ class ToolbarDockMixin:
                 rely = (py - self.root.winfo_rooty()) / h
             except Exception:
                 return
-            neu = ziel_position(relx, rely, self.toolbar_position(name))
+            neu = ziel_position(relx, rely, self.toolbar_position(name), self._links_grenze(w))
             if neu != self.toolbar_position(name):
                 self.toolbar_position_setzen(neu, name)
                 return

@@ -13,6 +13,14 @@ def check(c, m):
 # --- pure helpers
 check(TD.ziel_position(0.05, 0.5) == "links" and TD.ziel_position(0.05, 0.05) == "oben"
       and TD.ziel_position(0.95, 0.5) == "rechts" and TD.ziel_position(0.5, 0.5, "links") == "links", "Zielposition links")
+check(TD.ziel_position(0.2, 0.5, "oben", 0.25) == "links" and TD.ziel_position(0.2, 0.5, "oben") == "oben"
+      and TD.ziel_position(0.2, 0.1, "oben", 0.25) == "oben" and TD.ziel_position(0.2, 0.9, "oben", 0.25) == "unten", "Links: Bereich bis zur Seitenleiste")
+class _SL:
+    def ist_sichtbar(s): return True
+    def winfo_width(s): return 300
+class _X(TD.ToolbarDockMixin): pass
+_x = _X(); _x.seitenleiste = _SL()
+check(abs(_x._links_grenze(1400) - 380 / 1400) < 1e-9 and _X()._links_grenze(1400) == 0.08, "Grenze aus Seitenleistenbreite")
 check("links" in TD.POSITIONEN and TD.VERTIKAL == ("links", "rechts"), "Positionen")
 
 # --- fakes
