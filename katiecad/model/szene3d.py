@@ -764,7 +764,7 @@ def _el_fang(el, out):
         return
     if isinstance(el, Wand):                      # centre line of the wall (to join walls)
         for x, y in el.punkte:
-            out.append(((x, y, 0.0), "end"))
+            out.append(((x, y, 0.0), "achse"))
         for i, j in el._segmente():
             (ax, ay), (bx, by) = el.punkte[i], el.punkte[j]
             out.append((((ax + bx) / 2, (ay + by) / 2, 0.0), "mitte"))
@@ -824,7 +824,7 @@ def fang_kandidaten(elemente):
 def fang_suche(elemente, kamera, cx, cy, mx, my, tol=12.0, filt=None):
     """Nearest snap candidate within `tol` pixels -> (point, kind) or None.
     Centres win over end points, end points over midpoints on a tie."""
-    rang = {"zentrum": 0, "end": 1, "mitte": 2}
+    rang = {"achse": 0, "zentrum": 0, "end": 1, "mitte": 2}
     best, bw = None, None
     for p, art in fang_kandidaten(elemente):
         if filt is not None and not filt(p):

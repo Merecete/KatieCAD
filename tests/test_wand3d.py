@@ -79,5 +79,9 @@ for sp in ("de", "en", "es", "fr"):
 print("test_wand3d OK", ok)
 # snap: wall centre line + corners also in 3D (join walls); long meshes must not collapse to cap centres
 _W2 = core.Wand([(0, 0), (4000, 0), (4000, 3000)], dicke=240)
-_pk = {(round(p[0]), round(p[1])) for p, a in S.fang_kandidaten([_W2]) if abs(p[2]) < 1e-6 and a == "end"}
-check((0, 0) in _pk and (4000, 3000) in _pk and (4120, -120) in _pk, "Fang: Mittellinie + Ecken der Wand")
+_pk = {(round(p[0]), round(p[1])) for p, a in S.fang_kandidaten([_W2]) if abs(p[2]) < 1e-6}
+check((4000, 3000) in _pk and (4120, -120) in _pk, "Fang: Mittellinie + Ecken der Wand")
+_pa = {(round(p[0]), round(p[1])) for p, a in S.fang_kandidaten([_W2]) if abs(p[2]) < 1e-6 and a == "achse"}
+check((0, 0) in _pa and (4000, 0) in _pa, "Fang: Wandachse")
+for sp in ("de", "en", "es", "fr"):
+    check(i18n.TEXTE[sp].get("d3.fang.achse"), "i18n achse " + sp)

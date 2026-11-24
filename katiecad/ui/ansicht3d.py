@@ -1132,11 +1132,24 @@ class Ansicht3D(tk.Frame):
     def _bau_punkt(self, e):
         """Corner point on the floor (Z = 0): object snap, then grid; ORTHO relative to the
         last point. -> ((x, y), kind, 3D point) or None."""
-        r = self._fang_ebene(e, G.BODEN_EBENE)
+        pl = self.app.aktuelle_polylinie
+        r = None
+        if self.app.osnap.get() and pl:                 # points of the chain being drawn (close the room)
+            mx, my = self._mitte()
+            best = None
+            for q in pl:
+                s = self.kamera.proj((q[0], q[1], 0.0), mx, my)
+                if s is not None:
+                    d = math.hypot(s[0] - e.x, s[1] - e.y)
+                    if d <= 12.0 and (best is None or d < best[0]):
+                        best = (d, q)
+            if best is not None:
+                r = ((best[1][0], best[1][1]), "end", (best[1][0], best[1][1], 0.0))
+        if r is None:
+            r = self._fang_ebene(e, G.BODEN_EBENE)
         if r is None:
             return None
         p, art, p3 = r
-        pl = self.app.aktuelle_polylinie
         if self.app.ortho.get() and pl and art == "raster":
             q = pl[-1]
             p = (p[0], q[1]) if abs(p[0] - q[0]) >= abs(p[1] - q[1]) else (q[0], p[1])
@@ -1381,7 +1394,7 @@ class Ansicht3D(tk.Frame):
                 return
             x, y = q[0], q[1]
             f = FARBEN["gelb"]
-            if art == "end":
+            if art in ("end", "achse"):
                 c.create_rectangle(x - 5, y - 5, x + 5, y + 5, outline=f, width=2, tags="hover")
             elif art == "mitte":
                 c.create_polygon(x, y - 6, x - 6, y + 5, x + 6, y + 5, outline=f, fill="",
