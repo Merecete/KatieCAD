@@ -6904,9 +6904,9 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             if sys.platform.startswith("win"):
                 os.startfile(pfad)
             elif sys.platform == "darwin":
-                subprocess.Popen(["open", pfad])
+                subprocess.Popen(["open", os.path.abspath(pfad)])
             else:
-                subprocess.Popen(["xdg-open", pfad])
+                subprocess.Popen(["xdg-open", os.path.abspath(pfad)])
         except Exception as e:
             print(f"[KatieCAD] Ordner konnte nicht geoeffnet werden: {e}")
 
@@ -7221,9 +7221,9 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             if sys.platform.startswith("win"):
                 os.startfile(pf)
             elif sys.platform == "darwin":
-                subprocess.run(["open", "-t", pf], check=True)
+                subprocess.run(["open", "-t", os.path.abspath(pf)], check=True)
             else:
-                subprocess.run(["xdg-open", pf], check=True)
+                subprocess.run(["xdg-open", os.path.abspath(pf)], check=True)
         except Exception as ex:
             messagebox.showwarning(
                 "Log", (tr("txt.0153", p0=ex, p1=pf)), parent=self.root)

@@ -332,10 +332,10 @@ def pdf_senden(pfad, drucken):
         if sys.platform.startswith("win"):
             os.startfile(pfad, "print" if drucken else "open")
         elif sys.platform == "darwin":
-            subprocess.run(["lpr", pfad] if drucken else ["open", pfad],
+            subprocess.run(["lpr", os.path.abspath(pfad)] if drucken else ["open", os.path.abspath(pfad)],
                            check=True)
         else:
-            subprocess.run(["lpr", pfad] if drucken else ["xdg-open", pfad],
+            subprocess.run(["lpr", os.path.abspath(pfad)] if drucken else ["xdg-open", os.path.abspath(pfad)],
                            check=True)
     except Exception as ex:
         messagebox.showwarning(

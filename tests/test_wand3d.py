@@ -286,6 +286,20 @@ for sp in ("de", "en", "es", "fr"):
         check(i18n.TEXTE[sp].get(k), f"i18n {k} {sp}")
 print("test_wand3d Dach OK", ok)
 
+# ---- hardening: garbage from files must not hang or crash ----
+_nan = float("nan"); _inf = float("inf")
+_ts = core.Treppe(_nan, _inf, _nan, breite=_nan, hoehe=_inf, steigungen=10 ** 9, auftritt=-5, etage=10 ** 9, gelaender_hoehe=_nan)
+check(_ts.anzahl() <= 200 and _ts.etage == core.ETAGE_MAX and _ts.x == 0.0 and len(_ts.stufen()) <= 200, "Treppe: Muellwerte begrenzt")
+check(core.Wand([(0, 0), (1000, 0)], etage=10 ** 12).etage == core.ETAGE_MAX and core.Decke([(0, 0), (1, 0), (1, 1)], etage=-4).etage == 0, "Etage begrenzt")
+check(core.etage_basis([], 10 ** 9 if False else core.ETAGE_MAX) is None, "etage_basis ohne Decken")
+_dn = core.Dach([(0, 0), (_nan, 0), (1000, 1000)], neigung=_nan, firsthoehe=_inf, traufe=_nan, giebel=[_nan, 1, 99, -3])
+check(_dn.neigung == 35.0 and _dn.giebel == [1] and _dn.geometrie()["flaechen"] == [], "Dach: NaN-Umriss ergibt kein Dach, kein Absturz")
+_dg = core.Dach([(math.cos(i) * 5000, math.sin(i) * 5000) for i in range(1000)])
+check(_dg.geometrie()["flaechen"] == [] and S.virtuelle_netze(_dg) == [], "Dach: zu viele Punkte werden nicht berechnet")
+_dq = core.Dach([(0, 0), (0, 0), (0, 0)])
+check(_dq.geometrie()["flaechen"] == [], "Dach: entarteter Umriss")
+print("test_wand3d Haertung OK", ok)
+
 # ---- view: one storey ----
 _ap = _A.CadApp.__new__(_A.CadApp)
 _ap.__dict__["_ctx_liste"] = lambda: _all

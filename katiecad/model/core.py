@@ -1433,6 +1433,28 @@ TUER_MODELL_VORGABE = {                       # width, height per door model (mm
     "doppel_ungleich": (1500.0, 2010.0),
     "rolltor": (3000.0, 2500.0),
 }
+ETAGE_MAX = 15                                 # highest storey number
+
+
+def _etage_klemmen(n):
+    """Storey number from a file / dialog: whole number 0 .. ETAGE_MAX (garbage -> 0)."""
+    try:
+        return max(0, min(ETAGE_MAX, int(n)))
+    except (TypeError, ValueError, OverflowError):
+        return 0
+
+
+def _endlich(x, vorgabe, minimum=-1e9, maximum=1e9):
+    """Finite number within [minimum, maximum] (NaN / inf / garbage -> `vorgabe`)."""
+    try:
+        v = float(x)
+    except (TypeError, ValueError, OverflowError):
+        return float(vorgabe)
+    if v != v or v in (float("inf"), float("-inf")):
+        return float(vorgabe)
+    return max(minimum, min(maximum, v))
+
+
 WAND_HOEHE_STANDARD = 2500.0                   # wall height (mm) of new walls / old files
 
 OEFFNUNG_VORGABE = {                          # plan symbols: door / window
@@ -1562,7 +1584,7 @@ class Wand(Polylinie):
         self.schraffur = schraffur if schraffur in WAND_SCHRAFFUREN else ""
         self.schraffur_abstand = max(5.0, float(schraffur_abstand))
         self.hoehe = max(1.0, float(hoehe))        # wall height (mm): the wall is a solid in 3D
-        self.etage = max(0, int(etage))            # storey (0 = ground floor, 1 = above ceiling 0, ...)
+        self.etage = _etage_klemmen(etage)            # storey (0 = ground floor, 1 = above ceiling 0, ...)
         self._zbasis = 0.0                         # runtime only: floor level of the storey (mm)
         self._oeff3 = []              # runtime only: [(segment, t0, t1, z0, z1)] openings in 3D
         self._luecken = []            # runtime only: [(segment, t0, t1)] door gaps
@@ -1881,7 +1903,7 @@ class Oeffnung(Element):
         self.modell = modell if (modell in TUER_MODELLE and self.art == "tuer") else "einfach"
         self.anteil = min(0.9, max(0.5, float(anteil)))
         self._geo = None              # runtime only: position/direction taken from the wall
-        self.etage = max(0, int(etage))
+        self.etage = _etage_klemmen(etage)
         self._zbasis = 0.0
 
     def to_dict(self):
@@ -6694,7 +6716,7 @@ class Decke(Polylinie):
         self.art = art if art in DECKE_ARTEN else "decke"
         self.dicke = max(1.0, float(dicke))
         self.hoehe = float(hoehe)       # above the floor level of its storey
-        self.etage = max(0, int(etage))
+        self.etage = _etage_klemmen(etage)
         self._zbasis = 0.0
         self._aussparungen = []         # openings (stairs), runtime only: [[(x, y)]]
 
@@ -6791,21 +6813,22 @@ class Treppe(Element):
         for k in ("_netz3d", "_zbasis"):
             kw.pop(k, None)
         super().__init__("treppe", **kw)
-        self.x, self.y, self.winkel = float(x), float(y), float(winkel)
+        self.x, self.y = _endlich(x, 0.0, -1e8, 1e8), _endlich(y, 0.0, -1e8, 1e8)
+        self.winkel = _endlich(winkel, 0.0, -1e5, 1e5)
         self.art = art if art in TREPPE_ARTEN else "gerade"
-        self.breite = max(200.0, float(breite))
-        self.hoehe = max(100.0, float(hoehe))
-        self.steigungen = max(0, int(steigungen))
-        self.auftritt = max(50.0, float(auftritt))
-        self.dicke = max(5.0, float(dicke))
+        self.breite = _endlich(breite, 1000.0, 200.0, 20000.0)
+        self.hoehe = _endlich(hoehe, 2700.0, 100.0, 30000.0)
+        self.steigungen = int(_endlich(steigungen, 0, 0, 200))
+        self.auftritt = _endlich(auftritt, 280.0, 50.0, 2000.0)
+        self.dicke = _endlich(dicke, 40.0, 5.0, 500.0)
         self.bauweise = bauweise if bauweise in TREPPE_BAUWEISEN else "massiv"
         self.richtung = "rechts" if richtung == "rechts" else "links"
-        self.auge = max(0.0, float(auge))
-        self.r_innen = max(20.0, float(r_innen))
-        self.drehwinkel = min(720.0, max(30.0, float(drehwinkel)))
-        self.etage = max(0, int(etage))
+        self.auge = _endlich(auge, 100.0, 0.0, 5000.0)
+        self.r_innen = _endlich(r_innen, 100.0, 20.0, 10000.0)
+        self.drehwinkel = _endlich(drehwinkel, 270.0, 30.0, 720.0)
+        self.etage = _etage_klemmen(etage)
         self.gelaender = gelaender if gelaender in TREPPE_GELAENDER else "keins"
-        self.gelaender_hoehe = max(300.0, float(gelaender_hoehe))
+        self.gelaender_hoehe = _endlich(gelaender_hoehe, 900.0, 300.0, 3000.0)
         self.wangen = bool(wangen)              # side stringers
         self.bruchlinie = bool(bruchlinie)      # plan: break line, treads above the cut dashed
         self.durchbruch = bool(durchbruch)      # opening in the ceiling above the stair
@@ -6821,7 +6844,7 @@ class Treppe(Element):
     def anzahl(self):
         """Number of risers."""
         n = self.steigungen if self.steigungen >= 2 else int(round(self.hoehe / TREPPE_STEIGUNG_ZIEL))
-        return max(4 if self.art in ("l", "u") else 2, n)
+        return max(4 if self.art in ("l", "u") else 2, min(200, n))
 
     def steigung(self):
         return self.hoehe / self.anzahl()
@@ -7225,12 +7248,13 @@ class Dach(Polylinie):
             kw.pop(k, None)
         super().__init__(punkte, True, **kw)
         self.typ = "dach"
-        self.neigung = min(85.0, max(5.0, float(neigung)))
+        self.neigung = _endlich(neigung, 35.0, 5.0, 85.0)
         self.spitz = bool(spitz)
-        self.firsthoehe = max(10.0, float(firsthoehe))
-        self.traufe = float(traufe)
-        self.giebel = sorted({int(g) for g in (giebel or []) if 1 <= int(g) <= max(1, len(self.punkte))})
-        self.etage = max(0, int(etage))
+        self.firsthoehe = _endlich(firsthoehe, 2000.0, 10.0, 50000.0)
+        self.traufe = _endlich(traufe, WAND_HOEHE_STANDARD + 200.0, -1e5, 1e5)
+        self.giebel = sorted({int(g) for g in (giebel or []) if isinstance(g, (int, float)) and g == g
+                              and 1 <= g <= max(1, len(self.punkte))})
+        self.etage = _etage_klemmen(etage)
         self._zbasis = 0.0
 
     def to_dict(self):
@@ -7244,13 +7268,16 @@ class Dach(Polylinie):
 
     def geometrie(self):
         """{"flaechen", "plateau", "grate"} of the roof (z above the eaves), cached."""
-        from katiecad.model.dach import dach_flaechen
+        from katiecad.model.dach import dach_flaechen, DACH_MAX_PUNKTE
         sig = (tuple(tuple(p) for p in self.punkte), self.neigung, self.spitz, self.firsthoehe,
                tuple(self.giebel))
         c = getattr(self, "_dachgeo", None)
         if c is not None and c[0] == sig:
             return c[1]
         try:
+            if len(self.punkte) > DACH_MAX_PUNKTE or not all(
+                    abs(c) < 1e9 and c == c for p in self.punkte for c in p):
+                raise ValueError("outline not usable")
             g = dach_flaechen(self.punkte, self.neigungen(), None if self.spitz else self.firsthoehe)
         except Exception:
             g = {"flaechen": [], "plateau": None, "grate": []}

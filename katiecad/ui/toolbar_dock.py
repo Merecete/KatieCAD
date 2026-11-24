@@ -318,7 +318,10 @@ class ToolbarDockMixin:
             vor = getattr(self, "_tab_leiste", None)
             if vor is None:
                 vor = self._zeichenflaeche()
-            self._zone("links").pack(side=tk.LEFT, fill=tk.Y, before=vor)
+            try:
+                self._zone("links").pack(side=tk.LEFT, fill=tk.Y, before=vor)
+            except tk.TclError:                        # reference widget not packed in the window
+                self._zone("links").pack(side=tk.LEFT, fill=tk.Y)
         for pos, namen in belegt.items():
             zone = self._zone(pos)
             for name in namen:

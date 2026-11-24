@@ -12,8 +12,10 @@ dach_flaechen(punkte, neigungen, hoehe=None) ->
      "grate": [((x, y, z), (x, y, z)), ...]}        ridges, hips and valleys
 """
 import math
+import time
 
 EPS = 1e-7
+DACH_MAX_PUNKTE = 150                    # larger outlines are not computed (O(n^3) wavefront)
 SPEED_GIEBEL = 1e-3                      # horizontal run per height of a (nearly) vertical gable face
 
 
@@ -116,8 +118,11 @@ def dach_flaechen(punkte, neigungen, hoehe=None):
     tn = 0.0
     top = hoehe if (hoehe is not None and hoehe > 0) else None
     zaehler = 0
+    frist = time.monotonic() + 3.0                      # never block the program
     while loops and zaehler < 20 * n + 100:
         zaehler += 1
+        if time.monotonic() > frist:
+            raise TimeoutError("roof: too complex")
         best = None
         for li, L in enumerate(loops):
             m = len(L)

@@ -3154,9 +3154,9 @@ def oeffne_im_dateimanager(pfad):
         if sys.platform.startswith("win"):
             os.startfile(pfad)
         elif sys.platform == "darwin":
-            subprocess.Popen(["open", pfad])
+            subprocess.Popen(["open", os.path.abspath(pfad)])
         else:
-            subprocess.Popen(["xdg-open", pfad])
+            subprocess.Popen(["xdg-open", os.path.abspath(pfad)])
     except Exception as e:
         print(f"[KatieCAD] Dateimanager: {e}")
 
