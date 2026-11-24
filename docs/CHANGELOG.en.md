@@ -1,6 +1,8 @@
 # Changes
 
 ## 1.2.1
+- New: **Building tools in 3D:** Wall, Door, Window, Opening, Join walls and Room (same icons of the "Building" bar) also work directly in the 3D view (wall/room: points on the floor with object snap/ORTHO/input line; door/window: click on the wall). Double click opens the same properties as in 2D, right-click menu with hinge / opening side, Z arrow changes the height above floor
+- Fix: **Wall in 3D in one piece:** no more superfluous cut lines at doors and windows
 - New: **Walls, doors and windows in 3D:** every wall has a **wall height** (default 2500 mm, in the wall dialog before drawing and by double click) and appears in the 3D view as a solid (also hidden-line view, selection, box select, snap). Doors and windows cut their opening into the wall; for windows "Sill" is now **Height above floor**; door leaf and pane as thin slabs. Old files: 2500 mm
 - Fix: **Windows installer with welcome page:** the installer shows the start page "Welcome to the KatieCAD Setup Wizard" with the large banner on the left again (Inno Setup hides it by default)
 - New: **3D: Rotate like in 2D:** in the right-click menu of a selection: **Rotate** = click the base point (with object snap), then set the angle with the mouse (preview, ORTHO = 90° steps) or type the degrees in the input line; the rotation is about the vertical axis through the base point. **Rotate 3D** still opens the dialog (axis X, Y or Z)

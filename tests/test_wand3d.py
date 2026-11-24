@@ -50,7 +50,25 @@ fl = S.virtuelle_netze(F)
 check(len(fl) == 1 and zmin(fl[0]) > 900 and zmax(fl[0]) < 1900, "Fensterscheibe ab Bruestung")
 check(S.hat_netze(W) and S.hat_netze(T) and not S.hat_netze(core.Linie(0, 0, 1, 1)), "hat_netze")
 check(S.flache_zuege(W) == [] if hasattr(S, "flache_zuege") else True, "Wand nicht flach")
-check(len(S.koerper_netze(el)) >= 4, "Netze in der Szene")
+check(len(S.koerper_netze(el)) == 3, "Netze in der Szene")
+check(len(S.virtuelle_netze(W)) == 1, "Wand = ein Netz")
+# no lines inside flat faces: all edges of the wall mesh are real edges (door gap -> no cut lines)
+_k = S.virtuelle_netze(W)[0].kanten
+check(len(_k) < 60, f"wenige Kanten {len(_k)}")
+# wall hit by ray / tool wiring
+from katiecad.model import geom3d as G
+check(S.wand_treffer([W], G.Kamera(skala=0.12, ziel=(2000, 0, 1000)), 400, 300, 400, 300) is not None, "Wand-Treffer")
+check(S.wand_treffer([core.Linie(0, 0, 1, 1)], G.Kamera(), 400, 300, 400, 300) is None, "kein Treffer")
+Fz = core.Oeffnung("fenster", 100, 0); Fz.bruestung = 500
+S_verschieben = S.verschieben_achse([Fz], "z", 200)
+check(Fz.bruestung == 700, "Fenster per Z-Pfeil hoeher")
+S.verschieben_achse([Fz], "z", -5000)
+check(Fz.bruestung == 0, "nicht unter den Boden")
+from katiecad.ui import ansicht3d as A3
+check(set(A3.BAU_MODI) == {"wand", "raum", "tuer", "fenster", "durchbruch", "wandverb"} and all(m in A3.Ansicht3D.MODI for m in A3.BAU_MODI), "Bau-Modi")
+for sp in ("de", "en", "es", "fr"):
+    for m in A3.BAU_MODI:
+        check(i18n.TEXTE[sp].get("d3.modus." + m), f"i18n d3.modus.{m} {sp}")
 
 # cache follows changes
 W.hoehe = 3000

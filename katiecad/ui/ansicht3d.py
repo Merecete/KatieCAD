@@ -20,7 +20,7 @@ from tkinter import ttk
 from katiecad.ui import meldung as messagebox
 
 from katiecad.common.i18n import tr
-from katiecad.model.core import (FARBEN, UI_SCHRIFT, Koerper3D, Gruppe3D, Skizze3D, kanal_rechteck, kanal_kette, kanal_versatz, kanal_aus_koerper, kanal_formstueck, Bemassung3D, Text3D, Viewport,
+from katiecad.model.core import (FARBEN, UI_SCHRIFT, Wand, Oeffnung, Koerper3D, Gruppe3D, Skizze3D, kanal_rechteck, kanal_kette, kanal_versatz, kanal_aus_koerper, kanal_formstueck, Bemassung3D, Text3D, Viewport,
                                  quader, zylinder, kegel, pyramide, kugel)
 VERDECKT_SCHNELL_S = 0.15      # hidden-line run faster than this (seconds): stay hidden while navigating
 from katiecad.model import geom3d as G
@@ -30,7 +30,12 @@ from katiecad.ui.dialogs import _modal, _LayoutNameDialog
 
 # basic 2D tools of the toolbar -> their 3D counterparts (drawing on the work plane / 3D dimension)
 WERKZEUG_3D = {"linie": "linie", "polylinie": "poly", "kreis": "kreis", "rechteck": "rechteck",
-               "bemassung": "bem", "text": "text", "kanal": "kanal", "kanalverb": "kanalverb"}
+               "bemassung": "bem", "text": "text", "kanal": "kanal", "kanalverb": "kanalverb",
+               "wand": "wand", "tuer": "tuer", "fenster": "fenster", "durchbruch": "durchbruch",
+               "wandverb": "wandverb", "raum": "raum"}
+BAU_PUNKTE = ("wand", "raum")                       # building tools: corner points on the floor
+BAU_OEFFNUNG = ("tuer", "fenster", "durchbruch")    # click on a wall
+BAU_MODI = BAU_PUNKTE + BAU_OEFFNUNG + ("wandverb",)
 
 BTN_MITTE, BTN_RECHTS = ("3", "2") if __import__("sys").platform == "darwin" else ("2", "3")
 
@@ -443,7 +448,7 @@ def _vorzeichen(k):
 
 
 class Ansicht3D(tk.Frame):
-    MODI = ("flaeche", "linie", "kreis", "rechteck", "poly", "bem", "kanal", "kanalverb", "pivot", "text", "messen", "verschieben", "strecken", "drehen")
+    MODI = ("flaeche", "linie", "kreis", "rechteck", "poly", "bem", "kanal", "kanalverb", "pivot", "text", "messen", "verschieben", "strecken", "drehen") + BAU_MODI
     SKIZZEN = ("linie", "kreis", "rechteck", "poly")
 
     def __init__(self, app, master=None):
@@ -957,6 +962,9 @@ class Ansicht3D(tk.Frame):
     def modus_setzen(self, modus):
         if modus != "messen":
             self._messungen = []
+        if modus not in BAU_PUNKTE:
+            self.app.aktuelle_polylinie = []
+            self.app.letzter_punkt = None
         self._skiz = None
         self._platz = None
         self._modus = modus
@@ -1047,6 +1055,9 @@ class Ansicht3D(tk.Frame):
 
     def _modus_ende(self):
         self._messungen = []
+        if self._modus in BAU_PUNKTE:
+            self.app.aktuelle_polylinie = []
+            self.app.letzter_punkt = None
         self._modus = None
         self._skiz = None
         self.canvas.configure(cursor="crosshair")
@@ -1117,6 +1128,121 @@ class Ansicht3D(tk.Frame):
                 p = (q[0], p[1])
         return p
 
+    # ---- building tools (wall, room, door, window, opening, join walls) ----
+    def _bau_punkt(self, e):
+        """Corner point on the floor (Z = 0): object snap, then grid; ORTHO relative to the
+        last point. -> ((x, y), kind, 3D point) or None."""
+        r = self._fang_ebene(e, G.BODEN_EBENE)
+        if r is None:
+            return None
+        p, art, p3 = r
+        pl = self.app.aktuelle_polylinie
+        if self.app.ortho.get() and pl and art == "raster":
+            q = pl[-1]
+            p = (p[0], q[1]) if abs(p[0] - q[0]) >= abs(p[1] - q[1]) else (q[0], p[1])
+            p3 = (p[0], p[1], 0.0)
+        return p, art, p3
+
+    def _bau_klick(self, e):
+        m = self._modus
+        app = self.app
+        if m in BAU_PUNKTE:
+            r = self._bau_punkt(e)
+            if r is None:
+                self.info_var.set(tr("d3.msg.keine_ebene"))
+                return
+            app._zeichnen_werkzeug_anwenden(r[0][0], r[0][1])
+            self.info_var.set(tr("msg.raum.hinweis" if m == "raum" else "msg.wand.klick"))
+            self.zeichne()
+            return
+        treffer = S.wand_treffer(self._sichtbare(), self.kamera, *self._mitte(), e.x, e.y)
+        if treffer is None:
+            self.info_var.set(tr("msg.wand.keine"))
+            return
+        wand, (x, y, _z) = treffer
+        r = wand.naechstes_segment(x, y)
+        i, j = wand._segmente()[r[1]]
+        ax, ay = wand.punkte[i]
+        bx, by = wand.punkte[j]
+        pt = (ax + (bx - ax) * r[2], ay + (by - ay) * r[2])      # on the centre line
+        if m == "wandverb":
+            app._wand_verbinden_klick(pt)
+        else:
+            app._wand_oeffnung_klick(pt, m)
+        self.info_var.set(app.status.get())
+        self.zeichne()
+
+    def _bau_abschliessen(self):
+        """Enter: ends the wall / closes the room (like Enter in 2D)."""
+        if self._modus in BAU_PUNKTE and self.app.aktuelle_polylinie:
+            self.app._polylinie_abschliessen()
+            self.app.redraw()
+            self.zeichne()
+            return True
+        return False
+
+    def _bau_vorschau(self):
+        pl = self.app.aktuelle_polylinie
+        if not pl or not self._maus:
+            return
+        gelb = FARBEN["gelb"]
+        r = self._bau_punkt(self._maus)
+        pts = list(pl) + ([r[0]] if r else [])
+        if self._modus == "wand" and len(pts) >= 2:
+            try:
+                w = Wand(pts, dicke=self.app._wand_dicke, ausrichtung=self.app._wand_ausrichtung,
+                         hoehe=self.app._wand_hoehe)
+                for nz in S.virtuelle_netze(w):
+                    for (i, j) in nz.kanten:
+                        self._linie(nz.punkte[i], nz.punkte[j], gelb, 1, (4, 3), "vorschau")
+            except Exception:
+                pass
+        self._polylinie([(x, y, 0.0) for x, y in pts], gelb, 1, (4, 3), "vorschau",
+                        self._modus == "raum" and len(pts) >= 3)
+        if r and len(pts) >= 2:
+            a = pts[-2]
+            f = self.app._einh_faktor()
+            self._text3(((a[0] + r[0][0]) / 2, (a[1] + r[0][1]) / 2, 0.0),
+                        f"{math.hypot(r[0][0] - a[0], r[0][1] - a[1]) / f:.2f} {self.app.einheit.get()}",
+                        gelb, "vorschau")
+
+    def _bau_eingabe(self, text):
+        """Typed input for wall / room: 'x,y', '@dx,dy', 'length<angle' or a length in the
+        direction of the mouse. -> True if used."""
+        app = self.app
+        f = app._einh_faktor()
+        t = text.strip().lower()
+        pl = app.aktuelle_polylinie
+        try:
+            if "<" in t and pl:
+                l, w = t.split("<", 1)
+                L, W = float(l.replace(",", ".")) * f, math.radians(float(w.replace(",", ".")))
+                q = pl[-1]
+                p = (q[0] + L * math.cos(W), q[1] + L * math.sin(W))
+            else:
+                rel = t.startswith("@")
+                a = [v for v in re.split(r"[,;]\s*|\s+", t.lstrip("@")) if v]
+                if len(a) == 1 and pl and self._maus:          # length in the mouse direction
+                    r = self._bau_punkt(self._maus)
+                    q = pl[-1]
+                    dx, dy = (r[0][0] - q[0], r[0][1] - q[1]) if r else (1.0, 0.0)
+                    d = math.hypot(dx, dy) or 1.0
+                    L = float(a[0].replace(",", ".")) * f
+                    p = (q[0] + dx / d * L, q[1] + dy / d * L)
+                elif len(a) == 2:
+                    x, y = float(a[0].replace(",", ".")) * f, float(a[1].replace(",", ".")) * f
+                    if rel and pl:
+                        x, y = pl[-1][0] + x, pl[-1][1] + y
+                    p = (x, y)
+                else:
+                    raise ValueError
+        except ValueError:
+            self.info_var.set(tr("d3.msg.zahl"))
+            return True
+        app._zeichnen_werkzeug_anwenden(p[0], p[1])
+        self.zeichne()
+        return True
+
     def _raum_punkt(self, e):
         r = self._fang_raum(e)
         p = r[0] if r else None
@@ -1137,6 +1263,15 @@ class Ansicht3D(tk.Frame):
         if e is None or m not in self.MODI:
             return
         h = {"fang": None, "flaeche": None}
+        if m in BAU_OEFFNUNG or m == "wandverb":
+            self._hover = h
+            return
+        if m in BAU_PUNKTE:
+            r = self._bau_punkt(e)
+            if r:
+                h["fang"] = (r[2], r[1])
+            self._hover = h
+            return
         erste = self._skiz is None
         if m in ("bem", "pivot", "messen", "verschieben", "strecken", "drehen"):
             h["fang"] = self._fang_raum(e)
@@ -1273,6 +1408,9 @@ class Ansicht3D(tk.Frame):
 
     def _modus_klick(self, e):
         m = self._modus
+        if m in BAU_MODI:
+            self._bau_klick(e)
+            return
         if m == "flaeche":
             r = S.flaeche_pick([x for x in self.app.elemente if self._sichtbar(x)], self.kamera,
                                *self._mitte(), e.x, e.y)
@@ -1599,6 +1737,8 @@ class Ansicht3D(tk.Frame):
     def _skizze_abschliessen(self):
         """Enter: closes a polyline sketch."""
         sk = self._skiz
+        if self._bau_abschliessen():
+            return
         if sk and sk["form"] == "poly" and len(sk["pts"]) >= 3:
             self._skizze_fertig("poly", [list(p) for p in sk["pts"]])
             self.zeichne()
@@ -1608,6 +1748,9 @@ class Ansicht3D(tk.Frame):
     def _vorschau_zeichnen(self):
         sk, m = self._skiz, self._modus
         gelb = FARBEN["gelb"]
+        if m in BAU_PUNKTE:
+            self._bau_vorschau()
+            return
         if self._platz is not None and self._platz.get("maus"):
             pl = self._platz
             p, fang = self._platz_pos(pl["maus"], pl)
@@ -1952,7 +2095,7 @@ class Ansicht3D(tk.Frame):
         if self._platz is not None:
             self._platz["maus"] = e
             self.zeichne()
-        elif self._skiz is not None:
+        elif self._skiz is not None or (self._modus in BAU_PUNKTE and self.app.aktuelle_polylinie):
             self.zeichne()
         elif self._modus in self.MODI:
             self._hover_zeichnen()
@@ -2044,6 +2187,8 @@ class Ansicht3D(tk.Frame):
         'x,y' on the work plane; then circle: radius, rectangle: 'width,height' (or 'width x
         height'), line: 'length' or 'length<angle', polyline: 'x,y' or '@dx,dy'. -> True if used."""
         m = self._modus
+        if m in BAU_PUNKTE:
+            return self._bau_eingabe(text)
         if m == "drehen":
             sk = self._skiz
             zahl = self._zahl_tippen(text)
@@ -2238,7 +2383,11 @@ class Ansicht3D(tk.Frame):
         self._erzeuge(pl["art"], pl["par"], pos)
 
     def abbrechen(self):
-        if self._skiz is not None:
+        if self._modus in BAU_PUNKTE and self.app.aktuelle_polylinie:
+            self.app.aktuelle_polylinie = []
+            self.app.letzter_punkt = None
+            self.zeichne()
+        elif self._skiz is not None:
             self._skiz = None
             self.zeichne()
         elif self._modus is not None:
@@ -2432,6 +2581,12 @@ class Ansicht3D(tk.Frame):
             m.add_command(label=tr("d3.ctx.drehen3d"), command=self.drehen_dialog)
             if len([x for x in self.app.auswahl if S.ist_3d(x)]) >= 2:
                 m.add_command(label=tr("d3.ctx.verschmelzen"), command=self.verschmelzen)
+            if any(isinstance(x, Oeffnung) for x in self.app.auswahl):
+                m.add_command(label=tr("menu.wand.spiegeln"),
+                              command=lambda: self._ctx_oeffnung("spiegeln"))
+                if any(isinstance(x, Oeffnung) and x.art == "tuer" for x in self.app.auswahl):
+                    m.add_command(label=tr("menu.wand.umkehren"),
+                                  command=lambda: self._ctx_oeffnung("umkehren"))
             m.add_command(label=tr("d3.ctx.layer_aus"), command=self._ctx_layer_aus)
             m.add_command(label=tr("d3.ctx.loeschen"), command=self._ctx_loeschen)
             m.add_separator()
@@ -2445,6 +2600,10 @@ class Ansicht3D(tk.Frame):
         else:
             self.app.eigenschaften_fenster()
         self.app.redraw()
+        self.zeichne()
+
+    def _ctx_oeffnung(self, was):
+        self.app._oeffnung_umschalten(was)
         self.zeichne()
 
     def _ctx_layer_aus(self):

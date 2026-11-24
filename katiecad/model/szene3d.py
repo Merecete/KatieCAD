@@ -53,9 +53,7 @@ def virtuelle_netze(el):
         return c[1]
     netze = []
     if isinstance(el, Wand):
-        for quad, za, zb in el.stuecke3d():
-            if zb - za > 1e-6:
-                netze.append(Koerper3D("prisma", profil=quad, z0=za, hoehe=zb - za).netz())
+        netze = wand_netze([s for s in el.stuecke3d() if s[2] - s[1] > 1e-6])
     else:
         cx, cy, ux, uy, ol, orr = el._lage()
         nx, ny = -uy, ux
@@ -72,6 +70,132 @@ def virtuelle_netze(el):
         netze.append(Koerper3D("prisma", profil=quad, z0=z0, hoehe=hz - (LUFT_FLUEGEL if el.bruestung > 0 else 0.0)).netz())
     el._netz3d = (sig, netze)
     return netze
+
+
+def _quad_ccw(q):
+    a = sum(q[i][0] * q[(i + 1) % len(q)][1] - q[(i + 1) % len(q)][0] * q[i][1] for i in range(len(q)))
+    return list(q) if a >= 0 else list(reversed(q))
+
+
+def _im_stueck(p, st):
+    x, y, z = p
+    q, za, zb = st
+    if z < za - 1e-9 or z > zb + 1e-9:
+        return False
+    pos = neg = False
+    for i in range(len(q)):
+        (ax, ay), (bx, by) = q[i], q[(i + 1) % len(q)]
+        c = (bx - ax) * (y - ay) - (by - ay) * (x - ax)
+        pos |= c > 1e-9
+        neg |= c < -1e-9
+    return not (pos and neg)
+
+
+def wand_netze(stuecke):
+    """One mesh for the whole wall (all boxes) with only the REAL edges: edges inside a
+    flat face (where two boxes meet in one plane) and inside the solid are left out, so the
+    wall stays in one piece in the 3D view. Faces of all boxes are kept (hidden-line)."""
+    if not stuecke:
+        return []
+    stuecke = [(_quad_ccw(q), a, b) for q, a, b in stuecke]
+    nz = G.Netz()
+    verts = []
+    kanten = []                                   # (a, b, n1, n2)
+    for q, za, zb in stuecke:
+        n = len(q)
+        seit = []
+        for i in range(n):
+            (ax, ay), (bx, by) = q[i], q[(i + 1) % n]
+            d = math.hypot(bx - ax, by - ay) or 1.0
+            seit.append(((by - ay) / d, -(bx - ax) / d, 0.0))        # outward (counter-clockwise)
+        for z, nv in ((za, (0, 0, -1.0)), (zb, (0, 0, 1.0))):
+            idx = [nz.punkt((x, y, z)) for x, y in q]
+            if z == zb:
+                nz.flaeche(idx)
+            else:
+                nz.flaeche(list(reversed(idx)))
+            for i in range(n):
+                kanten.append(((*q[i], z), (*q[(i + 1) % n], z), nv, seit[i]))
+        for i in range(n):
+            kanten.append(((*q[i], za), (*q[i], zb), seit[i - 1], seit[i]))
+            j = (i + 1) % n
+            idx = [nz.punkt((*q[i], za)), nz.punkt((*q[j], za)), nz.punkt((*q[j], zb)),
+                   nz.punkt((*q[i], zb))]
+            nz.flaeche(idx)
+        for x, y in q:
+            verts.append((x, y, za))
+            verts.append((x, y, zb))
+    eps = 0.6
+    gesehen = set()
+    neu = G.Netz()
+    neu.punkte, neu.flaechen = nz.punkte, nz.flaechen
+    pidx = {}
+
+    def pkt(p):
+        k = (round(p[0], 1), round(p[1], 1), round(p[2], 1))
+        if k not in pidx:
+            pidx[k] = neu.punkt(p)
+        return pidx[k]
+
+    for a, b, n1, n2 in kanten:
+        ex, ey, ez = b[0] - a[0], b[1] - a[1], b[2] - a[2]
+        L2 = ex * ex + ey * ey + ez * ez
+        if L2 < 1e-6:
+            continue
+        ts = {0.0, 1.0}
+        for v in verts:
+            wx, wy, wz = v[0] - a[0], v[1] - a[1], v[2] - a[2]
+            t = (wx * ex + wy * ey + wz * ez) / L2
+            if 1e-6 < t < 1 - 1e-6:
+                px, py, pz = a[0] + ex * t - v[0], a[1] + ey * t - v[1], a[2] + ez * t - v[2]
+                if px * px + py * py + pz * pz < 0.01:
+                    ts.add(t)
+        ts = sorted(ts)
+        for t0, t1 in zip(ts, ts[1:]):
+            p0 = (a[0] + ex * t0, a[1] + ey * t0, a[2] + ez * t0)
+            p1 = (a[0] + ex * t1, a[1] + ey * t1, a[2] + ez * t1)
+            m = tuple((u + w) / 2 for u, w in zip(p0, p1))
+            inn = []
+            for s1 in (1, -1):
+                for s2 in (1, -1):
+                    pr = tuple(m[i] + eps * (s1 * n1[i] + s2 * n2[i]) for i in range(3))
+                    inn.append(any(_im_stueck(pr, st) for st in stuecke))
+            c = sum(inn)
+            # inn order: (+,+) (+,-) (-,+) (-,-): diagonal pairs are (0,3) and (1,2)
+            echt = c in (1, 3) or (c == 2 and inn[0] == inn[3])
+            if not echt:
+                continue
+            k = tuple(sorted(((round(p0[0], 1), round(p0[1], 1), round(p0[2], 1)),
+                              (round(p1[0], 1), round(p1[1], 1), round(p1[2], 1)))))
+            if k in gesehen:
+                continue
+            gesehen.add(k)
+            neu.kante(pkt(p0), pkt(p1))
+    return [neu]
+
+
+def wand_treffer(elemente, kamera, cx, cy, mx, my):
+    """Wall under the screen point: (wall, (x, y, z) of the hit on its surface) or None.
+    Near a corner / edge (no direct hit) the nearest wall by pick is used."""
+    o, d = kamera.strahl(mx, my, cx, cy)
+    best = None
+    for el in elemente:
+        if not isinstance(el, Wand):
+            continue
+        for nz in virtuelle_netze(el):
+            for tri in nz.dreiecke():
+                t = G._strahl_dreieck(o, d, tri)
+                if t is not None and t > 0 and (best is None or t < best[0]):
+                    best = (t, el)
+    if best is not None:
+        t, el = best
+        return el, (o[0] + d[0] * t, o[1] + d[1] * t, o[2] + d[2] * t)
+    el = pick([w for w in elemente if isinstance(w, Wand)], kamera, cx, cy, mx, my)
+    if isinstance(el, Wand):
+        p = kamera.auf_ebene(mx, my, cx, cy, el.hoehe / 2.0)
+        if p is not None:
+            return el, (p[0], p[1], el.hoehe / 2.0)
+    return None
 
 
 def hat_netze(el):
@@ -421,6 +545,9 @@ def verschiebung_mm(info, dx_px, dy_px, raster=None):
 def verschieben_achse(auswahl, achse, mm):
     a = ACHSEN[achse]
     for el in auswahl:
+        if isinstance(el, Oeffnung) and achse == "z":       # window / door: height above the floor
+            el.bruestung = max(0.0, el.bruestung + mm)
+            continue
         if hasattr(el, "verschieben"):
             if ist_raum(el):
                 el.verschieben(a[0] * mm, a[1] * mm, a[2] * mm)
