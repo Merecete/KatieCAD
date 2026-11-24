@@ -1430,6 +1430,8 @@ TUER_MODELL_VORGABE = {                       # width, height per door model (mm
     "doppel_ungleich": (1500.0, 2010.0),
     "rolltor": (3000.0, 2500.0),
 }
+WAND_HOEHE_STANDARD = 2500.0                   # wall height (mm) of new walls / old files
+
 OEFFNUNG_VORGABE = {                          # plan symbols: door / window
     "tuer": {"breite": 1010.0, "hoehe": 2010.0, "bruestung": 0.0},
     "fenster": {"breite": 1250.0, "hoehe": 1250.0, "bruestung": 900.0},
@@ -1541,8 +1543,10 @@ class Wand(Polylinie):
     which is computed by wand_verknuepfen()."""
 
     def __init__(self, punkte, geschlossen=False, dicke=240.0, ausrichtung="mitte",
-                 schraffur="", schraffur_abstand=180.0, **kw):
+                 schraffur="", schraffur_abstand=180.0, hoehe=WAND_HOEHE_STANDARD, **kw):
         kw.pop("oeffnungen", None)
+        kw.pop("_oeff3", None)
+        kw.pop("_netz3d", None)
         kw.pop("_luecken", None)
         kw.pop("_fenster", None)
         kw.pop("_abzug", None)
@@ -1553,6 +1557,8 @@ class Wand(Polylinie):
         self.ausrichtung = ausrichtung if ausrichtung in WAND_AUSRICHTUNGEN else "mitte"
         self.schraffur = schraffur if schraffur in WAND_SCHRAFFUREN else ""
         self.schraffur_abstand = max(5.0, float(schraffur_abstand))
+        self.hoehe = max(1.0, float(hoehe))        # wall height (mm): the wall is a solid in 3D
+        self._oeff3 = []              # runtime only: [(segment, t0, t1, z0, z1)] openings in 3D
         self._luecken = []            # runtime only: [(segment, t0, t1)] door gaps
         self._fenster = []            # runtime only: window openings (hatch stays free there)
         self._abzug = []              # runtime only: bodies of other walls (faces inside them vanish)
@@ -1564,9 +1570,59 @@ class Wand(Polylinie):
         d.pop("_fenster", None)
         d.pop("_abzug", None)
         d.pop("_abzug_schr", None)
+        d.pop("_oeff3", None)
+        d.pop("_netz3d", None)
         return d
 
     # ---- geometry -------------------------------------------------------
+    def stuecke3d(self):
+        """The wall as boxes for the 3D view: [(quad, z_from, z_to)]. Every wall piece between
+        the openings goes up to `hoehe`; over a door / under and over a window short pieces
+        remain (openings from wand_verknuepfen: self._oeff3)."""
+        segs = self._segmente()
+        if not segs:
+            return []
+        H = self.hoehe
+        L, R = self._versatz_ecken()
+        pts = self.punkte
+        ol, orr = _wand_versatz(self.ausrichtung, self.dicke)
+
+        def rand(k, t, links):
+            i, j = segs[k]
+            if t <= 0.0:
+                return (L if links else R)[i]
+            if t >= 1.0:
+                return (L if links else R)[j]
+            ax, ay = pts[i]
+            bx, by = pts[j]
+            d = math.hypot(bx - ax, by - ay) or 1.0
+            nx, ny = -(by - ay) / d, (bx - ax) / d
+            o = ol if links else -orr
+            return (ax + (bx - ax) * t + nx * o, ay + (by - ay) * t + ny * o)
+
+        je_seg = [[] for _ in segs]
+        for k, t0, t1, z0, z1 in getattr(self, "_oeff3", []):
+            z0, z1 = max(0.0, z0), min(H, z1)
+            if 0 <= k < len(segs) and t1 > t0 and z1 > z0:
+                je_seg[k].append((t0, t1, z0, z1))
+        out = []
+        for k in range(len(segs)):
+            tt = sorted({0.0, 1.0} | {min(1.0, max(0.0, t)) for o in je_seg[k] for t in o[:2]})
+            for a, b in zip(tt, tt[1:]):
+                if b - a < 1e-9:
+                    continue
+                mitte = (a + b) / 2.0
+                offen = sorted((z0, z1) for t0, t1, z0, z1 in je_seg[k] if t0 <= mitte <= t1)
+                quad = [rand(k, a, True), rand(k, b, True), rand(k, b, False), rand(k, a, False)]
+                z = 0.0
+                for z0, z1 in offen:                 # solid parts between the openings (in z)
+                    if z0 > z + 1e-6:
+                        out.append((quad, z, z0))
+                    z = max(z, z1)
+                if z < H - 1e-6:
+                    out.append((quad, z, H))
+        return out
+
     def _segmente(self):
         """Centre line segments [(i, j)] (vertex indices)."""
         n = len(self.punkte)
@@ -1798,7 +1854,7 @@ class Oeffnung(Element):
     def __init__(self, art="tuer", x=0.0, y=0.0, winkel=0.0, breite=None, hoehe=None,
                  bruestung=None, dicke=240.0, spiegeln=False, umkehren=False,
                  ausrichtung="mitte", modell="einfach", anteil=0.67, **kw):
-        for k in ("_geo", "geo"):
+        for k in ("_geo", "geo", "_netz3d"):
             kw.pop(k, None)
         super().__init__("oeffnung", **kw)
         # "durchbruch" = wall opening (gap in the wall, only the reveals, no glazing / leaf)
@@ -1822,6 +1878,7 @@ class Oeffnung(Element):
     def to_dict(self):
         d = super().to_dict()
         d.pop("_geo", None)
+        d.pop("_netz3d", None)
         return d
 
     def _lage(self):
@@ -2222,6 +2279,7 @@ def wand_verknuepfen(elemente):
     for w in waende:
         w._luecken = []
         w._fenster = []
+        w._oeff3 = []
     for o in oeff:
         o._geo = None
         treffer = []
@@ -2252,6 +2310,7 @@ def wand_verknuepfen(elemente):
                 o.ausrichtung = w.ausrichtung
                 o.winkel = math.degrees(math.atan2(uy, ux)) % 360.0
             # every wall that contains the opening gets the gap (also overlapping duplicates)
+            w._oeff3.append((k, s0 / ln, s1 / ln, o.bruestung, o.bruestung + o.hoehe))
             if o.art != "fenster":                   # door / breakthrough: the wall is open
                 w._luecken.append((k, s0 / ln, s1 / ln))
             else:

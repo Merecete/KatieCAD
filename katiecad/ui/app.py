@@ -5558,6 +5558,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
     _wand_ausrichtung = "mitte"
     _wand_schraffur = ""
     _wand_schraffur_abstand = 180.0
+    _wand_hoehe = 2500.0
     _wand_verb_erste = None
 
     def _wand_layer_sicherstellen(self):
@@ -5624,7 +5625,8 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         self._wand_layer_sicherstellen()
         dlg = WandDialog(self.root, self._wand_dicke, self._wand_ausrichtung,
                          schraffur=self._wand_schraffur,
-                         schraffur_abstand=self._wand_schraffur_abstand)
+                         schraffur_abstand=self._wand_schraffur_abstand,
+                         hoehe=self._wand_hoehe)
         if dlg.result is None:
             self.aktives_werkzeug.set("auswahl")
             self._werkzeug_toolbar()
@@ -5633,6 +5635,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         self._wand_ausrichtung = dlg.result["ausrichtung"]
         self._wand_schraffur = dlg.result["schraffur"]
         self._wand_schraffur_abstand = dlg.result["schraffur_abstand"]
+        self._wand_hoehe = dlg.result["hoehe"]
         self.status.set(tr("msg.wand.klick"))
 
     def _wand_unter_punkt(self, pt, ausser=None):
@@ -5686,10 +5689,12 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
 
     def _wand_bearbeiten(self, el):
         dlg = WandDialog(self.root, el.dicke, el.ausrichtung, laenge=el.laenge(),
-                         schraffur=el.schraffur, schraffur_abstand=el.schraffur_abstand)
+                         schraffur=el.schraffur, schraffur_abstand=el.schraffur_abstand,
+                         hoehe=el.hoehe)
         if dlg.result is None:
             return
         self._snapshot()
+        el.hoehe = dlg.result["hoehe"]
         el.dicke = dlg.result["dicke"]
         el.ausrichtung = dlg.result["ausrichtung"]
         el.schraffur = dlg.result["schraffur"]
@@ -5823,7 +5828,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                     self.aktuelle_polylinie, geschlossen=geschlossen,
                     dicke=self._wand_dicke, ausrichtung=self._wand_ausrichtung,
                     schraffur=self._wand_schraffur, schraffur_abstand=self._wand_schraffur_abstand,
-                    **self._wand_layer_daten()))
+                    hoehe=self._wand_hoehe, **self._wand_layer_daten()))
             elif self.aktives_werkzeug.get() == "spline":
                 self._ziel_liste().append(Spline(self.aktuelle_polylinie,
                                                  geschlossen=geschlossen,

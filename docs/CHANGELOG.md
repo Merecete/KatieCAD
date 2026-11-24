@@ -1,6 +1,7 @@
 # Änderungen
 
 ## 1.2.1
+- Neu: **Wände, Türen und Fenster in 3D:** jede Wand hat eine **Wandhöhe** (Standard 2500 mm, im Wanddialog vor dem Zeichnen und per Doppelklick) und erscheint in der 3D-Ansicht als Körper (auch verdeckte Ansicht, Auswahl, Rahmenwahl, Fang). Türen und Fenster schneiden ihre Öffnung in die Wand; beim Fenster heißt „Brüstung“ jetzt **Höhe vom Boden**; Türblatt und Scheibe als dünne Platten. Alte Dateien: 2500 mm
 - Fix: **Windows-Installer mit Willkommensseite:** der Installer zeigt jetzt wieder die Startseite „Willkommen zum KatieCAD Setup-Assistenten“ mit dem großen Banner links (Inno Setup blendet sie standardmäßig aus)
 - Neu: **3D: Drehen wie in 2D:** im Rechtsklickmenü der Auswahl: **Drehen** = Basispunkt klicken (mit Objektfang), dann den Winkel mit der Maus bestimmen (Vorschau, ORTHO = 90°-Schritte) oder die Gradzahl in die Eingabezeile tippen; gedreht wird um die senkrechte Achse durch den Basispunkt. **3D drehen** öffnet wie bisher den Dialog (Achse X, Y oder Z)
 - Neu: **PE / PEN Linientyp:** automatische Leitungen eines ganzen Netzes (über Verbindungen verbunden), in dem ein Anschlusspunkt, eine Klemme oder ein Querverweis mit „PE“ oder „PEN“ beschriftet ist, werden automatisch gezeichnet: PE als Strichlinie, PEN als Strichpunktlinie (PEN gewinnt gegen PE); ändert sich die Beschriftung, wird sie wieder durchgezogen

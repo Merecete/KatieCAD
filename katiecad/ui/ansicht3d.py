@@ -692,7 +692,7 @@ class Ansicht3D(tk.Frame):
             self._achsenkreuz()
         elemente = [e for e in self.app.elemente if self._sichtbar(e)]
         for el in elemente:
-            if S.ist_3d(el):
+            if S.hat_netze(el):
                 continue
             farbe, br = self._farbe(el), self._breite(el)
             for zug, geschlossen in S.zuege3(el):
@@ -836,13 +836,13 @@ class Ansicht3D(tk.Frame):
     def _auswahl_zeichnen(self):
         farbe = FARBEN["cyan"]
         for el in self.app.auswahl:
-            if S.ist_3d(el):
+            if S.hat_netze(el):
                 erg = self._verdeckt_aktuell
                 if erg is not None and id(el) in erg:      # only the visible edges
                     for pl in erg[id(el)][0]:
                         self._zug_px(pl, farbe, 3, "auswahl")
                     continue
-                for nz in el.netze():
+                for nz in S.netze_von(el):
                     for (i, j) in nz.kanten:
                         self._linie(nz.punkte[i], nz.punkte[j], farbe, 3, None, "auswahl")
             else:
@@ -1847,10 +1847,10 @@ class Ansicht3D(tk.Frame):
         r = (min(d["x"], e.x), min(d["y"], e.y), max(d["x"], e.x), max(d["y"], e.y))
         for el in S.auswahl_im_rahmen([x for x in self.app.elemente if self._sichtbar(x)],
                                       self.kamera, *self._mitte(), r, kreuz):
-            for nz in (el.netze() if S.ist_3d(el) else []):
+            for nz in S.netze_von(el):
                 for (i, j) in nz.kanten:
                     self._linie(nz.punkte[i], nz.punkte[j], FARBEN["magenta"], 2, None, "rahmen")
-            for zug, geschl in ([] if S.ist_3d(el) else S.zuege3(el)):
+            for zug, geschl in ([] if S.hat_netze(el) else S.zuege3(el)):
                 self._polylinie(zug, FARBEN["magenta"], 2, None, "rahmen", geschl)
 
     def on_los(self, e):

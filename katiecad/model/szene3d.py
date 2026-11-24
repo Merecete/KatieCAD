@@ -9,7 +9,7 @@ and does the maths of the 3D manipulator (X/Y/Z arrows).
 import copy
 import math
 
-from katiecad.model.core import (Koerper3D, Gruppe3D, Skizze3D, Bemassung3D, Text3D, Linie, Rechteck,
+from katiecad.model.core import (Wand, Oeffnung, Koerper3D, Gruppe3D, Skizze3D, Bemassung3D, Text3D, Linie, Rechteck,
                                  Polylinie, Kreis, Bogen, Ellipse, ZUSAMMENGESETZT, bogen_punkte,
                                  bogen_sweep, profil_aus_element, extrusion)
 from katiecad.model import geom3d as G
@@ -23,6 +23,65 @@ RAUM_TYPEN = (Koerper3D, Gruppe3D, Skizze3D, Bemassung3D, Text3D)
 
 def ist_3d(el):
     return isinstance(el, KOERPER_TYPEN)
+
+
+LUFT_FLUEGEL = 15.0                                  # gap between leaf / pane and the reveal (mm)
+FLUEGEL_DICKE = {"tuer": 40.0, "fenster": 30.0}     # thickness of the door leaf / window pane (3D)
+
+
+def _wand_sig(el):
+    if isinstance(el, Wand):
+        return (tuple(tuple(p) for p in el.punkte), el.geschlossen, el.dicke, el.ausrichtung,
+                el.hoehe, tuple(tuple(o) for o in getattr(el, "_oeff3", [])))
+    return (el.x, el.y, el.winkel, el.breite, el.hoehe, el.bruestung, el.dicke, el.ausrichtung,
+            el.art, tuple(el._lage()))
+
+
+def virtuelle_netze(el):
+    """Meshes of the building elements that are solids in the 3D view only: a wall (with its
+    height, open at doors / windows) and the door leaf / window pane. [] for everything else.
+    Computed from the plan data (nothing is saved), cached on the element."""
+    if isinstance(el, Wand):
+        quads = None
+    elif isinstance(el, Oeffnung) and el.art != "durchbruch":
+        quads = None
+    else:
+        return []
+    sig = _wand_sig(el)
+    c = getattr(el, "_netz3d", None)
+    if c is not None and c[0] == sig:
+        return c[1]
+    netze = []
+    if isinstance(el, Wand):
+        for quad, za, zb in el.stuecke3d():
+            if zb - za > 1e-6:
+                netze.append(Koerper3D("prisma", profil=quad, z0=za, hoehe=zb - za).netz())
+    else:
+        cx, cy, ux, uy, ol, orr = el._lage()
+        nx, ny = -uy, ux
+        h = max(1.0, el.breite / 2.0 - LUFT_FLUEGEL)  # a little air at the reveals: the outline of
+        hz = max(1.0, el.hoehe - LUFT_FLUEGEL)         # the leaf stays visible in the opening
+        q = (ol - orr) / 2.0                         # middle of the wall thickness
+        d = FLUEGEL_DICKE.get(el.art, 30.0) / 2.0
+
+        def pt(s, w):
+            return (cx + ux * s + nx * (q + w), cy + uy * s + ny * (q + w))
+
+        quad = [pt(-h, -d), pt(h, -d), pt(h, d), pt(-h, d)]
+        z0 = el.bruestung + (LUFT_FLUEGEL if el.bruestung > 0 else 0.0)
+        netze.append(Koerper3D("prisma", profil=quad, z0=z0, hoehe=hz - (LUFT_FLUEGEL if el.bruestung > 0 else 0.0)).netz())
+    el._netz3d = (sig, netze)
+    return netze
+
+
+def hat_netze(el):
+    """True for solids (bodies, groups) and for walls / doors / windows (seen as solids in 3D)."""
+    return ist_3d(el) or bool(virtuelle_netze(el))
+
+
+def netze_von(el):
+    """Meshes of a solid (see hat_netze)."""
+    return el.netze() if ist_3d(el) else virtuelle_netze(el)
 
 
 def ist_raum(el):
@@ -46,9 +105,8 @@ def koerper_netze(elemente):
     """[(top-level element, Netz)] of all 3D bodies."""
     out = []
     for el in elemente:
-        if ist_3d(el):
-            for nz in el.netze():
-                out.append((el, nz))
+        for nz in netze_von(el):
+            out.append((el, nz))
     return out
 
 
@@ -136,6 +194,8 @@ def koerper_netze_offen(elemente):
     for el in elemente:
         if ist_3d(el):
             sammeln(el, el)
+        else:
+            paare.extend((el, nz) for nz in virtuelle_netze(el))
     return paare, offen
 
 
@@ -167,7 +227,7 @@ def verdeckt_ergebnis(paare, offen, kamera, cx, cy, cache=None, signatur_extra=(
 def flache_zuege(el):
     """2D polylines [(points, closed)] of a 2D element or composite (3D bodies
     are skipped: they are drawn as solids)."""
-    if ist_3d(el):
+    if ist_3d(el) or virtuelle_netze(el):
         return []
     if isinstance(el, Linie):
         return [([(el.x1, el.y1), (el.x2, el.y2)], False)]
@@ -224,8 +284,8 @@ def auswahl_im_rahmen(elemente, kamera, cx, cy, rahmen, kreuzend):
     out = []
     for el in elemente:
         pts = []
-        if ist_3d(el):
-            for nz in el.netze():
+        if hat_netze(el):
+            for nz in netze_von(el):
                 pts.extend(nz.punkte)
         else:
             for zug, _c in zuege3(el):
@@ -253,7 +313,7 @@ def pick(elemente, kamera, cx, cy, mx, my, tol=8.0):
     if best is not None:
         return best
     for el in reversed(elemente):
-        if ist_3d(el):
+        if hat_netze(el):
             continue
         if isinstance(el, Text3D) and el.ebene is None:
             q = kamera.proj(el.p, cx, cy)
@@ -867,10 +927,10 @@ def szene_segmente(elemente, kamera, cx, cy, sichtbar=None, verdeckt=False, cach
     for el in elemente:
         if sichtbar is not None and not sichtbar(el):
             continue
-        if ist_3d(el):
+        if hat_netze(el):
             if verdeckt:
                 continue
-            for nz in el.netze():
+            for nz in netze_von(el):
                 for (i, j) in nz.kanten:
                     seg = kamera.proj_segment(nz.punkte[i], nz.punkte[j], cx, cy)
                     if seg:

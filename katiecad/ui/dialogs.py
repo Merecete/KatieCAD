@@ -426,12 +426,12 @@ def _zahl(var, minimum=0.0, strikt=False):
 
 class WandDialog(tk.Toplevel):
     """Wall: thickness, position of the drawn line and hatch.
-    result = {"dicke", "ausrichtung", "schraffur", "schraffur_abstand"} or None."""
+    result = {"dicke", "ausrichtung", "schraffur", "schraffur_abstand", "hoehe"} or None."""
     AUSR = ("mitte", "links", "rechts")
     SCHR = ("", "schraeg", "kreuz", "voll")
 
     def __init__(self, parent, dicke=240.0, ausrichtung="mitte", laenge=None,
-                 schraffur="", schraffur_abstand=180.0):
+                 schraffur="", schraffur_abstand=180.0, hoehe=2500.0):
         super().__init__(parent)
         self.result = None
         self.title(tr("dlg.wand.titel" if laenge is not None else "dlg.wand.titel_vorgabe"))
@@ -459,13 +459,16 @@ class WandDialog(tk.Toplevel):
         ttk.Label(f, text=tr("dlg.wand.schr_abstand")).grid(row=3, column=0, sticky=tk.W, pady=4)
         self.abst_var = tk.StringVar(value=f"{schraffur_abstand:g}")
         ttk.Entry(f, textvariable=self.abst_var, width=10).grid(row=3, column=1, sticky=tk.W, padx=8)
+        ttk.Label(f, text=tr("dlg.wand.hoehe")).grid(row=4, column=0, sticky=tk.W, pady=4)
+        self.hoehe_var = tk.StringVar(value=f"{hoehe:g}")
+        ttk.Entry(f, textvariable=self.hoehe_var, width=10).grid(row=4, column=1, sticky=tk.W, padx=8)
         if laenge is not None:
             ttk.Label(f, text=tr("dlg.wand.laenge", wert=f"{laenge:.0f}"),
-                      style="Hint.TLabel").grid(row=4, column=0, columnspan=2, sticky=tk.W, pady=2)
+                      style="Hint.TLabel").grid(row=5, column=0, columnspan=2, sticky=tk.W, pady=2)
         ttk.Label(f, text=tr("dlg.wand.hinweis"), style="Hint.TLabel", wraplength=400,
-                  justify=tk.LEFT).grid(row=5, column=0, columnspan=2, sticky=tk.W, pady=(8, 2))
+                  justify=tk.LEFT).grid(row=6, column=0, columnspan=2, sticky=tk.W, pady=(8, 2))
         bf = ttk.Frame(f)
-        bf.grid(row=6, column=0, columnspan=2, pady=(10, 0))
+        bf.grid(row=7, column=0, columnspan=2, pady=(10, 0))
         ttk.Button(bf, text=tr("dlg.ok"), command=self._ok).pack(side=tk.LEFT, padx=4)
         ttk.Button(bf, text=tr("dlg.abbrechen"), command=self.destroy).pack(side=tk.LEFT, padx=4)
         self.bind("<Return>", lambda ev: self._ok())
@@ -475,7 +478,8 @@ class WandDialog(tk.Toplevel):
     def _ok(self):
         dicke = _zahl(self.dicke_var, 0.0, True)
         abst = _zahl(self.abst_var, 4.0)
-        if dicke is None or abst is None:
+        hoehe = _zahl(self.hoehe_var, 0.0, True)
+        if dicke is None or abst is None or hoehe is None:
             messagebox.showwarning(tr("dlg.wand.titel"), tr("dlg.wand.zahl"), parent=self)
             return
         wahl = self.ausr_var.get()
@@ -483,7 +487,7 @@ class WandDialog(tk.Toplevel):
         sw = self.schr_var.get()
         schr = next((a for a in self.SCHR if tr("dlg.wand.schr." + (a or "keine")) == sw), "")
         self.result = {"dicke": dicke, "ausrichtung": ausr, "schraffur": schr,
-                       "schraffur_abstand": abst}
+                       "schraffur_abstand": abst, "hoehe": hoehe}
         self.destroy()
 
 
