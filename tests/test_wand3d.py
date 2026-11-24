@@ -207,6 +207,24 @@ check(_ap._etage_ausgeblendet(_w0) and not _ap._etage_ausgeblendet(_w1) and _ap.
       and not _ap._etage_ausgeblendet(_t1), "Etage 1: Etage 0 ausgeblendet")
 check(not _ap._etage_ausgeblendet(core.Linie(0, 0, 1, 1)) and not _ap._etage_ausgeblendet(core.Text(0, 0, "x")), "andere Objekte bleiben")
 check(_ap._etagen_vorhanden() == [0, 1], "vorhandene Etagen aus den Bauteilen")
+class _FM:                      # menu stub
+    def __init__(s): s.e = []
+    def delete(s, a, b=None): s.e.clear()
+    def index(s, i): return len(s.e) - 1 if s.e else None
+    def add_radiobutton(s, **k): s.e.append(dict(k))
+    def add_separator(s, **k): s.e.append({"sep": 1})
+    def entryconfigure(s, i, **k): s.e[i].update(k)
+_fv = type("V", (), {"__init__": lambda s, value=None: setattr(s, "v", value), "set": lambda s, v: setattr(s, "v", v)})
+_tk0 = _A.tk
+_A.tk = type("T", (), {"StringVar": _fv})
+try:
+    _ap._m_etage = _FM()
+    _ap._etage_menue_aufbauen(); _ap._etage_menue_aufbauen()
+    _me = _ap._m_etage.e
+    check(len(_me) == 2 + _A.CadApp.ETAGEN_MAX + 1, "Etagenmenue: feste Eintraege")
+    check([i for i, e in enumerate(_me[2:]) if e.get("state") == "normal"] == [0, 1], "Etagenmenue: nur vorhandene Etagen waehlbar")
+finally:
+    _A.tk = _tk0
 _ap._etage_filter = None
 for sp in ("de", "en", "es", "fr"):
     for k in ("menu.ansicht.etage", "menu.ansicht.etage_gesamt", "menu.ansicht.etage_n", "msg.etage.alle", "msg.etage.nur"):
