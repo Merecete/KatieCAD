@@ -1544,8 +1544,9 @@ class Wand(Polylinie):
     which is computed by wand_verknuepfen()."""
 
     def __init__(self, punkte, geschlossen=False, dicke=240.0, ausrichtung="mitte",
-                 schraffur="", schraffur_abstand=180.0, hoehe=WAND_HOEHE_STANDARD, **kw):
+                 schraffur="", schraffur_abstand=180.0, hoehe=WAND_HOEHE_STANDARD, etage=0, **kw):
         kw.pop("oeffnungen", None)
+        kw.pop("_zbasis", None)
         kw.pop("_oeff3", None)
         kw.pop("_netz3d", None)
         kw.pop("_luecken", None)
@@ -1559,6 +1560,8 @@ class Wand(Polylinie):
         self.schraffur = schraffur if schraffur in WAND_SCHRAFFUREN else ""
         self.schraffur_abstand = max(5.0, float(schraffur_abstand))
         self.hoehe = max(1.0, float(hoehe))        # wall height (mm): the wall is a solid in 3D
+        self.etage = max(0, int(etage))            # storey (0 = ground floor, 1 = above ceiling 0, ...)
+        self._zbasis = 0.0                         # runtime only: floor level of the storey (mm)
         self._oeff3 = []              # runtime only: [(segment, t0, t1, z0, z1)] openings in 3D
         self._luecken = []            # runtime only: [(segment, t0, t1)] door gaps
         self._fenster = []            # runtime only: window openings (hatch stays free there)
@@ -1573,6 +1576,7 @@ class Wand(Polylinie):
         d.pop("_abzug_schr", None)
         d.pop("_oeff3", None)
         d.pop("_netz3d", None)
+        d.pop("_zbasis", None)
         return d
 
     # ---- geometry -------------------------------------------------------
@@ -1854,8 +1858,8 @@ class Oeffnung(Element):
 
     def __init__(self, art="tuer", x=0.0, y=0.0, winkel=0.0, breite=None, hoehe=None,
                  bruestung=None, dicke=240.0, spiegeln=False, umkehren=False,
-                 ausrichtung="mitte", modell="einfach", anteil=0.67, **kw):
-        for k in ("_geo", "geo", "_netz3d"):
+                 ausrichtung="mitte", modell="einfach", anteil=0.67, etage=0, **kw):
+        for k in ("_geo", "geo", "_netz3d", "_zbasis"):
             kw.pop(k, None)
         super().__init__("oeffnung", **kw)
         # "durchbruch" = wall opening (gap in the wall, only the reveals, no glazing / leaf)
@@ -1875,10 +1879,13 @@ class Oeffnung(Element):
         self.modell = modell if (modell in TUER_MODELLE and self.art == "tuer") else "einfach"
         self.anteil = min(0.9, max(0.5, float(anteil)))
         self._geo = None              # runtime only: position/direction taken from the wall
+        self.etage = max(0, int(etage))
+        self._zbasis = 0.0
 
     def to_dict(self):
         d = super().to_dict()
         d.pop("_geo", None)
+        d.pop("_zbasis", None)
         d.pop("_netz3d", None)
         return d
 
@@ -2277,6 +2284,10 @@ def wand_verknuepfen(elemente):
     wall gets a gap for doors. Call before drawing / exporting."""
     waende = [e for e in elemente if isinstance(e, Wand)]
     oeff = [e for e in elemente if isinstance(e, Oeffnung)]
+    for el in elemente:                                  # floor level of every storey (runtime)
+        if isinstance(el, (Wand, Oeffnung, Decke)):
+            b = etage_basis(elemente, getattr(el, "etage", 0))
+            el._zbasis = 0.0 if b is None else b
     for w in waende:
         w._luecken = []
         w._fenster = []
@@ -2285,6 +2296,8 @@ def wand_verknuepfen(elemente):
         o._geo = None
         treffer = []
         for w in waende:
+            if getattr(w, "etage", 0) != getattr(o, "etage", 0):
+                continue                                 # a door belongs to the walls of its storey
             # tolerant: a point on the wall line / face counts as inside (rounding!)
             if not w.punkt_im_koerper(o.x, o.y, max(1.0, 0.5 * w.dicke)):
                 continue
@@ -2319,6 +2332,19 @@ def wand_verknuepfen(elemente):
     waende_bereinigen(waende)
 
 
+def etage_basis(elemente, n):
+    """Floor level (mm) of storey n: 0 for the ground floor, otherwise the top of the ceiling
+    over storey n-1. None while that ceiling does not exist."""
+    if n <= 0:
+        return 0.0
+    b = etage_basis(elemente, n - 1)
+    if b is None:
+        return None
+    hs = [b + d.hoehe + d.dicke for d in elemente
+          if isinstance(d, Decke) and d.art == "decke" and getattr(d, "etage", 0) == n - 1]
+    return max(hs) if hs else None
+
+
 def waende_bereinigen(waende):
     """Walls that touch or cross each other form one outline: the faces (and the hatch) of a
     wall inside the body of another wall are not drawn (runtime only, nothing is saved)."""
@@ -2331,7 +2357,7 @@ def waende_bereinigen(waende):
     for i, w in enumerate(waende):
         w._abzug, w._abzug_schr = [], []
         for j, v in enumerate(waende):
-            if i == j or boxen[i] is None or boxen[j] is None:
+            if i == j or boxen[i] is None or boxen[j] is None or w.etage != v.etage:
                 continue
             a, b = boxen[i], boxen[j]
             if b[2] < a[0] or b[0] > a[2] or b[3] < a[1] or b[1] > a[3]:
@@ -6652,22 +6678,28 @@ class Decke(Polylinie):
     art "boden": `hoehe` is the TOP edge (the slab goes down); art "decke": `hoehe` is the
     UNDERSIDE (the slab goes up). Flat outline in 2D, solid in the 3D view."""
 
-    def __init__(self, punkte, geschlossen=True, art="decke", dicke=200.0, hoehe=2500.0, **kw):
+    def __init__(self, punkte, geschlossen=True, art="decke", dicke=200.0, hoehe=2500.0, etage=0,
+                 **kw):
         kw.pop("_netz3d", None)
+        kw.pop("_zbasis", None)
         super().__init__(punkte, True, **kw)
         self.typ = "decke"
         self.art = art if art in DECKE_ARTEN else "decke"
         self.dicke = max(1.0, float(dicke))
-        self.hoehe = float(hoehe)
+        self.hoehe = float(hoehe)       # above the floor level of its storey
+        self.etage = max(0, int(etage))
+        self._zbasis = 0.0
 
     def z_bereich(self):
-        """(z_from, z_to) of the slab."""
+        """(z_from, z_to) of the slab, absolute (including the floor level of the storey)."""
+        b = getattr(self, "_zbasis", 0.0)
         if self.art == "boden":
-            return self.hoehe - self.dicke, self.hoehe
-        return self.hoehe, self.hoehe + self.dicke
+            return b + self.hoehe - self.dicke, b + self.hoehe
+        return b + self.hoehe, b + self.hoehe + self.dicke
 
     def to_dict(self):
         d = super().to_dict()
+        d.pop("_zbasis", None)
         d.pop("_netz3d", None)
         return d
 

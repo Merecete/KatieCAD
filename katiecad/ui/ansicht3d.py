@@ -20,7 +20,7 @@ from tkinter import ttk
 from katiecad.ui import meldung as messagebox
 
 from katiecad.common.i18n import tr
-from katiecad.model.core import (FARBEN, UI_SCHRIFT, Wand, Oeffnung, Decke, Koerper3D, Gruppe3D, Skizze3D, kanal_rechteck, kanal_kette, kanal_versatz, kanal_aus_koerper, kanal_formstueck, Bemassung3D, Text3D, Viewport,
+from katiecad.model.core import (FARBEN, UI_SCHRIFT, Wand, Oeffnung, Decke, etage_basis, Koerper3D, Gruppe3D, Skizze3D, kanal_rechteck, kanal_kette, kanal_versatz, kanal_aus_koerper, kanal_formstueck, Bemassung3D, Text3D, Viewport,
                                  quader, zylinder, kegel, pyramide, kugel)
 VERDECKT_SCHNELL_S = 0.15      # hidden-line run faster than this (seconds): stay hidden while navigating
 from katiecad.model import geom3d as G
@@ -1187,7 +1187,7 @@ class Ansicht3D(tk.Frame):
         if m == "wandverb":
             app._wand_verbinden_klick(pt)
         else:
-            app._wand_oeffnung_klick(pt, m)
+            app._wand_oeffnung_klick(pt, m, wand)
         self.info_var.set(app.status.get())
         self.zeichne()
 
@@ -1207,24 +1207,27 @@ class Ansicht3D(tk.Frame):
         gelb = FARBEN["gelb"]
         r = self._bau_punkt(self._maus)
         pts = list(pl) + ([r[0]] if r else [])
+        zb = etage_basis(self.app._ctx_liste(), self.app._etage) or 0.0     # floor level of the storey
         if self._modus == "wand" and len(pts) >= 2:
             try:
                 w = Wand(pts, dicke=self.app._wand_dicke, ausrichtung=self.app._wand_ausrichtung,
-                         hoehe=self.app._wand_hoehe)
+                         hoehe=self.app._wand_hoehe, etage=self.app._etage)
+                w._zbasis = zb
                 for nz in S.virtuelle_netze(w):
                     for (i, j) in nz.kanten:
                         self._linie(nz.punkte[i], nz.punkte[j], gelb, 1, (4, 3), "vorschau")
             except Exception:
                 pass
-        z = 0.0
+        z = zb
         if self._modus == "decke":
-            z = self.app._decke_hoehe
+            z = zb + self.app._decke_hoehe
         self._polylinie([(x, y, z) for x, y in pts], gelb, 1, (4, 3), "vorschau",
                         self._modus in ("raum", "decke") and len(pts) >= 3)
         if self._modus == "decke" and len(pts) >= 3:
             try:
                 d = Decke(pts, art=self.app._decke_art, dicke=self.app._decke_dicke,
-                          hoehe=self.app._decke_hoehe)
+                          hoehe=self.app._decke_hoehe, etage=self.app._etage)
+                d._zbasis = zb
                 for nz in S.virtuelle_netze(d):
                     for (i, j) in nz.kanten:
                         self._linie(nz.punkte[i], nz.punkte[j], gelb, 1, (4, 3), "vorschau")

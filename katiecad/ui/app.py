@@ -77,7 +77,7 @@ from katiecad.model.core import (
     BEFEHLE, PdfSeite, ist_dunkel,
     E_DEVICES, E_LINES, E_CABLE, E_CLAMPS, E_PIN, ELEKTRO_LAYER, FTEXT_LAYER,
     Layer, Layout, Element, Linie, Kreis, Bogen, Rechteck, Polylinie, Text,
-    Ellipse, Spline, Wand, Kabelkanal, kanal_kette, kanal_versatz, KANAL_LAYER, KANAL_LAYER_FARBE, kanal_formstueck, kanal_aus_koerper, _variantenname, Oeffnung, Raum, RAUM_LAYER, RAUM_LAYER_FARBE, Decke, DECKE_LAYER, DECKE_LAYER_FARBE, DECKE_VORGABE, WAND_LAYER, WAND_LAYER_FARBE,
+    Ellipse, Spline, Wand, Kabelkanal, kanal_kette, kanal_versatz, KANAL_LAYER, KANAL_LAYER_FARBE, kanal_formstueck, kanal_aus_koerper, _variantenname, Oeffnung, Raum, RAUM_LAYER, RAUM_LAYER_FARBE, Decke, etage_basis, DECKE_LAYER, DECKE_LAYER_FARBE, DECKE_VORGABE, WAND_LAYER, WAND_LAYER_FARBE,
     wand_verknuepfen, wand_in_linien, wand_verbinden, wand_schliessen,
     Bemassung, Viewport, Schraffur, Bild, konturen_aus_elementen, bereich_an_punkt,
     AttributDefinition, Leitung, Verbindungspunkt, Querverweis,
@@ -5631,6 +5631,19 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
     _wand_schraffur = ""
     _wand_schraffur_abstand = 180.0
     _wand_hoehe = 2500.0
+    _etage = 0                          # storey of the building tools (0 = ground floor)
+
+    def _etage_pruefen(self, n):
+        """Storey n exists when there is a ceiling over storey n-1 (0 always). Else a message."""
+        if etage_basis(self._ctx_liste(), n) is not None:
+            return True
+        msg = tr("msg.etage.fehlt", n=n, m=n - 1)
+        self.status.set(msg)
+        try:
+            messagebox.showinfo(tr("dlg.etage").rstrip(":"), msg, parent=self.root)
+        except Exception:
+            pass
+        return False
     _wand_verb_erste = None
 
     def _wand_layer_sicherstellen(self):
@@ -5695,11 +5708,13 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
 
     def _decke_werkzeug_start(self):
         """Floor / ceiling tool: ask kind, thickness and height, then click the corner points."""
-        dlg = DeckeDialog(self.root, self._decke_art, self._decke_dicke, self._decke_hoehe)
-        if dlg.result is None:
+        dlg = DeckeDialog(self.root, self._decke_art, self._decke_dicke, self._decke_hoehe,
+                          etage=self._etage)
+        if dlg.result is None or not self._etage_pruefen(dlg.result["etage"]):
             self.aktives_werkzeug.set("auswahl")
             self._werkzeug_toolbar()
             return
+        self._etage = dlg.result["etage"]
         self._decke_art = dlg.result["art"]
         self._decke_dicke = dlg.result["dicke"]
         self._decke_hoehe = dlg.result["hoehe"]
@@ -5709,15 +5724,15 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
     def _decke_neu(self, punkte):
         self._snapshot()
         d = Decke(punkte, art=self._decke_art, dicke=self._decke_dicke, hoehe=self._decke_hoehe,
-                  **self._decke_layer_daten())
+                  etage=self._etage, **self._decke_layer_daten())
         self._ziel_liste().append(d)
         self.auswahl = [d]
         self.redraw()
         self.status.set(tr("msg.decke.fertig", art=tr("dlg.decke.art." + d.art)))
 
     def _decke_bearbeiten(self, el):
-        dlg = DeckeDialog(self.root, el.art, el.dicke, el.hoehe, neu=False)
-        if dlg.result is None:
+        dlg = DeckeDialog(self.root, el.art, el.dicke, el.hoehe, neu=False, etage=el.etage)
+        if dlg.result is None or not self._etage_pruefen(dlg.result["etage"]):
             return
         self._snapshot()
         for k, v in dlg.result.items():
@@ -5749,11 +5764,12 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         dlg = WandDialog(self.root, self._wand_dicke, self._wand_ausrichtung,
                          schraffur=self._wand_schraffur,
                          schraffur_abstand=self._wand_schraffur_abstand,
-                         hoehe=self._wand_hoehe)
-        if dlg.result is None:
+                         hoehe=self._wand_hoehe, etage=self._etage)
+        if dlg.result is None or not self._etage_pruefen(dlg.result["etage"]):
             self.aktives_werkzeug.set("auswahl")
             self._werkzeug_toolbar()
             return
+        self._etage = dlg.result["etage"]
         self._wand_dicke = dlg.result["dicke"]
         self._wand_ausrichtung = dlg.result["ausrichtung"]
         self._wand_schraffur = dlg.result["schraffur"]
@@ -5773,26 +5789,29 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                 if el.punkt_im_koerper(pt[0], pt[1], tol):
                     r = el.naechstes_segment(pt[0], pt[1])
                     d = r[0] if r else 0.0
-                    if beste is None or d < beste[0]:
-                        beste = (d, el)
+                    key = (el.etage != self._etage, d)          # the current storey first
+                    if beste is None or key < beste[0]:
+                        beste = (key, el)
         return beste[1] if beste else None
 
     def _oeffnung_vorgabe_dialog(self, art):
         """Door / window tool selected: ask the properties BEFORE placing (model, size, hinge ...)."""
         vg = self.__dict__.setdefault("_oeffnung_vorgaben", {})
-        probe = Oeffnung(art, 0, 0, 0, **vg.get(art, {}))
+        probe = Oeffnung(art, 0, 0, 0, etage=self._etage, **vg.get(art, {}))
         dlg = OeffnungDialog(self.root, probe, vorgabe=True)
-        if dlg.result is None:
+        if dlg.result is None or not self._etage_pruefen(dlg.result["etage"]):
             self.aktives_werkzeug.set("auswahl")
             self._werkzeug_toolbar()
             return
+        self._etage = dlg.result.pop("etage")
         vg[art] = dict(dlg.result)
         self.status.set(tr("msg.wand." + art))
 
-    def _wand_oeffnung_klick(self, pt, art):
+    def _wand_oeffnung_klick(self, pt, art, wand=None):
         """Door / window tool: click on a wall puts the object there (it is a normal object
-        afterwards: move, copy, mirror, delete, double click = its attributes)."""
-        wand = self._wand_unter_punkt(pt)
+        afterwards: move, copy, mirror, delete, double click = its attributes). `wand`: the
+        wall is already known (3D view)."""
+        wand = wand or self._wand_unter_punkt(pt)
         if wand is None:
             self.status.set(tr("msg.wand.keine"))
             return
@@ -5805,18 +5824,21 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         self._snapshot()
         daten = self._wand_layer_daten()
         vorgabe = dict(self.__dict__.get("_oeffnung_vorgaben", {}).get(art, {}))
+        vorgabe.pop("etage", None)
         self._ziel_liste().append(Oeffnung(art, px, py, winkel, dicke=wand.dicke,
-                                           ausrichtung=wand.ausrichtung, **vorgabe, **daten))
+                                           ausrichtung=wand.ausrichtung, etage=wand.etage,
+                                           **vorgabe, **daten))
         self.redraw()
         self.status.set(tr("msg.wand.eingesetzt", art=tr("dlg.wand.art." + art)))
 
     def _wand_bearbeiten(self, el):
         dlg = WandDialog(self.root, el.dicke, el.ausrichtung, laenge=el.laenge(),
                          schraffur=el.schraffur, schraffur_abstand=el.schraffur_abstand,
-                         hoehe=el.hoehe)
-        if dlg.result is None:
+                         hoehe=el.hoehe, etage=el.etage)
+        if dlg.result is None or not self._etage_pruefen(dlg.result["etage"]):
             return
         self._snapshot()
+        el.etage = dlg.result["etage"]
         el.hoehe = dlg.result["hoehe"]
         el.dicke = dlg.result["dicke"]
         el.ausrichtung = dlg.result["ausrichtung"]
@@ -5961,7 +5983,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                     self.aktuelle_polylinie, geschlossen=geschlossen,
                     dicke=self._wand_dicke, ausrichtung=self._wand_ausrichtung,
                     schraffur=self._wand_schraffur, schraffur_abstand=self._wand_schraffur_abstand,
-                    hoehe=self._wand_hoehe, **self._wand_layer_daten()))
+                    hoehe=self._wand_hoehe, etage=self._etage, **self._wand_layer_daten()))
             elif self.aktives_werkzeug.get() == "spline":
                 self._ziel_liste().append(Spline(self.aktuelle_polylinie,
                                                  geschlossen=geschlossen,

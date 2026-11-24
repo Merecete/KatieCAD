@@ -32,10 +32,10 @@ FLUEGEL_DICKE = {"tuer": 40.0, "fenster": 30.0}     # thickness of the door leaf
 def _wand_sig(el):
     if isinstance(el, Wand):
         return (tuple(tuple(p) for p in el.punkte), el.geschlossen, el.dicke, el.ausrichtung,
-                el.hoehe, tuple(tuple(o) for o in getattr(el, "_oeff3", [])))
+                el.hoehe, tuple(tuple(o) for o in getattr(el, "_oeff3", [])), el._zbasis)
     if isinstance(el, Decke):
-        return (tuple(tuple(p) for p in el.punkte), el.art, el.dicke, el.hoehe)
-    return (el.x, el.y, el.winkel, el.breite, el.hoehe, el.bruestung, el.dicke, el.ausrichtung,
+        return (tuple(tuple(p) for p in el.punkte), el.art, el.dicke, el.hoehe, el._zbasis)
+    return (el.x, el.y, el.winkel, el.breite, el.hoehe, el.bruestung, el.dicke, el.ausrichtung, el._zbasis,
             el.art, tuple(el._lage()))
 
 
@@ -55,7 +55,8 @@ def virtuelle_netze(el):
         return c[1]
     netze = []
     if isinstance(el, Wand):
-        netze = wand_netze([s for s in el.stuecke3d() if s[2] - s[1] > 1e-6])
+        zb = el._zbasis
+        netze = wand_netze([(q, a + zb, b + zb) for q, a, b in el.stuecke3d() if b - a > 1e-6])
     elif isinstance(el, Decke):
         if len(el.punkte) >= 3:
             za, zb = el.z_bereich()
@@ -73,7 +74,7 @@ def virtuelle_netze(el):
             return (cx + ux * s + nx * (q + w), cy + uy * s + ny * (q + w))
 
         quad = [pt(-h, -d), pt(h, -d), pt(h, d), pt(-h, d)]
-        z0 = el.bruestung + (LUFT_FLUEGEL if el.bruestung > 0 else 0.0)
+        z0 = el._zbasis + el.bruestung + (LUFT_FLUEGEL if el.bruestung > 0 else 0.0)
         netze.append(Koerper3D("prisma", profil=quad, z0=z0, hoehe=hz - (LUFT_FLUEGEL if el.bruestung > 0 else 0.0)).netz())
     el._netz3d = (sig, netze)
     return netze
@@ -777,7 +778,9 @@ def _el_fang(el, out):
     if isinstance(el, Wand):                      # centre line of the wall (to join walls)
         for x, y in el.punkte:
             out.append(((x, y, 0.0), "achse"))
-            out.append(((x, y, el.hoehe), "achse"))             # also at the top of the wall
+            out.append(((x, y, el._zbasis + el.hoehe), "achse"))             # also at the top of the wall
+            if el._zbasis:
+                out.append(((x, y, el._zbasis), "achse"))
         for i, j in el._segmente():
             (ax, ay), (bx, by) = el.punkte[i], el.punkte[j]
             out.append((((ax + bx) / 2, (ay + by) / 2, 0.0), "mitte"))

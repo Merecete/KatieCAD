@@ -136,3 +136,31 @@ check(_a._eingabe_hat_text(), "Text in der Befehlszeile erkannt")
 print("test_wand3d Fokus OK", ok)
 _pt = [(round(p[0]), round(p[1]), round(p[2])) for p, a in S.fang_kandidaten([_W2]) if a == "achse"]
 check((4000, 3000, 2500) in _pt and (4000, 3000, 0) in _pt, "Fang: Wandachse unten und oben")
+
+# ---- storeys (Etage) ----
+_w0 = core.Wand([(0, 0), (4000, 0)], dicke=200, hoehe=2500)
+_d0 = core.Decke([(0, 0), (4000, 0), (4000, 3000), (0, 3000)], art="decke", dicke=200, hoehe=2500, etage=0)
+_w1 = core.Wand([(0, 0), (4000, 0)], dicke=200, hoehe=2400, etage=1)
+_t1 = core.Oeffnung("tuer", 1000, 0, etage=1)
+_t0 = core.Oeffnung("tuer", 3000, 0, etage=0)
+_all = [_w0, _d0, _w1, _t1, _t0]
+check(core.etage_basis(_all, 0) == 0 and core.etage_basis(_all, 1) == 2700, "Etage 1 beginnt auf der Decke")
+check(core.etage_basis(_all, 2) is None, "Etage 2 gibt es noch nicht")
+core.wand_verknuepfen(_all)
+check(_w1._zbasis == 2700 and _w0._zbasis == 0 and _t1._zbasis == 2700, "Bodenhoehe je Etage")
+check(len(_w0._oeff3) == 1 and len(_w1._oeff3) == 1, "Tueren nur in Waenden der eigenen Etage")
+_nz1 = S.virtuelle_netze(_w1)[0]
+check(min(p[2] for p in _nz1.punkte) == 2700 and max(p[2] for p in _nz1.punkte) == 5100, "Wand Etage 1 ueber der Decke")
+_tn = S.virtuelle_netze(_t1)[0]
+check(min(p[2] for p in _tn.punkte) >= 2700, "Tuerblatt in Etage 1")
+_dd = _d0.to_dict(); _wd = _w1.to_dict()
+check(_wd["etage"] == 1 and "_zbasis" not in _wd and _dd["etage"] == 0, "Etage gespeichert, Bodenhoehe nicht")
+_wd.pop("typ"); check(core.Wand(**_wd).etage == 1, "Round-Trip Etage")
+_d1 = core.Decke([(0, 0), (4000, 0), (4000, 3000)], art="decke", dicke=250, hoehe=2400, etage=1)
+core.wand_verknuepfen(_all + [_d1])
+check(core.etage_basis(_all + [_d1], 2) == 2700 + 2400 + 250, "Etage 2 nach Decke ueber Etage 1")
+check(min(p[2] for p in S.virtuelle_netze(_d1)[0].punkte) == 2700 + 2400, "Decke ueber Etage 1: absolute Hoehe")
+for sp in ("de", "en", "es", "fr"):
+    for k in ("dlg.etage", "dlg.etage.hinweis", "dlg.etage.hinweis_decke", "msg.etage.fehlt"):
+        check(i18n.TEXTE[sp].get(k), f"i18n {k} {sp}")
+print("test_wand3d Etage OK", ok)
