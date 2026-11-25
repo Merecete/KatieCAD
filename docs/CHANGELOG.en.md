@@ -1,6 +1,7 @@
 # Changes
 
 ## 1.2.1
+- Fix: **Linux package: empty window** (issue #10): the Roboto fallback font of Kivy was searched in the wrong folder inside the packed program, so the window stayed empty on systems without a matching font (e.g. Manjaro); the font is now bundled, found in every layout and replaced by an installed system font as a last resort. The "minimum_width / minimum_height must be greater than 0" warning is gone.
 - Security/stability: stairs, roofs and storeys read from files are limited (invalid numbers/NaN, up to 200 risers, storeys 0-15, roofs up to 150 points and 3 s computing time) so manipulated or damaged files cannot freeze the program; external programs (open / print) only get absolute paths.
 - New: **Hide / show toolbars:** right click on a bar > hide; the same menu lists hidden bars to show again, "Show all" and "Restore the default layout" (also View > Toolbars, check entry "Show"). If every bar is hidden, a "Show toolbars..." button remains. Bars can also be docked **at the left, next to the project sidebar**. The choice is saved.
 - New: **Roof** (Building bar, Insert > Roof, command `ROOF`; 2D and 3D): click the outline of the eaves (the first point closes), with roof slope, **pointed roof** (up to the ridge) or **roof height** (cut horizontally), eaves height, storey and **gable edges** (gable roof). Any outline (L, T, U) gets clean ridges, hips and valleys (weighted straight skeleton). The plan shows outline, ridges, hips and valleys; the storey view hides the roof.

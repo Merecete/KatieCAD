@@ -174,8 +174,36 @@ def _familien_laden():
 
 
 def _fallback_datei():
+    """Kivy's own Roboto font. In a packed program (PyInstaller / AppImage) the Kivy data folder
+    is NOT next to kivy/__init__.py, so every plausible place is tried; the first existing wins."""
     import kivy
-    return os.path.join(os.path.dirname(kivy.__file__), "data", "fonts", "Roboto-Regular.ttf")
+    name = "Roboto-Regular.ttf"
+    kandidaten = []
+    try:
+        kandidaten.append(os.path.join(kivy.kivy_data_dir, "fonts", name))
+    except Exception:
+        pass
+    try:
+        from kivy.resources import resource_find
+        kandidaten.append(resource_find("data/fonts/" + name) or "")
+    except Exception:
+        pass
+    kandidaten.append(os.path.join(os.path.dirname(kivy.__file__), "data", "fonts", name))
+    basis = getattr(sys, "_MEIPASS", "")
+    if basis:
+        for teil in (("kivy_install", "data", "fonts"), ("kivy", "data", "fonts"), ("data", "fonts")):
+            kandidaten.append(os.path.join(basis, *teil, name))
+    for d in kandidaten:
+        if d and os.path.isfile(d):
+            return d
+    # last resort: any installed TrueType sans font, so that the window is never empty
+    for d in ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/TTF/DejaVuSans.ttf",
+              "/usr/share/fonts/dejavu/DejaVuSans.ttf", "/usr/share/fonts/noto/NotoSans-Regular.ttf",
+              "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+              "C:/Windows/Fonts/arial.ttf", "/System/Library/Fonts/Helvetica.ttc"):
+        if os.path.isfile(d):
+            return d
+    return kandidaten[0] if kandidaten and kandidaten[0] else name
 
 
 _ALIAS = {"helvetica": ("arial", "liberation sans", "dejavu sans"),

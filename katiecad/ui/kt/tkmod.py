@@ -1603,7 +1603,7 @@ class Tk(Wm, Misc, GeometrieMixin):
     def minsize(self, width=None, height=None):
         if width is None:
             return self._kt_minsize
-        self._kt_minsize = (int(width), int(height))
+        self._kt_minsize = (max(1, int(width)), max(1, int(height or 1)))
         try:
             Window.minimum_width, Window.minimum_height = self._kt_minsize
         except Exception:

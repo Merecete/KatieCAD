@@ -19,6 +19,13 @@ hiddenimports = collect_submodules("kivy.core") + [
     "kivy.graphics.tesselator", "fontTools.ttLib",
 ]
 
+# Kivy's Roboto font is the last-resort font of the interface; without it the window stays empty
+try:
+    from PyInstaller.utils.hooks import collect_data_files
+    datas = collect_data_files("kivy", includes=["data/fonts/*"])
+except Exception:
+    datas = []
+
 binaries = []
 try:
     import kivy_deps
