@@ -37,7 +37,8 @@ BAU_PUNKTE = ("wand", "raum", "decke", "dach")                       # building 
 BAU_OEFFNUNG = ("tuer", "fenster", "durchbruch")    # click on a wall
 BAU_MODI = BAU_PUNKTE + BAU_OEFFNUNG + ("wandverb", "treppe")
 
-BTN_MITTE, BTN_RECHTS = ("3", "2") if __import__("sys").platform == "darwin" else ("2", "3")
+BTN_MITTE, BTN_RECHTS = (("3", "2") if (__import__("sys").platform == "darwin"
+                         and not tk.__name__.startswith("katiecad.ui.kt")) else ("2", "3"))
 
 ACHSEN_FARBE = {"x": "#ff4d4d", "y": "#3ddc84", "z": "#4da6ff"}
 WUERFEL_MITTE = (84, 96)         # distance from the upper right corner

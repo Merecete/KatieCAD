@@ -130,9 +130,11 @@ ELEKTRO_WERKZEUGE = ("vpunkt", "verbindung", "leitung", "querverweis",
 # Style setup (tkinter-dependent, therefore here)
 # ============================================================
 # macOS: right mouse button = Button-2, middle = Button-3 (reversed on X11/Windows)
+# (the Kivy layer sends the X11 numbering on every system: right = 3, middle = 2)
 _MAC = sys.platform == "darwin"
-BTN_MITTE, BTN_RECHTS = ("3", "2") if _MAC else ("2", "3")
-_MITTE_MASKE = 0x400 if _MAC else 0x200          # event.state bit of the middle button
+_TK_MAC = _MAC and not tk.__name__.startswith("katiecad.ui.kt")    # real Tk (aqua) numbers the buttons differently
+BTN_MITTE, BTN_RECHTS = ("3", "2") if _TK_MAC else ("2", "3")
+_MITTE_MASKE = 0x400 if _TK_MAC else 0x200          # event.state bit of the middle button
 
 
 def _style_setup(root):

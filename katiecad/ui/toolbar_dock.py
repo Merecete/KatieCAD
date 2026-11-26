@@ -20,7 +20,8 @@ from katiecad.common.config import lade_konfiguration, speichere_konfiguration
 
 POSITIONEN = ("oben", "unten", "links", "rechts")
 VERTIKAL = ("links", "rechts")                           # areas where the symbols wrap into columns
-BTN_RECHTS = "2" if sys.platform == "darwin" else "3"
+# real Tk on the Mac: right button = 2; the Kivy layer sends 3 on every system
+BTN_RECHTS = "2" if (sys.platform == "darwin" and not tk.__name__.startswith("katiecad.ui.kt")) else "3"
 ZELLE_PX = 36                 # height of one symbol row at the right edge
 
 

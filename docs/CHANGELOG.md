@@ -1,8 +1,11 @@
 # Änderungen
 
-## 1.2.1
+## 1.2.2
+- Fix: **macOS: Rechtsklick ohne Wirkung** (Zeichenfläche, 3D-Ansicht, Werkzeugleisten): Die Kivy-Oberfläche meldet die rechte Maustaste auf allen Systemen als Taste 3, der Code erwartete auf dem Mac aber die Nummerierung des echten Tk (Taste 2). Die Zuordnung gilt jetzt nur noch für das echte Tk (`KATIECAD_UI=tk`).
 - Fix: **macOS: „Projekt öffnen“ beendete das Programm** und ein per Doppelklick übergebenes Projekt wurde nicht geöffnet. Die nativen Dateifenster (und die Farbauswahl) werden auf dem Mac jetzt über das System (osascript) geöffnet, weil Tk 9 im Kivy-Prozess abstürzt (`macOSVersion`); Dateien, die das System übergibt (Doppelklick, „Öffnen mit“), werden über das Drop-Ereignis angenommen.
 - Fix: **Linux-Paket: leeres Fenster** (Issue #10): Kivys Ersatzschrift Roboto wurde im gepackten Programm im falschen Ordner gesucht, dadurch blieb das Fenster auf Systemen ohne passende Schrift (z. B. Manjaro) leer; die Schrift wird jetzt mitgepackt, in jedem Layout gefunden und zuletzt durch eine installierte Systemschrift ersetzt. Die Warnung „minimum_width / minimum_height müssen größer als 0 sein“ entfällt.
+
+## 1.2.1
 - Sicherheit/Stabilität: Treppen, Dächer und Etagen aus Dateien werden begrenzt (ungültige Zahlen/NaN, bis zu 200 Steigungen, Etagen 0–15, Dach höchstens 150 Punkte und 3 s Rechenzeit), damit manipulierte oder beschädigte Dateien das Programm nicht blockieren; externe Programme (Öffnen/Drucken) bekommen nur absolute Pfade.
 - Neu: **Werkzeugleisten aus- und einblenden:** Rechtsklick auf eine Leiste › ausblenden; dasselbe Menü zeigt ausgeblendete Leisten zum Einblenden, „Alle einblenden“ und „Standardanordnung wiederherstellen“ (auch Ansicht › Werkzeugleisten, Haken „Anzeigen“). Sind alle Leisten aus, bleibt ein Knopf „Werkzeugleisten einblenden…“ stehen. Leisten lassen sich außerdem **links neben der Projekt-Seitenleiste** andocken. Wird gespeichert.
 - Neu: **Dach** (Leiste „Bau“, Einfügen › Dach, Befehl `DACH`/`ROOF`; 2D und 3D): Umriss der Traufe anklicken (erster Punkt schließt), dazu Dachneigung, **spitzes Dach** (bis zum First) oder **Dachhöhe** (waagerecht abgeschnitten), Traufhöhe, Etage und **Giebelkanten** (Satteldach). Beliebige Umrisse (L, T, U) bekommen saubere Grate und Kehlen (gewichtetes Straight Skeleton). Im Plan: Umriss, Firste, Grate, Kehlen; in der Etagenansicht wird das Dach ausgeblendet.
