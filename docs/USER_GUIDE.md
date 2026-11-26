@@ -237,7 +237,7 @@ Without a project you work on a single drawing (**File** menu: New, Open, Save �
 - **Insert > Save drawing as title block template…** turns a drawing into a new
   template.
 - **File > Print** (Ctrl+P) and **Project > Print project…** create a PDF
-  (several sheets in one file) or open the print preview.
+  (several sheets in one file) or open the print preview. If a sheet has **several layouts** (e.g. A0 and A1), every layout is printed on a page of its own - same sheet number, one after the other; empty layouts are skipped.
 
 ## 7. Blocks and attributes
 
@@ -479,7 +479,7 @@ Edit › Properties opens a window for the current selection, also mixed (lines,
 **Edit › Mirror** (command `MIRROR`/`MI`, also in the right-click menu): select objects, Enter, pick two points of the mirror line (live preview), then decide whether the originals are deleted. Texts stay readable (not mirrored); blocks including pins and labels are mirrored correctly and remain devices.
 
 ## Whole project as one DXF / DWG file
-**Project › Export project as DWG / DXF…** (file type in the save dialog) evaluates all sheets like printing (layout with frame, title block and viewports) and places them side by side in one DXF file: 4 sheets per row, then a new row. Every sheet is on its own layer (`Blatt_01` ...), plus `Blattgrenze` and `Blattnamen`.
+**Project › Export project as DWG / DXF…** (file type in the save dialog) evaluates all sheets like printing (layout with frame, title block and viewports) and places them side by side in one DXF file: 4 sheets per row, then a new row. If a sheet has several layouts, every layout is added as a sheet of its own (named "sheet (layout)"). Every sheet is on its own layer (`Blatt_01` ...), plus `Blattgrenze` and `Blattnamen`.
 
 ## Info window and log
 Help › About shows the logo, version and license. **License** opens the license text; **Log** opens the log file (`katiecad-log.txt` in the KatieCAD settings folder) in your default text editor – useful for error reports. The previous session's log is kept as `katiecad-log.txt.old`.

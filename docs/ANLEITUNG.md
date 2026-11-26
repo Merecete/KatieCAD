@@ -238,7 +238,7 @@ Ohne Projekt arbeitest du in einer einzelnen Zeichnung (Menü **Datei**: Neu,
 - **Einfügen > Zeichnung als Schriftkopf-Vorlage speichern…** legt aus einer
   Zeichnung eine neue Vorlage an.
 - **Datei > Drucken** (Strg+P) und **Projekt > Projekt drucken…**
-  erzeugen ein PDF (mehrere Blätter in einer Datei) oder öffnen die Druckvorschau.
+  erzeugen ein PDF (mehrere Blätter in einer Datei) oder öffnen die Druckvorschau. Hat ein Blatt **mehrere Layouts** (z. B. A0 und A1), wird jedes Layout auf eine eigene Seite gedruckt – mit gleicher Blattnummer, hintereinander; leere Layouts entfallen.
 
 ## 7. Blöcke und Attribute
 
@@ -496,7 +496,7 @@ Was über was liegt, bestimmt die Reihenfolge, in der die Objekte gezeichnet wer
 **Bearbeiten › Spiegeln** (Befehl `SPIEGELN`/`MI`, auch im Rechtsklickmenü): Objekte wählen, Enter, zwei Punkte der Spiegelachse klicken (Vorschau live), dann entscheiden, ob die Originale gelöscht werden. Texte bleiben lesbar (nicht gespiegelt), Blöcke inklusive Pins und Beschriftung werden korrekt gespiegelt und bleiben Geräte.
 
 ## Projekt als eine DXF-/DWG-Datei
-**Projekt › Projekt als DWG / DXF exportieren…** (Dateityp im Speichern-Dialog) wertet alle Blätter wie beim Drucken aus (Layout mit Rahmen, Schriftfeld und Viewports) und legt sie in einer DXF-Datei nebeneinander ab: 4 Blätter pro Zeile, dann eine neue Zeile. Jedes Blatt liegt auf einem eigenen Layer (`Blatt_01` …), dazu `Blattgrenze` und `Blattnamen`.
+**Projekt › Projekt als DWG / DXF exportieren…** (Dateityp im Speichern-Dialog) wertet alle Blätter wie beim Drucken aus (Layout mit Rahmen, Schriftfeld und Viewports) und legt sie in einer DXF-Datei nebeneinander ab: 4 Blätter pro Zeile, dann eine neue Zeile. Hat ein Blatt mehrere Layouts, kommt jedes Layout als eigenes Blatt in die Datei (Name „Blatt (Layout)“). Jedes Blatt liegt auf einem eigenen Layer (`Blatt_01` …), dazu `Blattgrenze` und `Blattnamen`.
 
 ## Info-Fenster und Log
 Hilfe › Info zeigt Logo, Version und Lizenz. Mit **Lizenz** öffnest du den Lizenztext, mit **Log** öffnet sich die Log-Datei (`katiecad-log.txt` im KatieCAD-Einstellungsordner) im Standard-Editor – hilfreich bei Fehlermeldungen. Die Datei der vorherigen Sitzung bleibt als `katiecad-log.txt.old` erhalten.

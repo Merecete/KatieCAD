@@ -12281,6 +12281,28 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
                                   TB.make_info(p, i, SPRACHE["aktuell"], lay.format))
         return kontexte, nicht_lesbar
 
+    @staticmethod
+    def _je_layout(kontexte):
+        """[(name, ctx)] -> one entry per layout of every sheet (same sheet number, the layout
+        name is added when a sheet has several non-empty layouts). Report sheets (lists, cover
+        sheet) and sheets with one layout stay as they are. Empty layouts are skipped as long
+        as the sheet has another one with content."""
+        erg = []
+        for name, ctx in kontexte:
+            lays = list(getattr(ctx, "layouts", None) or [])
+            if getattr(ctx, "bericht", None) or len(lays) <= 1:
+                erg.append((name, ctx))
+                continue
+            belegt = [k for k, lay in enumerate(lays) if lay.elemente]
+            if not belegt:
+                erg.append((name, ctx))
+                continue
+            for k in belegt:
+                c = SimpleNamespace(**vars(ctx))
+                c.aktives_layout = k
+                erg.append((name if len(belegt) == 1 else f"{name} ({lays[k].name})", c))
+        return erg
+
     def projekt_dxf_exportieren(self):
         """The whole project as ONE DXF or DWG file (sheets side by side, 4 per row);
         the file type chosen in the dialog decides."""
@@ -12308,7 +12330,7 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
             kontexte, nicht_lesbar = self._kontexte_vorbereiten(
                 list(range(len(p.blaetter))))
             seiten, uebersprungen = seiten_sammeln(
-                [(n, c) for _, n, c in kontexte], False)
+                self._je_layout([(n, c) for _, n, c in kontexte]), False)
             if not seiten:
                 from katiecad.fileio import dxf_projekt as _dp
                 raise ValueError(tr("msg.druckp.keine_seiten")
@@ -12346,12 +12368,14 @@ class CadApp(TabsMixin, BlockleisteMixin, AendernMixin, Ansicht3DMixin, ToolbarD
         aktion, indizes, quelle, farbig, rahmen = dlg.result
         kontexte, nicht_lesbar = self._kontexte_vorbereiten(indizes)
         try:
-            pdf, uebersprungen = pdf_mehrseitig_erzeugen(
-                [(n, c) for _, n, c in kontexte], quelle, farbig, rahmen)
+            liste = [(n, c) for _, n, c in kontexte]
+            if quelle == "layout":
+                liste = self._je_layout(liste)           # every layout of a sheet on its own page
+            pdf, uebersprungen = pdf_mehrseitig_erzeugen(liste, quelle, farbig, rahmen)
         except Exception as ex:
             messagebox.showerror("PDF", str(ex), parent=self.root)
             return
-        n_seiten = len(kontexte) - len(uebersprungen)
+        n_seiten = len(liste) - len(uebersprungen)
         if aktion == "pdf":
             pfad = filedialog.asksaveasfilename(
                 parent=self.root, defaultextension=".pdf",

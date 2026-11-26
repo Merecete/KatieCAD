@@ -1,6 +1,7 @@
 # Änderungen
 
 ## 1.2.2
+- Neu: **Alle Layouts eines Blatts drucken und exportieren:** „Projekt drucken…“ (PDF/Druck) und „Projekt als DWG / DXF exportieren…“ nahmen bisher nur das zuletzt aktive Layout eines Blatts. Jetzt kommt jedes (nicht leere) Layout auf eine eigene Seite, mit gleicher Blattnummer hintereinander (z. B. Blatt 2 in A0, danach Blatt 2 in A1). Berichtsblätter und Blätter mit nur einem Layout bleiben unverändert.
 - Fix: **macOS: Rechtsklick ohne Wirkung** (Zeichenfläche, 3D-Ansicht, Werkzeugleisten): Die Kivy-Oberfläche meldet die rechte Maustaste auf allen Systemen als Taste 3, der Code erwartete auf dem Mac aber die Nummerierung des echten Tk (Taste 2). Die Zuordnung gilt jetzt nur noch für das echte Tk (`KATIECAD_UI=tk`).
 - Fix: **macOS: „Projekt öffnen“ beendete das Programm** und ein per Doppelklick übergebenes Projekt wurde nicht geöffnet. Die nativen Dateifenster (und die Farbauswahl) werden auf dem Mac jetzt über das System (osascript) geöffnet, weil Tk 9 im Kivy-Prozess abstürzt (`macOSVersion`); Dateien, die das System übergibt (Doppelklick, „Öffnen mit“), werden über das Drop-Ereignis angenommen.
 - Fix: **Linux-Paket: leeres Fenster** (Issue #10): Kivys Ersatzschrift Roboto wurde im gepackten Programm im falschen Ordner gesucht, dadurch blieb das Fenster auf Systemen ohne passende Schrift (z. B. Manjaro) leer; die Schrift wird jetzt mitgepackt, in jedem Layout gefunden und zuletzt durch eine installierte Systemschrift ersetzt. Die Warnung „minimum_width / minimum_height müssen größer als 0 sein“ entfällt.

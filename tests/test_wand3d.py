@@ -286,6 +286,30 @@ for sp in ("de", "en", "es", "fr"):
         check(i18n.TEXTE[sp].get(k), f"i18n {k} {sp}")
 print("test_wand3d Dach OK", ok)
 
+# ---- project print / DXF: every layout of a sheet gets its own page ----
+import katiecad.ui.app as A
+from types import SimpleNamespace as NS
+from katiecad.fileio.pdf import pdf_mehrseitig_erzeugen
+from katiecad.fileio.dxf_projekt import seiten_sammeln
+def _lay(n, fmt, leer=False):
+    l = core.Layout(n, fmt, "#fff")
+    if not leer:
+        l.elemente = [core.Linie(0, 0, 100, 100)]
+    return l
+_A4, _A3 = "A4 (297x210)", "A3 (420x297)"
+_ctx = NS(elemente=[], layers={}, layouts=[_lay("L1", _A4), _lay("L2", _A3), _lay("L3", _A3, True)],
+          aktives_layout=0, _einh_faktor=lambda: 1.0, dezimalkomma=NS(get=lambda: False), bericht=None)
+_ein = NS(**vars(_ctx)); _ein.layouts = [_lay("L1", _A4)]
+_r = A.CadApp._je_layout([("01 X", _ctx), ("02 Y", _ein)])
+check([(n, c.aktives_layout) for n, c in _r] == [("01 X (L1)", 0), ("01 X (L2)", 1), ("02 Y", 0)],
+      "je Layout: leere Layouts entfallen, Namen mit Layout")
+_pdf, _u = pdf_mehrseitig_erzeugen(_r, "layout", True, False)
+check(not _u and _pdf.count(b"/Type /Page\n") + _pdf.count(b"/Type /Page ") + _pdf.count(b"/Type/Page") >= 3, "PDF: 3 Seiten")
+_sei, _u = seiten_sammeln(_r, False)
+check(len(_sei) == 3 and (_sei[0][1].b, _sei[1][1].b) == (297, 420), "DXF: 3 Seiten mit eigenem Format")
+print("test_wand3d Layouts OK", ok)
+
+
 # ---- hardening: garbage from files must not hang or crash ----
 _nan = float("nan"); _inf = float("inf")
 _ts = core.Treppe(_nan, _inf, _nan, breite=_nan, hoehe=_inf, steigungen=10 ** 9, auftritt=-5, etage=10 ** 9, gelaender_hoehe=_nan)
