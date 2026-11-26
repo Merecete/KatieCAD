@@ -1,6 +1,7 @@
 # Changes
 
 ## 1.2.2
+- Fix: **macOS: 2D tools stayed greyed out after switching from 3D back to 2D** (electrical tools and others): closing the 3D view now always runs to the end, even if something goes wrong on the way, and releases the tools in every case.
 - New: **Print and export all layouts of a sheet:** "Print project…" (PDF / print) and "Export project as DWG / DXF…" used only the last active layout of a sheet. Now every (non-empty) layout gets a page of its own, with the same sheet number one after the other (e.g. sheet 2 in A0, then sheet 2 in A1). Report sheets and sheets with a single layout stay as they were.
 - Fix: **macOS: right click had no effect** (drawing area, 3D view, toolbars): the Kivy interface reports the right mouse button as button 3 on every system, but on the Mac the code expected the numbering of real Tk (button 2). That mapping now only applies to real Tk (`KATIECAD_UI=tk`).
 - Fix: **macOS: "Open project" terminated the program** and a project handed over by double click was not opened. The native file dialogs (and the colour chooser) now open through the system (osascript) on the Mac, because Tk 9 crashes inside the Kivy process (`macOSVersion`); files handed over by the system (double click, "Open with") are accepted through the drop event.

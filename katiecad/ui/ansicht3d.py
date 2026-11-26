@@ -2821,14 +2821,24 @@ class Ansicht3DMixin:
             w.after(60, w.einpassen)
             self.ansicht3d_werkzeug(beim_oeffnen=True)
         elif not an and w is not None:
-            self.canvas.pack(fill=tk.BOTH, expand=True, before=w)
             self._ansicht3d = None
-            if melden:
-                melden(None)
-            w.destroy()
-            self.redraw()
+            try:
+                self.canvas.pack(fill=tk.BOTH, expand=True, before=w)
+                if melden:
+                    melden(None)
+                w.destroy()
+            except Exception:
+                import traceback
+                traceback.print_exc()
+            try:
+                self.redraw()
+            except Exception:
+                import traceback
+                traceback.print_exc()
         self._3d_var_holen().set(an)
+        # the 2D-only tool buttons must come back even if closing the 3D view had a problem
         self.werkzeuge_fuer_3d()
+        self.root.after_idle(self.werkzeuge_fuer_3d)
 
     def _ansicht3d_aus_fenster(self):
         w = self._ansicht3d
