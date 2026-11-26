@@ -71,9 +71,111 @@ def _modul(name, **funktionen):
     return m
 
 
+# ------------------------------------------------------------ macOS: system dialogs without Tk
+# Tk 9 cannot be started inside the SDL / Kivy process on the Mac (it asks the application object
+# for macOSVersion, which SDLApplication does not have -> the whole program is terminated). So the
+# file and colour dialogs are the system ones, opened through osascript (a separate process).
+def _as_text(t):
+    return '"' + str(t).replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def _mac_endungen(filetypes):
+    """File name extensions of the Tk filetypes list (wildcard-only entries are ignored)."""
+    liste = []
+    try:
+        for eintrag in filetypes or []:
+            muster = eintrag[1]
+            muster = muster.split() if isinstance(muster, str) else list(muster)
+            for m in muster:
+                m = str(m).strip()
+                if m.startswith("*.") and len(m) > 2 and not any(c in m[2:] for c in "*?[]"):
+                    e = m[2:].lower().lstrip(".")
+                    if e and e not in liste:
+                        liste.append(e)
+    except (TypeError, IndexError):
+        return []
+    return liste
+
+
+def _osascript(zeilen):
+    """Runs an AppleScript; returns the text it prints, or None when cancelled or on error."""
+    import subprocess
+    try:
+        r = subprocess.run(["osascript", "-e", "tell current application to activate"]
+                           + [x for z in zeilen for x in ("-e", z)],
+                           capture_output=True, text=True, timeout=None)
+    except (OSError, ValueError):
+        return None
+    if r.returncode != 0:
+        return None                      # cancelled (error -128) or not possible
+    return r.stdout.rstrip("\n")
+
+
+def _mac_dateidialog(funktion, kw):
+    import os
+    titel = kw.get("title")
+    prompt = (" with prompt " + _as_text(titel)) if titel else ""
+    ordner = kw.get("initialdir")
+    ort = ""
+    if ordner and os.path.isdir(str(ordner)):
+        ort = " default location (POSIX file %s)" % _as_text(os.path.abspath(str(ordner)))
+    if funktion in ("askopenfilename", "askopenfilenames", "askopenfile", "askopenfiles"):
+        endungen = _mac_endungen(kw.get("filetypes"))
+        typen = (" of type {%s}" % ", ".join(_as_text(e) for e in endungen)) if endungen else ""
+        mehrere = funktion in ("askopenfilenames", "askopenfiles")
+        if mehrere:
+            z = ["set r to choose file%s%s%s with multiple selections allowed" % (prompt, typen, ort),
+                 "set o to \"\"", "repeat with f in r", "set o to o & POSIX path of f & linefeed",
+                 "end repeat", "o"]
+        else:
+            z = ["POSIX path of (choose file%s%s%s)" % (prompt, typen, ort)]
+        erg = _osascript(z)
+        if mehrere:
+            return tuple(x for x in (erg or "").split("\n") if x)
+        return erg or ""
+    if funktion == "askdirectory":
+        return _osascript(["POSIX path of (choose folder%s%s)" % (prompt, ort)]) or ""
+    # asksaveasfilename
+    name = kw.get("initialfile") or ""
+    vorgabe = (" default name " + _as_text(name)) if name else ""
+    erg = _osascript(["POSIX path of (choose file name%s%s%s)" % (prompt, vorgabe, ort)]) or ""
+    ende = kw.get("defaultextension") or ""
+    if erg and ende and not os.path.splitext(erg)[1]:
+        erg += ende if ende.startswith(".") else "." + ende
+    return erg
+
+
+def _mac_farbe(kw):
+    start = kw.get("initialcolor") or "#808080"
+    try:
+        h = str(start).lstrip("#")
+        rgb = [int(h[i:i + 2], 16) * 257 for i in (0, 2, 4)]
+    except (ValueError, IndexError):
+        rgb = [32896, 32896, 32896]
+    erg = _osascript(["choose color default color {%d, %d, %d}" % tuple(rgb)])
+    try:
+        r, g, b = [max(0, min(255, round(int(x) / 257))) for x in erg.replace(",", " ").split()]
+    except (AttributeError, ValueError):
+        return (None, None)
+    return ((r, g, b), "#%02x%02x%02x" % (r, g, b))
+
+
+def _mac_aufraeumen():
+    root = T._base.ROOT[0]
+    if root is not None:
+        root._kt_knoepfe.clear()
+        root._kt_maus_ziel = None
+
+
 # ------------------------------------------------------------ filedialog
 def _fd(funktion):
     def f(**kw):
+        if sys.platform == "darwin":
+            kw.pop("parent", None)
+            try:
+                return _mac_dateidialog(funktion, kw)
+            finally:
+                _mac_aufraeumen()
         erg = _nativ("tkinter.filedialog", funktion, kw)
         return erg
     f.__name__ = funktion
@@ -92,6 +194,11 @@ filedialog = _modul(
 def askcolor(color=None, **kw):
     if color is not None:
         kw["initialcolor"] = color
+    if sys.platform == "darwin":
+        try:
+            return _mac_farbe(kw)
+        finally:
+            _mac_aufraeumen()
     return _nativ("tkinter.colorchooser", "askcolor", kw)
 
 

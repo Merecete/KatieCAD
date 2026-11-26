@@ -1533,6 +1533,12 @@ class Tk(Wm, Misc, GeometrieMixin):
                     on_cursor_leave=self._kt_k_maus_raus)
         # a size set by the program reaches us as a property change, not always as on_resize
         Window.bind(size=lambda _w, gr: self._kt_k_groesse(Window, gr[0], gr[1]))
+        # file handed over by the system (macOS: double click / "Open with" arrives as a drop event)
+        self._kt_offene_dateien = []
+        try:
+            Window.bind(on_drop_file=self._kt_k_datei_von_aussen)
+        except Exception:
+            pass
         try:
             Window.clearcolor = (0, 0, 0, 1)
         except Exception:
@@ -1660,8 +1666,27 @@ class Tk(Wm, Misc, GeometrieMixin):
 
     wm_iconphoto = iconphoto
 
+    def _kt_k_datei_von_aussen(self, _fenster, datei, *_rest):
+        try:
+            pfad = datei.decode("utf-8", "replace") if isinstance(datei, bytes) else str(datei)
+        except Exception:
+            return
+        self._kt_offene_dateien.append(pfad)
+        self._kt_offene_dateien_senden()
+
+    def _kt_offene_dateien_senden(self):
+        """Hands the files to ::tk::mac::OpenDocument; waits until the program has set it up."""
+        f = self._kt_befehle.get("::tk::mac::OpenDocument")
+        if f is None:
+            return                                  # sent as soon as the command is created
+        while self._kt_offene_dateien:
+            pfad = self._kt_offene_dateien.pop(0)
+            self.after(200, lambda p=pfad: f(p))
+
     def createcommand(self, name, func):
         self._kt_befehle[name] = func
+        if name == "::tk::mac::OpenDocument":
+            self._kt_offene_dateien_senden()
 
     def report_callback_exception(self, exc, val, tb):
         import traceback
