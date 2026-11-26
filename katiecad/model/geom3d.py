@@ -494,6 +494,38 @@ def rechteck_profil(x1, y1, x2, y2):
     return [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
 
 
+def bogen_3punkt_profil(p1, pm, p2, schritt_grad=5.0):
+    """Points of the circular arc from p1 over pm to p2 (all 2D); [] when the three points
+    lie on a line (or the circle would be absurdly large / not finite)."""
+    try:
+        ax, ay = float(p1[0]), float(p1[1])
+        bx, by = float(pm[0]), float(pm[1])
+        qx, qy = float(p2[0]), float(p2[1])
+    except (TypeError, ValueError, IndexError):
+        return []
+    d = 2.0 * (ax * (by - qy) + bx * (qy - ay) + qx * (ay - by))
+    if not math.isfinite(d) or abs(d) < 1e-9:
+        return []
+    a2, b2, q2 = ax * ax + ay * ay, bx * bx + by * by, qx * qx + qy * qy
+    ux = (a2 * (by - qy) + b2 * (qy - ay) + q2 * (ay - by)) / d
+    uy = (a2 * (qx - bx) + b2 * (ax - qx) + q2 * (bx - ax)) / d
+    r = math.hypot(ax - ux, ay - uy)
+    if not (1e-6 < r < 1e8):
+        return []
+    w1 = math.atan2(ay - uy, ax - ux)
+    w2 = math.atan2(qy - uy, qx - ux)
+    ccw = (bx - ax) * (qy - by) - (by - ay) * (qx - bx) > 0          # direction p1 -> pm -> p2
+    if ccw:
+        sweep = (w2 - w1) % (2 * math.pi)
+    else:
+        sweep = -((w1 - w2) % (2 * math.pi))
+    n = max(6, min(180, int(abs(math.degrees(sweep)) / max(schritt_grad, 0.5)) + 1))
+    pts = [(ux + r * math.cos(w1 + sweep * i / n), uy + r * math.sin(w1 + sweep * i / n))
+           for i in range(n + 1)]
+    pts[0], pts[-1] = (ax, ay), (qx, qy)
+    return pts
+
+
 # --------------------------------------------------------------------------
 # Hidden-line removal
 # --------------------------------------------------------------------------

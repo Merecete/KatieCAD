@@ -20,7 +20,7 @@ from katiecad.common.i18n import tr, SPRACHE
 from katiecad.model.geom2d import ellipse_punkte, spline_punkte
 from katiecad.model import schriften as SCHRIFTEN
 from katiecad.model import normschrift as NORMSCHRIFT
-from katiecad.model.geom3d import (prisma_netz_gerundet, profil_abrunden, v_rotieren, punkt_rotieren, prisma_netz, pyramide_netz, kugel_netz, kreis_profil,
+from katiecad.model.geom3d import (bogen_3punkt_profil, prisma_netz_gerundet, profil_abrunden, v_rotieren, punkt_rotieren, prisma_netz, pyramide_netz, kugel_netz, kreis_profil,
                                    rechteck_profil, netz_abbilden, Netz, ebene_punkt, ebene_basis, BODEN_EBENE, v_cross)
 
 
@@ -5892,14 +5892,16 @@ class Gruppe3D(Element):
 class Skizze3D(Element):
     """2D shape drawn on a work plane in space (a face of a 3D body or the
     ground plane). Used to pull up (extrude) or to cut a hole / pocket."""
-    FORMEN = ("kreis", "rechteck", "polylinie", "linie")
+    FORMEN = ("kreis", "rechteck", "polylinie", "linie", "bogen", "ellipse", "spline")
+    OFFEN = ("linie", "bogen", "spline")             # open shapes (cannot be pulled up)
+    MAX_PUNKTE = 500
 
     def __init__(self, form="kreis", ebene=None, daten=None, **kw):
         super().__init__("skizze3d", **kw)
         self.form = form if form in self.FORMEN else "kreis"
         self.ebene = _ebene_tuple(ebene) or BODEN_EBENE
         self.daten = [list(d) if isinstance(d, (list, tuple)) else float(d)
-                      for d in (daten or [])]
+                      for d in (daten or [])][:self.MAX_PUNKTE]
 
     def profil(self):
         d = self.daten
@@ -5912,10 +5914,30 @@ class Skizze3D(Element):
             return [(float(p[0]), float(p[1])) for p in d]
         if self.form == "linie" and len(d) >= 4:
             return [(float(d[0]), float(d[1])), (float(d[2]), float(d[3]))]
+        if self.form == "bogen" and len(d) >= 6:
+            return bogen_3punkt_profil((d[0], d[1]), (d[2], d[3]), (d[4], d[5]))
+        if self.form == "ellipse" and len(d) >= 4:
+            try:
+                a_, b_ = abs(float(d[2])), abs(float(d[3]))
+                rot = float(d[4]) if len(d) > 4 else 0.0
+                if not all(math.isfinite(v) for v in (a_, b_, rot, float(d[0]), float(d[1]))) \
+                        or max(a_, b_) > 1e9:
+                    return []
+                return ellipse_punkte(float(d[0]), float(d[1]), max(a_, 1e-9), max(b_, 1e-9), rot, 64)
+            except (TypeError, ValueError):
+                return []
+        if self.form == "spline" and len(d) >= 2:
+            try:
+                stuetz = [(float(p[0]), float(p[1])) for p in d]
+            except (TypeError, ValueError, IndexError):
+                return []
+            if not all(math.isfinite(v) for p in stuetz for v in p):
+                return []
+            return spline_punkte(stuetz, False, 12)
         return []
 
     def geschlossen(self):
-        return self.form != "linie"
+        return self.form not in self.OFFEN
 
     def rund(self):
         return self.form == "kreis"
@@ -5960,8 +5982,10 @@ class Skizze3D(Element):
 
     def skalieren(self, cx, cy, f):
         self.ebene = _ebene_skalieren(self.ebene, cx, cy, f)
-        if self.form == "polylinie":
+        if self.form in ("polylinie", "spline"):
             self.daten = [[p[0] * f, p[1] * f] for p in self.daten]
+        elif self.form == "ellipse":                      # centre, a, b scale; the angle does not
+            self.daten = [v * f for v in self.daten[:4]] + list(self.daten[4:])
         else:
             self.daten = [v * f for v in self.daten]
 
@@ -5972,6 +5996,10 @@ class Skizze3D(Element):
             self.daten = [d[0], -d[1], d[2]]
         elif self.form in ("rechteck", "linie") and len(d) >= 4:
             self.daten = [d[0], -d[1], d[2], -d[3]]
+        elif self.form == "bogen" and len(d) >= 6:
+            self.daten = [d[0], -d[1], d[2], -d[3], d[4], -d[5]]
+        elif self.form == "ellipse" and len(d) >= 4:
+            self.daten = [d[0], -d[1], d[2], d[3], -(d[4] if len(d) > 4 else 0.0)]
         else:
             self.daten = [[p[0], -p[1]] for p in d]
 

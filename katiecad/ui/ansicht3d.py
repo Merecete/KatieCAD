@@ -30,6 +30,7 @@ from katiecad.ui.dialogs import _modal, _LayoutNameDialog
 
 # basic 2D tools of the toolbar -> their 3D counterparts (drawing on the work plane / 3D dimension)
 WERKZEUG_3D = {"linie": "linie", "polylinie": "poly", "kreis": "kreis", "rechteck": "rechteck",
+               "bogen": "bogen", "ellipse": "ellipse", "spline": "spline",
                "bemassung": "bem", "text": "text", "kanal": "kanal", "kanalverb": "kanalverb",
                "wand": "wand", "tuer": "tuer", "fenster": "fenster", "durchbruch": "durchbruch",
                "wandverb": "wandverb", "raum": "raum", "decke": "decke", "dach": "dach", "treppe": "treppe"}
@@ -449,8 +450,8 @@ def _vorzeichen(k):
 
 
 class Ansicht3D(tk.Frame):
-    MODI = ("flaeche", "linie", "kreis", "rechteck", "poly", "bem", "kanal", "kanalverb", "pivot", "text", "messen", "verschieben", "strecken", "drehen") + BAU_MODI
-    SKIZZEN = ("linie", "kreis", "rechteck", "poly")
+    MODI = ("flaeche", "linie", "kreis", "rechteck", "poly", "bogen", "ellipse", "spline", "bem", "kanal", "kanalverb", "pivot", "text", "messen", "verschieben", "strecken", "drehen") + BAU_MODI
+    SKIZZEN = ("linie", "kreis", "rechteck", "poly", "bogen", "ellipse", "spline")
 
     def __init__(self, app, master=None):
         super().__init__(master if master is not None else app.root, bg=FARBEN["bg_mittel"])
@@ -1123,7 +1124,7 @@ class Ansicht3D(tk.Frame):
         p = r[0] if r else None
         sk = self._skiz
         if (p is not None and sk and self.app.ortho.get() and sk.get("pts")
-                and sk["form"] in ("linie", "poly")):
+                and sk["form"] in ("linie", "poly", "spline")):
             q = sk["pts"][-1]
             if abs(p[0] - q[0]) >= abs(p[1] - q[1]):
                 p = (p[0], q[1])
@@ -1511,6 +1512,8 @@ class Ansicht3D(tk.Frame):
                 r = math.hypot(p[0] - sk["pts"][0][0], p[1] - sk["pts"][0][1])
                 if r > 1e-6:
                     self._skizze_fertig("kreis", [sk["pts"][0][0], sk["pts"][0][1], r])
+            elif m in ("bogen", "ellipse", "spline"):
+                self._skizze_punkt(m, sk, p)
             elif m in ("rechteck", "linie"):
                 q = sk["pts"][0]
                 if m == "linie" and math.hypot(p[0] - q[0], p[1] - q[1]) > 1e-6:
@@ -1801,10 +1804,48 @@ class Ansicht3D(tk.Frame):
         self.app.redraw()
         self.info_var.set(tr("d3.msg.skizze_fertig"))
 
+    def _skizze_punkt(self, m, sk, p):
+        """Next point of an arc (start, point on the arc, end), an ellipse (centre, end of the
+        first axis, point fixing the second axis) or a spline (any number of points, Enter ends)."""
+        pts = sk["pts"]
+        if m == "spline":
+            if math.hypot(p[0] - pts[-1][0], p[1] - pts[-1][1]) > 1e-6:
+                pts.append(p)
+            return
+        if math.hypot(p[0] - pts[-1][0], p[1] - pts[-1][1]) <= 1e-6:
+            return
+        pts.append(p)
+        if m == "bogen":
+            if len(pts) < 3:
+                self.info_var.set(tr("d3.msg.skizze_bogen_p3"))
+                return
+            if G.bogen_3punkt_profil(pts[0], pts[1], pts[2]):
+                self._skizze_fertig("bogen", [v for q in pts[:3] for v in (q[0], q[1])])
+            else:
+                del pts[2]
+                self.info_var.set(tr("d3.msg.skizze_kollinear"))
+            return
+        if len(pts) < 3:                                           # ellipse
+            self.info_var.set(tr("d3.msg.skizze_ellipse_p3"))
+            return
+        c, p1, p2 = pts[0], pts[1], pts[2]
+        a = math.hypot(p1[0] - c[0], p1[1] - c[1])
+        ux, uy = (p1[0] - c[0]) / a, (p1[1] - c[1]) / a
+        b = abs(-(p2[0] - c[0]) * uy + (p2[1] - c[1]) * ux)
+        if b < 1e-6:
+            del pts[2]
+            self.info_var.set(tr("d3.msg.skizze_kollinear"))
+            return
+        self._skizze_fertig("ellipse", [c[0], c[1], a, b, math.degrees(math.atan2(uy, ux)) % 360.0])
+
     def _skizze_abschliessen(self):
-        """Enter: closes a polyline sketch."""
+        """Enter: closes a polyline sketch / ends a spline."""
         sk = self._skiz
         if self._bau_abschliessen():
+            return
+        if sk and sk["form"] == "spline" and len(sk["pts"]) >= 2:
+            self._skizze_fertig("spline", [list(p) for p in sk["pts"]])
+            self.zeichne()
             return
         if sk and sk["form"] == "poly" and len(sk["pts"]) >= 3:
             self._skizze_fertig("poly", [list(p) for p in sk["pts"]])
@@ -1934,6 +1975,28 @@ class Ansicht3D(tk.Frame):
         elif sk["form"] == "rechteck":
             prof = G.rechteck_profil(q0[0], q0[1], p[0], p[1])
             self._polylinie([G.ebene_punkt(e, x, y) for x, y in prof], gelb, 1, (4, 3), "vorschau", True)
+        elif sk["form"] == "bogen":
+            prof = G.bogen_3punkt_profil(q0, sk["pts"][1], p) if len(sk["pts"]) >= 2 else []
+            if not prof:
+                prof = [q0, p] if len(sk["pts"]) < 2 else [q0, sk["pts"][1], p]
+            self._polylinie([G.ebene_punkt(e, x, y) for x, y in prof], gelb, 1, (4, 3), "vorschau")
+        elif sk["form"] == "ellipse":
+            a = math.hypot(sk["pts"][-1][0] - q0[0], sk["pts"][-1][1] - q0[1]) if len(sk["pts"]) >= 2 else 0
+            if len(sk["pts"]) < 2 or a < 1e-6:
+                self._linie(G.ebene_punkt(e, q0[0], q0[1]), G.ebene_punkt(e, p[0], p[1]), gelb, 1,
+                            (4, 3), "vorschau")
+            else:
+                p1 = sk["pts"][1]
+                ux, uy = (p1[0] - q0[0]) / a, (p1[1] - q0[1]) / a
+                b = abs(-(p[0] - q0[0]) * uy + (p[1] - q0[1]) * ux)
+                if b > 1e-6:
+                    sk_el = Skizze3D("ellipse", e, [q0[0], q0[1], a, b, math.degrees(math.atan2(uy, ux))])
+                    self._polylinie([G.ebene_punkt(e, x, y) for x, y in sk_el.profil()], gelb, 1,
+                                    (4, 3), "vorschau", True)
+        elif sk["form"] == "spline":
+            pts = sk["pts"] + [p]
+            prof = Skizze3D("spline", e, [list(q) for q in pts]).profil() or pts
+            self._polylinie([G.ebene_punkt(e, x, y) for x, y in prof], gelb, 1, (4, 3), "vorschau")
         else:
             pts = [G.ebene_punkt(e, x, y) for x, y in sk["pts"] + [p]]
             self._polylinie(pts, gelb, 1, (4, 3), "vorschau")
@@ -2316,7 +2379,7 @@ class Ansicht3D(tk.Frame):
                 p = (float(a[0].replace(",", ".")) * f, float(a[1].replace(",", ".")) * f)
                 self._skiz = {"form": m, "pts": [p], "maus": p}
                 self.info_var.set(tr("d3.msg.skizze_" + m))
-            elif m == "poly":
+            elif m in ("poly", "spline", "bogen", "ellipse"):
                 rel = t.startswith("@")
                 a = [v for v in re.split(r"[,;]\s*|\s+", t.lstrip("@")) if v]
                 if len(a) != 2:
@@ -2324,7 +2387,10 @@ class Ansicht3D(tk.Frame):
                 x, y = float(a[0].replace(",", ".")) * f, float(a[1].replace(",", ".")) * f
                 if rel:
                     x, y = sk["pts"][-1][0] + x, sk["pts"][-1][1] + y
-                sk["pts"].append((x, y))
+                if m == "poly":
+                    sk["pts"].append((x, y))
+                else:
+                    self._skizze_punkt(m, sk, (x, y))
             elif m == "linie" and "<" in t:
                 l, w = t.split("<", 1)
                 L, W = zahl(l), math.radians(float(w.strip().replace(",", ".")))

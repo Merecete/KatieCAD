@@ -288,6 +288,7 @@ print("test_wand3d Dach OK", ok)
 
 # ---- project print / DXF: every layout of a sheet gets its own page ----
 import katiecad.ui.app as A
+import katiecad.ui.ansicht3d as AV
 from types import SimpleNamespace as NS
 from katiecad.fileio.pdf import pdf_mehrseitig_erzeugen
 from katiecad.fileio.dxf_projekt import seiten_sammeln
@@ -309,6 +310,37 @@ _sei, _u = seiten_sammeln(_r, False)
 check(len(_sei) == 3 and (_sei[0][1].b, _sei[1][1].b) == (297, 420), "DXF: 3 Seiten mit eigenem Format")
 print("test_wand3d Layouts OK", ok)
 
+
+# ---- 3D: arc, ellipse, spline sketches ----
+_bg = core.Skizze3D("bogen", None, [0, 0, 50, 50, 100, 0])         # half circle over (50,50)
+_pb = _bg.profil()
+check(len(_pb) > 10 and abs(_pb[0][0]) < 1e-6 and abs(_pb[-1][0] - 100) < 1e-6
+      and all(abs(math.hypot(x - 50, y) - 50) < 1e-6 for x, y in _pb), "Bogen: Halbkreis")
+check(not _bg.geschlossen() and not S.extrudierbar(_bg), "Bogen: offen, nicht hochziehbar")
+check(core.Skizze3D("bogen", None, [0, 0, 10, 10, 20, 20]).profil() == [], "Bogen: Punkte auf einer Linie")
+_el = core.Skizze3D("ellipse", None, [0, 0, 100, 40, 0])
+_pe = _el.profil()
+check(len(_pe) >= 48 and abs(max(x for x, y in _pe) - 100) < 1e-6 and abs(max(y for x, y in _pe) - 40) < 1e-6,
+      "Ellipse: Halbachsen")
+check(_el.geschlossen() and S.extrudierbar(_el), "Ellipse: hochziehbar")
+_sp = core.Skizze3D("spline", None, [[0, 0], [50, 40], [100, 0], [150, 40]])
+_ps = _sp.profil()
+check(len(_ps) > 20 and _ps[0] == (0.0, 0.0) and _ps[-1] == (150.0, 40.0) and not S.extrudierbar(_sp), "Spline")
+_sp.skalieren(0, 0, 2); _el.skalieren(0, 0, 2); _bg.skalieren(0, 0, 2)
+check(_sp.daten[1] == [100, 80] and _el.daten[:4] == [0, 0, 200, 80] and _bg.daten[4] == 200, "Skalieren")
+_bg.spiegeln(0, 0, 1, 0); _el.spiegeln(0, 0, 1, 0)
+check(_bg.daten[3] == -100 and _el.daten[4] == 0, "Spiegeln")
+for _f, _d in (("bogen", [float("nan"), 0, 1, 1, 2, 5]), ("ellipse", [0, 0, float("inf"), 1]),
+               ("spline", [[0, 0], [float("nan"), 1]]), ("spline", [["x", 1], [2, 3]]), ("ellipse", [0, 0, 1e30, 1e30])):
+    check(core.Skizze3D(_f, None, _d).profil() == [], "Muelldaten " + _f)
+check(len(core.Skizze3D("spline", None, [[i, i % 7] for i in range(5000)]).daten) <= 500, "Spline: Punktgrenze")
+check(len(S.zuege3(core.Skizze3D("bogen", None, [0, 0, 50, 50, 100, 0]))) == 1, "Bogen: Zug fuer 3D")
+for _w in ("bogen", "ellipse", "spline"):
+    check(_w in AV.WERKZEUG_3D and AV.WERKZEUG_3D[_w] in AV.Ansicht3D.SKIZZEN and AV.WERKZEUG_3D[_w] in AV.Ansicht3D.MODI, "3D-Werkzeug " + _w)
+    for _sp_ in ("de", "en", "es", "fr"):
+        for _k in ("d3.modus." + _w, "d3.msg.skizze_" + _w):
+            check(i18n.TEXTE[_sp_].get(_k), f"i18n {_k} {_sp_}")
+print("test_wand3d 3D-Bogen/Ellipse/Spline OK", ok)
 
 # ---- hardening: garbage from files must not hang or crash ----
 _nan = float("nan"); _inf = float("inf")

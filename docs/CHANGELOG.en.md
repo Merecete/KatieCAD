@@ -1,6 +1,7 @@
 # Changes
 
 ## 1.2.2
+- New: **Arc, ellipse and spline in 3D:** the 2D tools Arc, Ellipse and Spline are now available in the 3D view as well and draw on the work plane or the body face under the mouse (with object snap, input line and preview). *Arc:* start point, point on the arc, end point (so half circles too). *Ellipse:* centre, end of the first axis, point for the second semi-axis; can be pulled up like circle and rectangle. *Spline:* any number of support points, Enter ends. Arc and spline are open and cannot be pulled up.
 - Fix: **macOS: 2D tools stayed greyed out after switching from 3D back to 2D** (electrical tools and others): closing the 3D view now always runs to the end, even if something goes wrong on the way, and releases the tools in every case.
 - New: **Print and export all layouts of a sheet:** "Print project…" (PDF / print) and "Export project as DWG / DXF…" used only the last active layout of a sheet. Now every (non-empty) layout gets a page of its own, with the same sheet number one after the other (e.g. sheet 2 in A0, then sheet 2 in A1). Report sheets and sheets with a single layout stay as they were.
 - Fix: **macOS: right click had no effect** (drawing area, 3D view, toolbars): the Kivy interface reports the right mouse button as button 3 on every system, but on the Mac the code expected the numbering of real Tk (button 2). That mapping now only applies to real Tk (`KATIECAD_UI=tk`).

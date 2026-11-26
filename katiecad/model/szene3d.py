@@ -723,7 +723,7 @@ def auswahl_zentrum3(auswahl):
 
 def extrudierbar(el):
     if isinstance(el, Skizze3D):
-        return len(el.profil()) >= 3
+        return el.geschlossen() and len(el.profil()) >= 3
     return (not ist_raum(el)) and profil_aus_element(el) is not None
 
 
@@ -1025,8 +1025,26 @@ def _el_fang(el, out):
             u, v, _w = G.ebene_basis(el.ebene)
             c = G.ebene_punkt(el.ebene, el.daten[0], el.daten[1])
             _kreis_fang(c, float(el.daten[2]), u, v, out)
+        elif el.form == "bogen" and len(el.daten) >= 6:
+            for i in (0, 4):                              # start and end point
+                out.append((G.ebene_punkt(el.ebene, el.daten[i], el.daten[i + 1]), "end"))
+            pr = el.profil()
+            if pr:
+                m = pr[len(pr) // 2]
+                out.append((G.ebene_punkt(el.ebene, m[0], m[1]), "mitte"))
+        elif el.form == "ellipse" and len(el.daten) >= 4:
+            cx, cy, a_, b_ = (float(v) for v in el.daten[:4])
+            rot = math.radians(float(el.daten[4]) if len(el.daten) > 4 else 0.0)
+            out.append((G.ebene_punkt(el.ebene, cx, cy), "zentrum"))
+            for sx, sy in ((a_, 0), (0, b_), (-a_, 0), (0, -b_)):
+                x = cx + sx * math.cos(rot) - sy * math.sin(rot)
+                y = cy + sx * math.sin(rot) + sy * math.cos(rot)
+                out.append((G.ebene_punkt(el.ebene, x, y), "end"))
+        elif el.form == "spline":
+            for pt in el.daten[:50]:
+                out.append((G.ebene_punkt(el.ebene, pt[0], pt[1]), "end"))
         else:
-            _zug_fang(el.zug3(), True, out)
+            _zug_fang(el.zug3(), el.geschlossen(), out)
         return
     if isinstance(el, Kreis):
         _kreis_fang((el.cx, el.cy, 0.0), el.r, (1, 0, 0), (0, 1, 0), out)
